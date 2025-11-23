@@ -39,15 +39,15 @@ export default function AdvancedSettingsDialog({
         <Button
           variant="outline"
           size="icon"
-          className="h-10 w-10 shrink-0 rounded-[18px] border-gray-200 dark:border-[#242629] dark:bg-[#111214] dark:text-[#f9fbfc]"
+          className="h-10 w-10 shrink-0 rounded-lg border-gray-200 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:text-[var(--color-text-1)]"
         >
           <Settings2 className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-[425px]">
+      <DialogContent className="max-h-[80vh] overflow-y-auto rounded-lg sm:max-w-[425px] dark:bg-[var(--color-bg-dialog)] dark:border-[var(--color-border-container)]">
         <DialogHeader>
-          <DialogTitle>Advanced Settings</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="dark:text-[var(--color-text-1)]">Advanced Settings</DialogTitle>
+          <DialogDescription className="dark:text-[var(--color-text-3)]">
             Configure additional options for your generation.
           </DialogDescription>
         </DialogHeader>

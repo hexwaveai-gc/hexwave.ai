@@ -133,6 +133,13 @@
   --theme-color-hover: #9ffd38;
   --color-bg-selection: #557172;
   --color-bg-selection-safari: #82b3b4;
+
+  /* Spacing variables */
+  --spacing-page-padding: 24px;
+  --spacing-section-gap: 24px;
+  --spacing-element-gap: 16px;
+  --spacing-header-bottom: 32px;
+  --spacing-footer-padding: 20px;
 }
 
 .dark {

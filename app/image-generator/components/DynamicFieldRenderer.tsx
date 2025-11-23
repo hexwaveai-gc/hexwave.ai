@@ -44,7 +44,7 @@ export default function DynamicFieldRenderer({
         if (config.type === "select" && config.options) {
           return (
             <div key={key} className="space-y-3">
-              <Label className="text-sm font-medium text-gray-900 dark:text-[#f9fbfc]">
+              <Label className="text-sm font-medium text-gray-900 dark:text-[var(--color-text-1)]">
                 {key
                   .split("_")
                   .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -54,15 +54,15 @@ export default function DynamicFieldRenderer({
                 value={value?.toString()}
                 onValueChange={(val) => onChange(key, val)}
               >
-                <SelectTrigger className="rounded-[18px]">
+                <SelectTrigger className="rounded-lg">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="rounded-[18px]">
+                <SelectContent className="rounded-lg">
                   {config.options.map((option) => (
                     <SelectItem
                       key={option.toString()}
                       value={option.toString()}
-                      className="rounded-[18px]"
+                      className="rounded-lg"
                     >
                       {option}
                     </SelectItem>
@@ -70,7 +70,7 @@ export default function DynamicFieldRenderer({
                 </SelectContent>
               </Select>
               {config.description && (
-                <p className="text-xs text-gray-500 dark:text-[#6c727a]">
+                <p className="text-xs text-gray-500 dark:text-[var(--color-text-3)]">
                   {config.description}
                 </p>
               )}
@@ -82,7 +82,7 @@ export default function DynamicFieldRenderer({
         if (config.type === "number") {
           return (
             <div key={key} className="space-y-3">
-              <Label className="text-sm font-medium text-gray-900 dark:text-[#f9fbfc]">
+              <Label className="text-sm font-medium text-gray-900 dark:text-[var(--color-text-1)]">
                 {key
                   .split("_")
                   .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -97,10 +97,10 @@ export default function DynamicFieldRenderer({
                 min={config.min}
                 max={config.max}
                 placeholder={config.description}
-                className="rounded-[18px]"
+                className="rounded-lg"
               />
               {config.description && (
-                <p className="text-xs text-gray-500 dark:text-[#6c727a]">
+                <p className="text-xs text-gray-500 dark:text-[var(--color-text-3)]">
                   {config.description}
                 </p>
               )}
@@ -112,7 +112,7 @@ export default function DynamicFieldRenderer({
         if (config.type === "array") {
           return (
             <div key={key} className="space-y-3">
-              <Label className="text-sm font-medium text-gray-900 dark:text-[#f9fbfc]">
+              <Label className="text-sm font-medium text-gray-900 dark:text-[var(--color-text-1)]">
                 {key
                   .split("_")
                   .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -134,7 +134,7 @@ export default function DynamicFieldRenderer({
                 className="rounded-[18px]"
               />
               {config.description && (
-                <p className="text-xs text-gray-500 dark:text-[#6c727a]">
+                <p className="text-xs text-gray-500 dark:text-[var(--color-text-3)]">
                   {config.description}
                 </p>
               )}

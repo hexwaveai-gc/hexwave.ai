@@ -54,16 +54,18 @@ export default function ImageGeneratorPage() {
   return (
     <GeneratorLayout
       inputPanel={
-        <div>
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-[#f9fbfc]">
+        <div className="flex h-full flex-col">
+          <div className="px-[var(--spacing-page-padding)] pt-[var(--spacing-page-padding)] pb-[var(--spacing-header-bottom)]">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-[var(--color-text-1)]">
               AI Image Generator
             </h1>
-            <p className="mt-2 text-sm text-gray-600 dark:text-[#6c727a]">
+            <p className="mt-2 text-sm text-gray-600 dark:text-[var(--color-text-3)]">
               Create stunning images with AI-powered generation
             </p>
           </div>
-          <GeneratorTabs tabs={tabs} defaultTab="text-to-image" />
+          <div className="flex-1 overflow-hidden">
+            <GeneratorTabs tabs={tabs} defaultTab="text-to-image" />
+          </div>
         </div>
       }
       resultsPanel={
@@ -77,7 +79,7 @@ export default function ImageGeneratorPage() {
             {generatedImages.map((imageUrl, index) => (
               <div
                 key={index}
-                className="group relative overflow-hidden rounded-[18px] border border-gray-200 bg-white shadow-sm transition-all hover:shadow-lg dark:border-[#242629] dark:bg-[#111214]"
+                className="group relative overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-all hover:shadow-lg dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)]"
               >
                 <img
                   src={imageUrl}
@@ -85,7 +87,7 @@ export default function ImageGeneratorPage() {
                   className="h-auto w-full object-cover"
                 />
                 <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
-                  <button className="rounded-[18px] bg-white px-4 py-2 text-sm font-medium text-gray-900 transition-transform hover:scale-105 dark:bg-[#111214] dark:text-[#f9fbfc]">
+                  <button className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-900 transition-transform hover:scale-105 dark:bg-[var(--color-bg-primary)] dark:text-[var(--color-text-1)]">
                     Download
                   </button>
                 </div>

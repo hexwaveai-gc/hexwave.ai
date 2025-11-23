@@ -6,6 +6,7 @@ export interface Model {
   name: string;
   description: string;
   settings: ModelSettings;
+  credits_per_generation?: number; // Credits required per generation (default: 1)
 }
 
 export const MODEL_REGISTRY: Record<string, Model> = {
@@ -14,12 +15,14 @@ export const MODEL_REGISTRY: Record<string, Model> = {
     name: "Runway Gen-4",
     description: "High-quality image generation with reference support",
     settings: runwaygen4Settings,
+    credits_per_generation: 1, // TODO: Update from backend API
   },
   flux: {
     id: "flux",
     name: "Flux Pro",
     description: "Fast and flexible image generation",
     settings: fluxSettings,
+    credits_per_generation: 1, // TODO: Update from backend API
   },
 };
 

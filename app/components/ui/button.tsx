@@ -20,6 +20,7 @@ const buttonVariants = cva(
         link: "text-slate-900 underline-offset-4 hover:underline dark:text-slate-50",
         "tf-primary": "font-semibold rounded-xl bg-[linear-gradient(180deg,#4bde8150,#a8ffc8_50%,#4bde81)] transition-all duration-[250ms] ease-in-out text-[rgb(16,18,21)] px-5 py-2 relative h-fit font-inter",
         "tf-secondary": "bg-transparent border border-white/20 text-white hover:bg-white/10 font-normal",
+        generate: "bg-[var(--color-theme-2)] text-[var(--color-text-5)] hover:bg-[var(--color-theme-hover)] font-semibold dark:bg-[var(--color-theme-2)] dark:text-[var(--color-text-5)] dark:hover:bg-[var(--color-theme-hover)]",
       },
       size: {
         default: "h-10 px-4 py-2",

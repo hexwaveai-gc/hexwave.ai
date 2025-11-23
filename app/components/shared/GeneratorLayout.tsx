@@ -60,7 +60,7 @@ export default function GeneratorLayout({
             minSize={minLeftSize}
             className="flex flex-col"
           >
-            <div className="flex h-full flex-col border-r border-gray-200 bg-white dark:border-[#242629] dark:bg-[#0a0a0a]">
+            <div className="flex h-full flex-col border-r border-gray-200 bg-white dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-page)]">
               {inputPanel}
             </div>
           </ResizablePanel>
@@ -68,7 +68,7 @@ export default function GeneratorLayout({
           {/* Resizable Handle */}
           <ResizableHandle
             withHandle
-            className="w-1 bg-gray-200 hover:bg-blue-500 dark:bg-[#242629] dark:hover:bg-[#74ff52]"
+            className="w-1 bg-gray-200 hover:bg-blue-500 dark:bg-[var(--color-border-container)] dark:hover:bg-[var(--color-theme-2)]"
           />
 
           {/* Right Panel - Results */}
@@ -77,7 +77,7 @@ export default function GeneratorLayout({
             minSize={minRightSize}
             className="flex flex-col"
           >
-            <div className="h-full overflow-y-auto bg-gray-50 p-6 dark:bg-[#0a0a0a]">
+            <div className="h-full overflow-y-auto bg-gray-50 p-6 dark:bg-[var(--color-bg-page)]">
               {resultsPanel}
             </div>
           </ResizablePanel>
@@ -87,12 +87,12 @@ export default function GeneratorLayout({
       {/* Mobile: Stacked vertically */}
       <div className="flex h-full flex-col md:hidden">
         {/* Input Section */}
-        <div className="flex-1 border-b border-gray-200 bg-white dark:border-[#242629] dark:bg-[#0a0a0a]">
+        <div className="flex-1 border-b border-gray-200 bg-white dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-page)]">
           {inputPanel}
         </div>
 
         {/* Results Section */}
-        <div className="flex-1 overflow-y-auto bg-gray-50 p-4 dark:bg-[#0a0a0a]">
+        <div className="flex-1 overflow-y-auto bg-gray-50 p-4 dark:bg-[var(--color-bg-page)]">
           {resultsPanel}
         </div>
       </div>

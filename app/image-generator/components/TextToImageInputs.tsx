@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../components/ui/select";
-import ModelSelector from "./ModelSelector";
+import ModelSelectorDialog from "./ModelSelectorDialog";
 import AdvancedSettingsDialog from "./AdvancedSettingsDialog";
 import { getModelById } from "../lib/modelRegistry";
 
@@ -59,6 +59,19 @@ export default function TextToImageInputs({
   const resolutionSetting = settings.resolution; // Using resolution instead of num_images for Runway
   const numImagesSetting = settings.num_images; // For Flux
 
+  // Calculate generation credits (dynamic - ready for backend integration)
+  const calculateCredits = () => {
+    // TODO: Replace with actual backend call
+    // For now, calculate based on model and settings
+    const baseCredits = model?.credits_per_generation || 1;
+    const numImages = numImagesSetting 
+      ? (modelParams.num_images || numImagesSetting.default || 1)
+      : 1;
+    return baseCredits * numImages;
+  };
+
+  const creditsRequired = calculateCredits();
+
   // Fields to exclude from Advanced Dialog (because they are in footer or main area)
   const excludedFields = [
     "prompt",
@@ -71,128 +84,145 @@ export default function TextToImageInputs({
   return (
     <div className="flex h-full flex-col">
       {/* Scrollable Content - Prompt takes available space */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto px-[var(--spacing-page-padding)] py-[var(--spacing-element-gap)]">
         <div className="flex h-full flex-col space-y-3">
-          <Label className="text-sm font-medium text-gray-900 dark:text-[#f9fbfc]">
+          <Label className="text-sm font-medium text-gray-900 dark:text-[var(--color-text-1)]">
             Prompt <span className="text-red-500">*</span>
           </Label>
           <Textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder="Describe the creative ideas for the image..."
-            className="h-full min-h-[200px] flex-1 resize-none rounded-[18px] border-gray-200 bg-gray-50 p-4 text-base focus:border-blue-500 focus:ring-0 dark:border-[#242629] dark:bg-[#111214] dark:text-[#f9fbfc]"
+            className="h-full min-h-[200px] flex-1 resize-none rounded-lg border-gray-200 bg-gray-50 p-4 text-base focus:border-blue-500 focus:ring-0 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:text-[var(--color-text-1)] dark:placeholder:text-[var(--color-text-3)]"
           />
         </div>
       </div>
 
-      {/* Fixed Footer */}
-      <div className="border-t border-gray-200 bg-white p-6 dark:border-[#242629] dark:bg-[#0a0a0a]">
+      {/* Fixed Footer - Always at bottom */}
+      <div className="border-t border-gray-200 bg-white px-[var(--spacing-page-padding)] py-[var(--spacing-footer-padding)] dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-page)]">
         {/* Model Selection */}
         <div className="mb-4">
-          <ModelSelector value={selectedModel} onChange={setSelectedModel} />
+          <Label className="mb-2 block text-sm font-medium text-gray-900 dark:text-[var(--color-text-1)]">
+            Model
+          </Label>
+          <ModelSelectorDialog value={selectedModel} onChange={setSelectedModel} />
         </div>
 
         {/* Controls Row */}
-        <div className="flex items-center gap-3">
-          {/* Aspect Ratio Dropdown */}
-          {aspectRatioSetting && aspectRatioSetting.options && (
-            <div className="w-24 shrink-0">
-              <Select
-                value={
-                  (modelParams.aspect_ratio as string) ||
-                  aspectRatioSetting.default
-                }
-                onValueChange={(val) => handleParamChange("aspect_ratio", val)}
-              >
-                <SelectTrigger className="h-10 rounded-[18px] border-gray-200 px-3 dark:border-[#242629] dark:bg-[#111214] dark:text-[#f9fbfc]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="rounded-[18px]">
-                  {aspectRatioSetting.options.map((option) => (
-                    <SelectItem
-                      key={option.toString()}
-                      value={option.toString()}
-                      className="rounded-[18px]"
-                    >
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        <div className="flex items-center justify-between gap-3">
+          {/* Left Side - Controls and Credits */}
+          <div className="flex items-center gap-3">
+            {/* Generation Credits Display */}
+            <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)]">
+              <span className="text-xs font-medium text-gray-600 dark:text-[var(--color-text-3)]">
+                Credits:
+              </span>
+              <span className="text-sm font-semibold text-gray-900 dark:text-[var(--color-text-1)]">
+                {creditsRequired}
+              </span>
             </div>
-          )}
 
-          {/* Resolution or Count Dropdown */}
-          {resolutionSetting && resolutionSetting.options && (
-            <div className="w-28 shrink-0">
-              <Select
-                value={
-                  (modelParams.resolution as string) ||
-                  resolutionSetting.default
-                }
-                onValueChange={(val) => handleParamChange("resolution", val)}
-              >
-                <SelectTrigger className="h-10 rounded-[18px] border-gray-200 px-3 dark:border-[#242629] dark:bg-[#111214] dark:text-[#f9fbfc]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="rounded-[18px]">
-                  {resolutionSetting.options.map((option) => (
-                    <SelectItem
-                      key={option.toString()}
-                      value={option.toString()}
-                      className="rounded-[18px]"
-                    >
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+            {/* Aspect Ratio Dropdown */}
+            {aspectRatioSetting && aspectRatioSetting.options && (
+              <div className="w-24 shrink-0">
+                <Select
+                  value={
+                    (modelParams.aspect_ratio as string) ||
+                    aspectRatioSetting.default
+                  }
+                  onValueChange={(val) => handleParamChange("aspect_ratio", val)}
+                >
+                  <SelectTrigger className="h-10 rounded-lg border-gray-200 px-3 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:text-[var(--color-text-1)]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-lg">
+                    {aspectRatioSetting.options.map((option) => (
+                      <SelectItem
+                        key={option.toString()}
+                        value={option.toString()}
+                        className="rounded-lg"
+                      >
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
-          {/* Num Images (Flux) */}
-          {numImagesSetting && (
-            <div className="w-24 shrink-0">
-              <Select
-                value={
-                  (modelParams.num_images as string) ||
-                  numImagesSetting.default?.toString()
-                }
-                onValueChange={(val) =>
-                  handleParamChange("num_images", Number(val))
-                }
-              >
-                <SelectTrigger className="h-10 rounded-[18px] border-gray-200 px-3 dark:border-[#242629] dark:bg-[#111214] dark:text-[#f9fbfc]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="rounded-[18px]">
-                  {[1, 2, 3, 4].map((num) => (
-                    <SelectItem
-                      key={num}
-                      value={num.toString()}
-                      className="rounded-[18px]"
-                    >
-                      {num} {num === 1 ? "Image" : "Images"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+            {/* Resolution or Count Dropdown */}
+            {resolutionSetting && resolutionSetting.options && (
+              <div className="w-28 shrink-0">
+                <Select
+                  value={
+                    (modelParams.resolution as string) ||
+                    resolutionSetting.default
+                  }
+                  onValueChange={(val) => handleParamChange("resolution", val)}
+                >
+                  <SelectTrigger className="h-10 rounded-lg border-gray-200 px-3 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:text-[var(--color-text-1)]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-lg">
+                    {resolutionSetting.options.map((option) => (
+                      <SelectItem
+                        key={option.toString()}
+                        value={option.toString()}
+                        className="rounded-lg"
+                      >
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
-          {/* Advanced Settings */}
-          <AdvancedSettingsDialog
-            settings={settings}
-            values={modelParams}
-            onChange={handleParamChange}
-            excludeFields={excludedFields}
-          />
+            {/* Num Images (Flux) */}
+            {numImagesSetting && (
+              <div className="w-24 shrink-0">
+                <Select
+                  value={
+                    (modelParams.num_images as string) ||
+                    numImagesSetting.default?.toString()
+                  }
+                  onValueChange={(val) =>
+                    handleParamChange("num_images", Number(val))
+                  }
+                >
+                  <SelectTrigger className="h-10 rounded-lg border-gray-200 px-3 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:text-[var(--color-text-1)]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-lg">
+                    {[1, 2, 3, 4].map((num) => (
+                      <SelectItem
+                        key={num}
+                        value={num.toString()}
+                        className="rounded-lg"
+                      >
+                        {num} {num === 1 ? "Image" : "Images"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
-          {/* Generate Button */}
+            {/* Advanced Settings */}
+            <AdvancedSettingsDialog
+              settings={settings}
+              values={modelParams}
+              onChange={handleParamChange}
+              excludeFields={excludedFields}
+            />
+          </div>
+
+          {/* Right Side - Generate Button */}
           <Button
             onClick={handleGenerate}
             disabled={isGenerateDisabled}
-            className="h-10 flex-1 rounded-[18px] bg-green-500 font-semibold text-white hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700"
+            variant="generate"
+            className="h-10 min-w-[140px] rounded-lg px-8"
           >
             Generate
           </Button>

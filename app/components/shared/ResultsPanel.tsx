@@ -45,10 +45,10 @@ export default function ResultsPanel({
     <div className={cn("flex h-full w-full flex-col", className)}>
       {/* Header */}
       <div className="mb-6">
-        <h2 className="text-2xl font-semibold text-gray-900 dark:text-[#f9fbfc]">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-[var(--color-text-1)]">
           Results
         </h2>
-        <p className="mt-1 text-sm text-gray-600 dark:text-[#6c727a]">
+        <p className="mt-2 text-sm text-gray-600 dark:text-[var(--color-text-3)]">
           Your generated content will appear here
         </p>
       </div>
@@ -58,30 +58,30 @@ export default function ResultsPanel({
         {/* Loading State */}
         {isLoading && (
           <div className="flex h-full flex-col items-center justify-center space-y-4">
-            <Loader2 className="h-12 w-12 animate-spin text-[#74ff52]" />
-            <p className="text-center text-sm font-medium text-gray-700 dark:text-[#c0c6cc]">
+            <Loader2 className="h-12 w-12 animate-spin text-[var(--color-theme-2)]" />
+            <p className="text-center text-sm font-medium text-gray-700 dark:text-[var(--color-text-2)]">
               {loadingMessage}
             </p>
             {/* Skeleton loaders */}
             <div className="w-full max-w-md space-y-3">
-              <Skeleton className="h-48 w-full rounded-[18px] dark:bg-[#111214]" />
-              <Skeleton className="h-4 w-3/4 dark:bg-[#111214]" />
-              <Skeleton className="h-4 w-1/2 dark:bg-[#111214]" />
+              <Skeleton className="h-48 w-full rounded-[18px] dark:bg-[var(--color-bg-primary)]" />
+              <Skeleton className="h-4 w-3/4 dark:bg-[var(--color-bg-primary)]" />
+              <Skeleton className="h-4 w-1/2 dark:bg-[var(--color-bg-primary)]" />
             </div>
           </div>
         )}
 
         {/* Empty State */}
         {!isLoading && isEmpty && (
-          <div className="flex h-full flex-col items-center justify-center space-y-4 rounded-[18px] border-2 border-dashed border-gray-300 bg-gray-50 p-8 dark:border-[#242629] dark:bg-[#111214]">
-            <div className="rounded-full bg-gray-200 p-4 dark:bg-[#1a1c1f]">
-              <ImageIcon className="h-12 w-12 text-gray-400 dark:text-[#6c727a]" />
+          <div className="flex h-full flex-col items-center justify-center space-y-4 rounded-[18px] border-2 border-dashed border-gray-300 bg-gray-50 p-8 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)]">
+            <div className="rounded-full bg-gray-200 p-4 dark:bg-[var(--color-bg-secondary)]">
+              <ImageIcon className="h-12 w-12 text-gray-400 dark:text-[var(--color-text-3)]" />
             </div>
             <div className="text-center">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-[#f9fbfc]">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-[var(--color-text-1)]">
                 No results yet
               </h3>
-              <p className="mt-1 text-sm text-gray-600 dark:text-[#6c727a]">
+              <p className="mt-1 text-sm text-gray-600 dark:text-[var(--color-text-3)]">
                 {emptyMessage}
               </p>
             </div>
