@@ -60,7 +60,7 @@ export default function GeneratorLayout({
             minSize={minLeftSize}
             className="flex flex-col"
           >
-            <div className="flex h-full flex-col border-r border-[var(--color-border-container)] bg-[var(--color-bg-page)]">
+            <div className="flex h-full flex-col bg-[var(--color-bg-primary)]">
               {inputPanel}
             </div>
           </ResizablePanel>
@@ -68,7 +68,7 @@ export default function GeneratorLayout({
           {/* Resizable Handle */}
           <ResizableHandle
             withHandle
-            className="w-1 bg-[var(--color-border-container)] hover:bg-[var(--color-theme-2)]"
+            className="group w-px"
           />
 
           {/* Right Panel - Results */}
@@ -87,7 +87,7 @@ export default function GeneratorLayout({
       {/* Mobile: Stacked vertically */}
       <div className="flex h-full flex-col md:hidden">
         {/* Input Section */}
-        <div className="flex-1 border-b border-[var(--color-border-container)] bg-[var(--color-bg-page)]">
+        <div className="flex-1 border-b border-[var(--color-border-container)] bg-[var(--color-bg-primary)]">
           {inputPanel}
         </div>
 

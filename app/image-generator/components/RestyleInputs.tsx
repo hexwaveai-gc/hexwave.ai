@@ -167,7 +167,7 @@ export default function RestyleInputs({ onGenerate }: RestyleInputsProps) {
       </div>
 
       {/* Fixed Footer - Always at bottom */}
-      <div className="border-t border-gray-200 bg-white px-[var(--spacing-page-padding)] py-[var(--spacing-footer-padding)] dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-page)]">
+      <div className="border-t border-gray-200 bg-white px-[var(--spacing-page-padding)] py-[var(--spacing-footer-padding)] dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)]">
         {/* Model Selection */}
         <div className="mb-4">
           <Label className="mb-2 block text-sm font-medium text-gray-900 dark:text-[var(--color-text-1)]">

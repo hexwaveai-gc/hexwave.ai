@@ -107,7 +107,7 @@ export default function TextToImageInputs({
       </div>
 
       {/* Fixed Footer - Always at bottom */}
-      <div className="border-t border-[var(--color-border-container)] bg-[var(--color-bg-page)] px-[var(--spacing-page-padding)] py-[var(--spacing-footer-padding)]">
+      <div className="border-t border-[var(--color-border-container)] bg-[var(--color-bg-primary)] px-[var(--spacing-page-padding)] py-[var(--spacing-footer-padding)]">
         {/* Model Selection */}
         <div className="mb-4">
           <Label className="mb-2 block text-sm font-medium text-[var(--color-text-1)]">
