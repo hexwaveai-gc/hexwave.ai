@@ -52,17 +52,23 @@ export default function GeneratorTabs({
     >
       {/* Tab List */}
       <div className="px-[var(--spacing-page-padding)] pt-0">
-        <TabsList className="flex h-auto w-full justify-start gap-6 border-b border-gray-200 bg-transparent p-0 pb-3 dark:border-[var(--color-border-container)]">
+        <TabsList className="flex h-auto w-full justify-start gap-8 border-b border-gray-200 bg-transparent p-0 dark:border-[var(--color-border-container)] dark:bg-transparent">
           {tabs.map((tab) => (
             <TabsTrigger
               key={tab.id}
               value={tab.id}
               className={cn(
-                "relative h-9 rounded-none border-b-2 border-transparent bg-transparent px-1 pb-3 pt-2 text-sm font-medium text-gray-500 shadow-none transition-none data-[state=active]:border-gray-900 data-[state=active]:text-gray-900 data-[state=active]:shadow-none dark:text-[var(--color-text-3)] dark:data-[state=active]:border-[var(--color-theme-2)] dark:data-[state=active]:text-[var(--color-text-1)]"
+                "relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-0 pb-3 pt-2 text-sm font-medium shadow-none transition-colors",
+                // Inactive state - muted gray text and icons, no background
+                "text-gray-500 dark:text-[var(--color-text-3)] dark:bg-transparent",
+                "[&_svg]:h-4 [&_svg]:w-4 [&_svg]:text-gray-500 [&_svg]:dark:text-[var(--color-text-3)] [&_svg]:transition-colors",
+                // Active state - bright white text with green underline, darker background
+                "data-[state=active]:border-[var(--color-theme-2)] data-[state=active]:text-white data-[state=active]:dark:text-[var(--color-text-1)] data-[state=active]:dark:bg-[var(--color-bg-primary)] data-[state=active]:shadow-none",
+                "data-[state=active]:[&_svg]:text-white data-[state=active]:[&_svg]:dark:text-[var(--color-text-1)]"
               )}
             >
               <div className="flex items-center gap-2">
-                {tab.icon && <span className="h-4 w-4">{tab.icon}</span>}
+                {tab.icon && <span>{tab.icon}</span>}
                 <span>{tab.label}</span>
               </div>
             </TabsTrigger>
