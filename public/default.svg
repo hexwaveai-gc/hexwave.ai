@@ -1,0 +1,14 @@
+<svg width="512" height="512" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <mask id="wave-mask">
+      <rect width="100" height="100" fill="white"/>
+      <!-- Top Gap -->
+      <path d="M-10 42 Q 25 62 50 42 Q 75 22 110 42" stroke="black" stroke-width="8" stroke-linecap="round" fill="none"/>
+      <!-- Bottom Gap -->
+      <path d="M-10 58 Q 25 78 50 58 Q 75 38 110 58" stroke="black" stroke-width="8" stroke-linecap="round" fill="none"/>
+    </mask>
+  </defs>
+  <!-- Hexagon Shape -->
+  <path d="M50 2 L93.3 27 V77 L50 102 L6.7 77 V27 Z" fill="white" mask="url(#wave-mask)"/>
+</svg>
+

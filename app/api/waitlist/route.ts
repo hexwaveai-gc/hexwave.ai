@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
+import { LoopsClient } from "loops";
+
+const loops = new LoopsClient(process.env.LOOPS_API_KEY as string);
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { email } = body;
+    const { email, name } = body;
 
     if (!email) {
       return NextResponse.json(
@@ -21,12 +24,31 @@ export async function POST(request: Request) {
       );
     }
 
-    // Mock API - In production, you would save to a database here
-    // For now, we'll just simulate a successful response
-    console.log("Waitlist signup:", email);
+    // Add contact to Loops waitlist
+    try {
+      if (!process.env.LOOPS_API_KEY) {
+        console.warn("LOOPS_API_KEY not configured, skipping Loops integration");
+      } else {
+        // Create or update contact in Loops
+        // Loops API expects email and optional properties
+        await loops.createContact({
+          email: email,
+          properties: {
+            firstName: name || undefined,
+            source: "waitlist",
+          },
+        });
 
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
+        // Optionally, add to a specific list if you have one
+        // await loops.updateContact(email, {
+        //   listIds: ["your-waitlist-list-id"],
+        // });
+      }
+    } catch (loopsError: any) {
+      // Log error but don't fail the request if Loops fails
+      console.error("Loops API error:", loopsError);
+      // Continue execution - we still want to return success to the user
+    }
 
     return NextResponse.json(
       {
