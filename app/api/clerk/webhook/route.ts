@@ -120,7 +120,7 @@ async function handleUserUpdate(payload: WebhookEvent) {
         console.log("[POST /api/users/clerk] User not found for update", {
           userId: userData._id,
         });
-        return await User.create([userData], { timeout: 5000 });
+        return await User.create([userData]);
       }
 
       return user;
@@ -158,24 +158,24 @@ async function validateRequest(request: Request) {
     const payloadString = await request.text();
     const headerPayload = await headers();
 
-    const svixHeaders = {
-      "svix-id": headerPayload.get("svix-id"),
-      "svix-timestamp": headerPayload.get("svix-timestamp"),
-      "svix-signature": headerPayload.get("svix-signature"),
-    };
+    const svixId = headerPayload.get("svix-id");
+    const svixTimestamp = headerPayload.get("svix-timestamp");
+    const svixSignature = headerPayload.get("svix-signature");
 
     // Validate required headers
-    if (
-      !svixHeaders["svix-id"] ||
-      !svixHeaders["svix-timestamp"] ||
-      !svixHeaders["svix-signature"]
-    ) {
+    if (!svixId || !svixTimestamp || !svixSignature) {
       throw new Error("Missing required Svix headers");
     }
 
     if (!webhookSecret) {
       throw new Error("Webhook secret is not configured");
     }
+
+    const svixHeaders = {
+      "svix-id": svixId,
+      "svix-timestamp": svixTimestamp,
+      "svix-signature": svixSignature,
+    };
 
     const wh = new Webhook(webhookSecret);
     return wh.verify(payloadString, svixHeaders) as WebhookEvent;
