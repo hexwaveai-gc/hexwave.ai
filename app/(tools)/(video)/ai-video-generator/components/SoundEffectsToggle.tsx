@@ -20,13 +20,13 @@ export function SoundEffectsToggle({
   onToggle,
 }: SoundEffectsToggleProps) {
   return (
-    <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-card">
+    <div className="flex items-center justify-between p-4 rounded-[18px] border border-gray-200 bg-gray-50 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)]">
       <div className="flex items-center gap-2">
-        <Label htmlFor="sound-effects" className="text-sm font-medium cursor-pointer">
+        <Label htmlFor="sound-effects" className="text-sm font-medium cursor-pointer text-gray-900 dark:text-[var(--color-text-1)]">
           Sound Effects
         </Label>
-        <Info className="h-4 w-4 text-muted-foreground" />
-        <span className="text-xs text-muted-foreground">Free for now</span>
+        <Info className="h-4 w-4 text-gray-500 dark:text-[var(--color-text-3)]" />
+        <span className="text-xs text-gray-500 dark:text-[var(--color-text-3)]">Free for now</span>
       </div>
       <Switch id="sound-effects" checked={enabled} onCheckedChange={onToggle} />
     </div>
