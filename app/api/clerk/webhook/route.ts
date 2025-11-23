@@ -10,7 +10,7 @@ import { retryOperation } from "@/utils/retry-operation";
 const loops = new LoopsClient(process.env.LOOPS_API_KEY as string);
 const webhookSecret = process.env.CLERK_USER_WEBHOOK_SECRET || ``;
 const MAX_RETRIES = 3;
-export const maxDuration = 800;
+// export const maxDuration = 800;
 
 export const POST = (async (request: Request) => {
   try {
