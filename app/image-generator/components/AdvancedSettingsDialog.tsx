@@ -10,8 +10,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../../components/ui/dialog";
-import { ModelSettings } from "../lib/s/runwaygen4/settings";
 import DynamicFieldRenderer from "./DynamicFieldRenderer";
+import { ModelSettings } from "../lib/modelRegistry";
 
 interface AdvancedSettingsDialogProps {
   settings: ModelSettings;
