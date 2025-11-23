@@ -56,8 +56,8 @@ export default function HeroSection() {
     return 20;
   };
   return (
-    <article className="rounded-3xl px-4 sm:px-6 md:px-8 border border-[#252629] bg-[#15171A]">
-      <div className="w-full relative border-x border-[#ffffff10] md:px-8 py-[7.5%] grid lg:grid-cols-2 gap-12 lg:gap-4 xl:gap-8 items-start">
+    <article className="rounded-3xl px-4 sm:px-6 md:px-8 border border-[#252629] dark:border-gray-800 bg-[#15171A] dark:bg-gray-900">
+      <div className="w-full relative border-x border-[#ffffff10] dark:border-gray-800 md:px-8 py-[7.5%] grid lg:grid-cols-2 gap-12 lg:gap-4 xl:gap-8 items-start">
         {/* Decorative dots */}
         <section className="z-0 absolute w-full h-full col-span-2 grid grid-cols-2 place-content-between pointer-events-none">
           <div className="bg-white/50 rounded-full w-1 h-1 my-8 outline outline-8 outline-[#171b1c]/60 lg:outline-[#171B1C] -mx-[2.5px]"></div>
@@ -69,13 +69,13 @@ export default function HeroSection() {
         {/* Content section */}
         <section className="space-y-8 mt-12 lg:mt-0 flex-2 flex flex-col gap-0">
           <div className="space-y-4">
-            <h1 className="text-4xl sm:text-[48px] lg:text-[42px] xl:text-5xl 2xl:text-6xl text-left leading-[50px] font-euclid text-white font-medium text-balance">
+            <h1 className="text-4xl sm:text-[48px] lg:text-[42px] xl:text-5xl 2xl:text-6xl text-left leading-[50px] font-euclid text-white dark:text-gray-100 font-medium text-balance">
               Create viral videos in{" "}
               <span className="font-medium from-[#45EC82] from-[0.16%] via-[#7079F3] via-[47.81%] to-[#75CEFC] to-100% bg-gradient-to-r bg-clip-text text-transparent">
                 Minutes
               </span>
             </h1>
-            <p className="text-md text-neutral-dark 2xl:text-base text-left leading-normal font-inter">
+            <p className="text-md text-neutral-dark dark:text-gray-400 2xl:text-base text-left leading-normal font-inter">
               Turn your creative ideas into attention-grabbing TikTok, Instagram, and YouTube stories with just a few clicks. All you need is a story to tell - Hexwave handles the rest.
             </p>
           </div>

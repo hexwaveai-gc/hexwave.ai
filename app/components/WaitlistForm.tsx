@@ -63,12 +63,12 @@ export function WaitlistForm() {
     return (
       <div className="flex flex-col items-start text-left space-y-3">
         <div className="flex items-center gap-2">
-          <CheckCircle className="w-5 h-5 text-[#4bde81]" />
-          <h3 className="text-base font-semibold text-white">
+          <CheckCircle className="w-5 h-5 text-[#4bde81] dark:text-green-400" />
+          <h3 className="text-base font-semibold text-white dark:text-gray-100">
             You're on the list! 🎉
           </h3>
         </div>
-        <p className="text-sm text-white/60">
+        <p className="text-sm text-white/60 dark:text-gray-400">
           Thanks for joining our waitlist. We'll notify you when we launch!
         </p>
       </div>
@@ -79,7 +79,7 @@ export function WaitlistForm() {
     <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-3">
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40 w-4 h-4 pointer-events-none" />
+          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40 dark:text-gray-500 w-4 h-4 pointer-events-none" />
           <Input
             type="email"
             placeholder="Enter your email"
@@ -89,7 +89,7 @@ export function WaitlistForm() {
               setError("");
             }}
             disabled={isSubmitting}
-            className={`pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/40 focus-visible:ring-white/20 ${
+            className={`pl-10 bg-white/5 dark:bg-gray-800/50 border-white/10 dark:border-gray-700 text-white dark:text-gray-100 placeholder:text-white/40 dark:placeholder:text-gray-500 focus-visible:ring-white/20 dark:focus-visible:ring-gray-600 ${
               error ? "border-red-500/50 focus-visible:border-red-500/50" : ""
             }`}
           />
@@ -111,9 +111,9 @@ export function WaitlistForm() {
         </Button>
       </div>
       {error && (
-        <p className="text-xs text-red-400">{error}</p>
+        <p className="text-xs text-red-400 dark:text-red-300">{error}</p>
       )}
-      <p className="text-xs text-white/40">
+      <p className="text-xs text-white/40 dark:text-gray-500">
         We'll only send you updates about the launch. No spam, ever.
       </p>
     </form>
