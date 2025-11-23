@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { ClerkProvider } from "@clerk/nextjs";
-import { ThemeProvider } from "./providers/ThemeProvider";
+import { ClerkProvider } from "@clerk/nextjs"; 
 import { IconSprite } from "./components/ui/icon-sprite";
 
 const geistSans = Geist({
@@ -104,16 +103,9 @@ export default function RootLayout({
       <html lang="en" suppressHydrationWarning>
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        >
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
+        > 
             <IconSprite />
-            {children}
-          </ThemeProvider>
+            {children} 
         </body>
       </html>
     </ClerkProvider>
