@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";   
+import { useState, useMemo } from "react";   
 import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
 import { Button } from "../../components/ui/button";
-import { Wand2 } from "lucide-react";
+import { Wand2, RefreshCw } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -25,12 +25,37 @@ interface TextToImageInputsProps {
  * Core fields: prompt, model selector
  * Dynamic fields: based on selected model's settings
  */
+// Hints pool with multiple sets of prompts
+const HINTS_POOL = [
+  [
+    { label: "Supermodel", prompt: "A stunning supermodel walking down a high-fashion runway, elegant pose, professional photography, studio lighting, high detail, fashion photography style" },
+    { label: "Retro Boy", prompt: "A retro-styled portrait of a young man, 1980s aesthetic, vintage clothing, film grain, nostalgic atmosphere, warm tones, classic photography" },
+  ],
+  [
+    { label: "Chinese painting", prompt: "Traditional Chinese ink painting style, mountains and rivers, misty landscape, calligraphy brush strokes, serene and peaceful, monochrome with subtle colors, ancient art style" },
+    { label: "Retro Girl", prompt: "Vintage portrait of a beautiful woman, 1950s pin-up style, retro fashion, classic Hollywood glamour, soft lighting, nostalgic color grading" },
+  ],
+  [
+    { label: "Stylish Boy", prompt: "A fashionable young man in modern streetwear, urban setting, contemporary style, dynamic pose, vibrant colors, professional portrait photography" },
+    { label: "B&W Male Portrait", prompt: "Black and white portrait of a distinguished man, dramatic lighting, high contrast, professional headshot, timeless elegance, monochrome photography" },
+  ],
+  [
+    { label: "Futuristic City", prompt: "A futuristic cyberpunk cityscape at night, neon lights, flying vehicles, towering skyscrapers, rain-soaked streets, vibrant colors, sci-fi atmosphere" },
+    { label: "Nature Landscape", prompt: "Breathtaking mountain landscape at sunset, golden hour lighting, dramatic clouds, pristine nature, wide angle view, cinematic composition, natural beauty" },
+  ],
+  [
+    { label: "Abstract Art", prompt: "Abstract artistic composition, vibrant colors blending together, fluid shapes, modern art style, creative expression, dynamic movement, contemporary design" },
+    { label: "Vintage Car", prompt: "Classic vintage car from the 1960s, polished chrome, retro styling, nostalgic atmosphere, warm lighting, automotive photography, timeless beauty" },
+  ],
+];
+
 export default function TextToImageInputs({
   onGenerate,
 }: TextToImageInputsProps) {
   const [selectedModel, setSelectedModel] = useState("runwaygen4");
   const [prompt, setPrompt] = useState("");
   const [modelParams, setModelParams] = useState<Record<string, any>>({});
+  const [hintsIndex, setHintsIndex] = useState(0);
 
   const model = getModelById(selectedModel);
   const settings = model?.settings || {};
@@ -81,6 +106,21 @@ export default function TextToImageInputs({
     "num_images",
   ];
 
+  // Get current hints based on index
+  const currentHints = useMemo(() => {
+    return HINTS_POOL[hintsIndex % HINTS_POOL.length];
+  }, [hintsIndex]);
+
+  // Handle hint click - fill textarea with prompt
+  const handleHintClick = (hintPrompt: string) => {
+    setPrompt(hintPrompt);
+  };
+
+  // Handle refresh - change to next set of hints
+  const handleRefreshHints = () => {
+    setHintsIndex((prev) => (prev + 1) % HINTS_POOL.length);
+  };
+
   // Helper function to normalize options (handle both string and object formats)
   const normalizeOption = (option: string | { value: string; label: string }) => {
     if (typeof option === "string") {
@@ -91,23 +131,54 @@ export default function TextToImageInputs({
 
   return (
     <div className="flex h-full flex-col">
-      {/* Scrollable Content - Prompt takes available space */}
+      {/* Scrollable Content - Prompt with fixed compact height */}
       <div className="flex-1 overflow-y-auto px-[var(--spacing-page-padding)] py-[var(--spacing-element-gap)]">
-        <div className="flex h-full flex-col space-y-3">
+        <div className="flex flex-col space-y-3">
           <Label className="text-sm font-medium text-[var(--color-text-1)]">
             Prompt
           </Label>
-          <Textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Describe the creative ideas for the image..."
-            className="h-full min-h-[200px] flex-1 resize-none rounded-lg border-[var(--color-border-container)] bg-[var(--color-bg-primary)] p-4 text-base text-[var(--color-text-1)] placeholder:text-[var(--color-text-3)] focus:border-[var(--color-theme-2)] focus:ring-0"
-          />
+          
+          {/* Combined Container */}
+          <div className="relative flex flex-col rounded-lg border border-[var(--color-border-container)] bg-[var(--color-bg-primary)] focus-within:border-[var(--color-theme-2)] transition-colors">
+            <Textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Please describe your creative ideas for the image, or have DeepSeek generate the prompt or view Help Center for a quick start."
+              className="min-h-[180px] w-full max-w-full resize-none border-0 bg-transparent p-4 text-base text-[var(--color-text-1)] placeholder:text-[var(--color-text-3)] focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none"
+            />
+
+            {/* Hints Section - Inside the border */}
+            <div className="flex items-center gap-3 px-4 pb-4 pt-2">
+              <Label className="text-sm font-medium text-[var(--color-text-1)] whitespace-nowrap">
+                Hints:
+              </Label>
+              <div className="flex items-center gap-2 flex-1">
+                {currentHints.map((hint, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleHintClick(hint.prompt)}
+                    className="px-4 py-2 rounded-lg text-sm font-medium text-[var(--color-text-2)] bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-1)] transition-colors border border-transparent hover:border-[var(--color-border-container)]"
+                    type="button"
+                  >
+                    {hint.label}
+                  </button>
+                ))}
+                <button
+                  onClick={handleRefreshHints}
+                  className="ml-auto p-2 rounded-lg text-[var(--color-text-2)] hover:text-[var(--color-text-1)] hover:bg-[var(--color-bg-secondary)] transition-colors"
+                  type="button"
+                  aria-label="Refresh hints"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Fixed Footer - Always at bottom */}
-      <div className="border-t border-[var(--color-border-container)] bg-[var(--color-bg-primary)] px-[var(--spacing-page-padding)] py-[var(--spacing-footer-padding)]">
+      {/* Sticky Footer - Always at bottom */}
+      <div className="mt-auto bg-[var(--color-bg-primary)] px-[var(--spacing-page-padding)] py-[var(--spacing-footer-padding)]">
         {/* Model Selection */}
         <div className="mb-4">
           <Label className="mb-2 block text-sm font-medium text-[var(--color-text-1)]">

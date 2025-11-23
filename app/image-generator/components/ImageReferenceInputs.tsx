@@ -174,14 +174,14 @@ export default function ImageReferenceInputs({
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="Describe how you want to use the reference images..."
-              className="min-h-[120px] w-full resize-none rounded-lg border-gray-200 bg-gray-50 p-4 text-base focus:border-blue-500 focus:ring-0 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:text-[var(--color-text-1)] dark:placeholder:text-[var(--color-text-3)]"
+              className="min-h-[180px] w-full resize-none rounded-lg border-gray-200 bg-gray-50 p-4 text-base focus:border-blue-500 focus:ring-0 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:text-[var(--color-text-1)] dark:placeholder:text-[var(--color-text-3)]"
             />
           </div>
         </div>
       </div>
 
-      {/* Fixed Footer - Always at bottom */}
-      <div className="border-t border-gray-200 bg-white px-[var(--spacing-page-padding)] py-[var(--spacing-footer-padding)] dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)]">
+      {/* Sticky Footer - Always at bottom */}
+      <div className="mt-auto bg-white px-[var(--spacing-page-padding)] py-[var(--spacing-footer-padding)] dark:bg-[var(--color-bg-primary)]">
         {/* Model Selection */}
         <div className="mb-4">
           <Label className="mb-2 block text-sm font-medium text-gray-900 dark:text-[var(--color-text-1)]">
