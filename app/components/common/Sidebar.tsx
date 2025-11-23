@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -11,6 +12,7 @@ import {
   LogIn,
   Zap,
 } from "lucide-react";
+import UpgradePlanModal from "./planModal/UpgradePlanModal";
 
 interface SidebarItem {
   id: string;
@@ -36,8 +38,11 @@ const sidebarItems: SidebarItem[] = [
 ];
 
 export default function Sidebar() {
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-19 bg-[#0a0a0a] flex flex-col z-50">
+    <>
+      <aside className="fixed left-0 top-0 bottom-0 w-19 bg-[#0a0a0a] flex flex-col z-50">
       {/* Logo */}
       <div className="pt-6 flex justify-center">
         <Link
@@ -107,8 +112,8 @@ export default function Sidebar() {
           </span>
         </Link>
 
-        <Link
-          href="/sale"
+        <button
+          onClick={() => setIsUpgradeModalOpen(true)}
           className="flex flex-col items-center justify-center gap-1 py-2 px-1.5 rounded-lg bg-[#74FF52] text-[#0a0a0a] hover:bg-[#66e648] transition-colors font-semibold"
           title="SALE 50% off"
         >
@@ -116,7 +121,7 @@ export default function Sidebar() {
           <span className="text-[9px] text-center leading-tight">
             SALE 50% off
           </span>
-        </Link>
+        </button>
 
         <div className="pt-1.5">
           <span className="block text-white/40 text-[9px] text-center">
@@ -124,6 +129,11 @@ export default function Sidebar() {
           </span>
         </div>
       </div>
-    </aside>
+      </aside>
+      <UpgradePlanModal
+        open={isUpgradeModalOpen}
+        onOpenChange={setIsUpgradeModalOpen}
+      />
+    </>
   );
 }
