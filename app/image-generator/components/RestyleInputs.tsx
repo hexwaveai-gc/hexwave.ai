@@ -93,6 +93,14 @@ export default function RestyleInputs({ onGenerate }: RestyleInputsProps) {
     "resolution",
   ];
 
+  // Helper function to normalize options (handle both string and object formats)
+  const normalizeOption = (option: string | { value: string; label: string }) => {
+    if (typeof option === "string") {
+      return { value: option, label: option };
+    }
+    return option;
+  };
+
   return (
     <div className="flex h-full flex-col">
       {/* Scrollable Content */}
@@ -186,15 +194,18 @@ export default function RestyleInputs({ onGenerate }: RestyleInputsProps) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="rounded-lg">
-                    {aspectRatioSetting.options.map((option: string) => (
-                      <SelectItem
-                        key={option.toString()}
-                        value={option.toString()}
-                        className="rounded-lg"
-                      >
-                        {option}
-                      </SelectItem>
-                    ))}
+                    {aspectRatioSetting.options.map((option: string | { value: string; label: string }) => {
+                      const normalized = normalizeOption(option);
+                      return (
+                        <SelectItem
+                          key={normalized.value}
+                          value={normalized.value}
+                          className="rounded-lg"
+                        >
+                          {normalized.label}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>

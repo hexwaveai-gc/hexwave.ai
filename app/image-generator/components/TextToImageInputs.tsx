@@ -81,28 +81,36 @@ export default function TextToImageInputs({
     "num_images",
   ];
 
+  // Helper function to normalize options (handle both string and object formats)
+  const normalizeOption = (option: string | { value: string; label: string }) => {
+    if (typeof option === "string") {
+      return { value: option, label: option };
+    }
+    return option;
+  };
+
   return (
     <div className="flex h-full flex-col">
       {/* Scrollable Content - Prompt takes available space */}
       <div className="flex-1 overflow-y-auto px-[var(--spacing-page-padding)] py-[var(--spacing-element-gap)]">
         <div className="flex h-full flex-col space-y-3">
-          <Label className="text-sm font-medium text-gray-900 dark:text-[var(--color-text-1)]">
+          <Label className="text-sm font-medium text-[var(--color-text-1)]">
             Prompt
           </Label>
           <Textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder="Describe the creative ideas for the image..."
-            className="h-full min-h-[200px] flex-1 resize-none rounded-lg border-gray-200 bg-gray-50 p-4 text-base focus:border-blue-500 focus:ring-0 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:text-[var(--color-text-1)] dark:placeholder:text-[var(--color-text-3)]"
+            className="h-full min-h-[200px] flex-1 resize-none rounded-lg border-[var(--color-border-container)] bg-[var(--color-bg-primary)] p-4 text-base text-[var(--color-text-1)] placeholder:text-[var(--color-text-3)] focus:border-[var(--color-theme-2)] focus:ring-0"
           />
         </div>
       </div>
 
       {/* Fixed Footer - Always at bottom */}
-      <div className="border-t border-gray-200 bg-white px-[var(--spacing-page-padding)] py-[var(--spacing-footer-padding)] dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-page)]">
+      <div className="border-t border-[var(--color-border-container)] bg-[var(--color-bg-page)] px-[var(--spacing-page-padding)] py-[var(--spacing-footer-padding)]">
         {/* Model Selection */}
         <div className="mb-4">
-          <Label className="mb-2 block text-sm font-medium text-gray-900 dark:text-[var(--color-text-1)]">
+          <Label className="mb-2 block text-sm font-medium text-[var(--color-text-1)]">
             Model
           </Label>
           <ModelSelectorDialog value={selectedModel} onChange={setSelectedModel} />
@@ -122,19 +130,22 @@ export default function TextToImageInputs({
                   }
                   onValueChange={(val) => handleParamChange("aspect_ratio", val)}
                 >
-                  <SelectTrigger className="h-10 rounded-lg border-gray-200 px-3 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:text-[var(--color-text-1)]">
+                  <SelectTrigger className="h-10 rounded-lg border-[var(--color-border-container)] bg-[var(--color-bg-primary)] text-[var(--color-text-1)] px-3">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="rounded-lg">
-                    {aspectRatioSetting.options.map((option: string) => (
-                      <SelectItem
-                        key={option.toString()}
-                        value={option.toString()}
-                        className="rounded-lg"
-                      >
-                        {option}
-                      </SelectItem>
-                    ))}
+                    {aspectRatioSetting.options.map((option: string | { value: string; label: string }) => {
+                      const normalized = normalizeOption(option);
+                      return (
+                        <SelectItem
+                          key={normalized.value}
+                          value={normalized.value}
+                          className="rounded-lg"
+                        >
+                          {normalized.label}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -150,19 +161,22 @@ export default function TextToImageInputs({
                   }
                   onValueChange={(val) => handleParamChange("resolution", val)}
                 >
-                  <SelectTrigger className="h-10 rounded-lg border-gray-200 px-3 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:text-[var(--color-text-1)]">
+                  <SelectTrigger className="h-10 rounded-lg border-[var(--color-border-container)] bg-[var(--color-bg-primary)] text-[var(--color-text-1)] px-3">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="rounded-lg">
-                    {resolutionSetting.options.map((option: string) => (
-                      <SelectItem
-                        key={option.toString()}
-                        value={option.toString()}
-                        className="rounded-lg"
-                      >
-                        {option}
-                      </SelectItem>
-                    ))}
+                    {resolutionSetting.options.map((option: string | { value: string; label: string }) => {
+                      const normalized = normalizeOption(option);
+                      return (
+                        <SelectItem
+                          key={normalized.value}
+                          value={normalized.value}
+                          className="rounded-lg"
+                        >
+                          {normalized.label}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -180,7 +194,7 @@ export default function TextToImageInputs({
                     handleParamChange("num_images", Number(val))
                   }
                 >
-                  <SelectTrigger className="h-10 rounded-lg border-gray-200 px-3 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:text-[var(--color-text-1)]">
+                  <SelectTrigger className="h-10 rounded-lg border-[var(--color-border-container)] bg-[var(--color-bg-primary)] text-[var(--color-text-1)] px-3">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="rounded-lg">

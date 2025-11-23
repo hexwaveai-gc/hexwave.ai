@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Sparkles,
   FolderOpen,
@@ -17,7 +18,7 @@ interface SidebarItem {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   href: string;
-  active?: boolean;
+  matchPaths?: string[]; // Additional paths that should activate this item
   badge?: string;
 }
 
@@ -27,15 +28,28 @@ const sidebarItems: SidebarItem[] = [
     label: "Explore",
     icon: Sparkles,
     href: "/explore",
-    active: true,
   },
   { id: "assets", label: "Assets", icon: FolderOpen, href: "/assets" },
-  { id: "image", label: "Image", icon: ImageIcon, href: "/image" },
+  { 
+    id: "image", 
+    label: "Image", 
+    icon: ImageIcon, 
+    href: "/image-generator",
+    matchPaths: ["/image-generator", "/image"] // Match both paths
+  },
   { id: "video", label: "Video", icon: Video, href: "/video", badge: "NEW" },
   { id: "tools", label: "All Tools", icon: Wrench, href: "/tools" },
 ];
 
 export default function Sidebar() {
+  const pathname = usePathname();
+
+  const isActive = (item: SidebarItem) => {
+    if (pathname === item.href) return true;
+    if (item.matchPaths?.some(path => pathname.startsWith(path))) return true;
+    return false;
+  };
+
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-19 bg-[#0a0a0a] flex flex-col z-50">
       {/* Logo */}
@@ -64,12 +78,13 @@ export default function Sidebar() {
         <div className="flex flex-col gap-2">
           {sidebarItems.map((item) => {
             const Icon = item.icon;
+            const active = isActive(item);
             return (
               <Link
                 key={item.id}
                 href={item.href}
                 className={`group flex flex-col items-center justify-center gap-1 py-2 rounded-lg transition-colors relative ${
-                  item.active
+                  active
                     ? "bg-white/10 text-[#74FF52]"
                     : "text-white/70 hover:text-white hover:bg-white/5"
                 }`}
@@ -77,7 +92,7 @@ export default function Sidebar() {
               >
                 <Icon
                   className={`w-5 h-5 flex-shrink-0 ${
-                    item.active ? "text-[#74FF52]" : ""
+                    active ? "text-[#74FF52]" : ""
                   }`}
                 />
                 <span className="text-[10px] font-medium text-center leading-tight">

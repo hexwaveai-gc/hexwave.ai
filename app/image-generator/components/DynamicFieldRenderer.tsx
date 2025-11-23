@@ -31,6 +31,14 @@ export default function DynamicFieldRenderer({
     ([key]) => !excludeFields.includes(key)
   );
 
+  // Helper function to normalize options (handle both string and object formats)
+  const normalizeOption = (option: string | { value: string; label: string }) => {
+    if (typeof option === "string") {
+      return { value: option, label: option };
+    }
+    return option;
+  };
+
   if (fieldEntries.length === 0) {
     return null;
   }
@@ -58,15 +66,18 @@ export default function DynamicFieldRenderer({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-lg">
-                  {config.options.map((option) => (
-                    <SelectItem
-                      key={option.toString()}
-                      value={option.toString()}
-                      className="rounded-lg"
-                    >
-                      {option}
-                    </SelectItem>
-                  ))}
+                  {config.options.map((option: any) => {
+                    const normalized = normalizeOption(option);
+                    return (
+                      <SelectItem
+                        key={normalized.value}
+                        value={normalized.value}
+                        className="rounded-lg"
+                      >
+                        {normalized.label}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
               {config.description && (
