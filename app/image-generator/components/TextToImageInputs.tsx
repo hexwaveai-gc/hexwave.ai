@@ -126,7 +126,7 @@ export default function TextToImageInputs({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="rounded-lg">
-                    {aspectRatioSetting.options.map((option) => (
+                    {aspectRatioSetting.options.map((option: string) => (
                       <SelectItem
                         key={option.toString()}
                         value={option.toString()}
@@ -154,7 +154,7 @@ export default function TextToImageInputs({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="rounded-lg">
-                    {resolutionSetting.options.map((option) => (
+                    {resolutionSetting.options.map((option: string) => (
                       <SelectItem
                         key={option.toString()}
                         value={option.toString()}

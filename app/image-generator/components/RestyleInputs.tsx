@@ -186,7 +186,7 @@ export default function RestyleInputs({ onGenerate }: RestyleInputsProps) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="rounded-lg">
-                    {aspectRatioSetting.options.map((option) => (
+                    {aspectRatioSetting.options.map((option: string) => (
                       <SelectItem
                         key={option.toString()}
                         value={option.toString()}
