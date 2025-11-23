@@ -3,23 +3,23 @@ import { Button } from "@/app/components/ui/button";
 
 export default function ToolsSection() {
   return (
-    <article className="mt-4 content-visibility-auto relative text-[#BEC0C7] rounded-3xl px-4 sm:px-6 md:px-8 border border-[#252629] w-full bg-[#15171a] mb-4">
-      <div className="w-full relative border-x border-white/10">
+    <article className="mt-4 content-visibility-auto relative text-[#BEC0C7] dark:text-gray-400 rounded-3xl px-4 sm:px-6 md:px-8 border border-[#252629] dark:border-gray-800 w-full bg-[#15171a] dark:bg-gray-900 mb-4">
+      <div className="w-full relative border-x border-white/10 dark:border-gray-800">
         {/* Decorative dots */}
         <div className="absolute z-0 w-full h-full grid lg:grid-cols-2 gap-8 items-center">
           <section className="z-0 absolute w-full h-full col-span-2 grid grid-cols-2 place-content-between">
-            <div className="bg-[#ffffff50] rounded-full w-1 h-1 my-4 sm:my-6 md:my-8 outline outline-8 outline-[#15171A] -mx-[2.5px]"></div>
-            <div className="bg-[#ffffff50] rounded-full w-1 h-1 my-4 sm:my-6 md:my-8 outline outline-8 outline-[#15171A] -mx-[2px] place-self-end"></div>
-            <div className="bg-[#ffffff50] rounded-full w-1 h-1 my-4 sm:my-6 md:my-8 outline outline-8 outline-[#15171A] -mx-[2.5px]"></div>
-            <div className="bg-[#ffffff50] rounded-full w-1 h-1 my-4 sm:my-6 md:my-8 outline outline-8 outline-[#15171A] -mx-[2px] place-self-end"></div>
+            <div className="bg-[#ffffff50] dark:bg-gray-500 rounded-full w-1 h-1 my-4 sm:my-6 md:my-8 outline outline-8 outline-[#15171A] dark:outline-gray-900 -mx-[2.5px]"></div>
+            <div className="bg-[#ffffff50] dark:bg-gray-500 rounded-full w-1 h-1 my-4 sm:my-6 md:my-8 outline outline-8 outline-[#15171A] dark:outline-gray-900 -mx-[2px] place-self-end"></div>
+            <div className="bg-[#ffffff50] dark:bg-gray-500 rounded-full w-1 h-1 my-4 sm:my-6 md:my-8 outline outline-8 outline-[#15171A] dark:outline-gray-900 -mx-[2.5px]"></div>
+            <div className="bg-[#ffffff50] dark:bg-gray-500 rounded-full w-1 h-1 my-4 sm:my-6 md:my-8 outline outline-8 outline-[#15171A] dark:outline-gray-900 -mx-[2px] place-self-end"></div>
           </section>
         </div>
 
         <div className="relative z-20 mx-auto py-12 lg:py-24">
           <div className="space-y-4">
             {/* Badge */}
-            <div className="mx-auto text-green-200 border border-[#252629] w-fit font-medium text-sm rounded-lg p-[1.5px]">
-              <div className="bg-[#15171a]/50 flex items-center space-x-1 py-1 px-2 rounded-full">
+            <div className="mx-auto text-green-200 dark:text-green-300 border border-[#252629] dark:border-gray-700 w-fit font-medium text-sm rounded-lg p-[1.5px]">
+              <div className="bg-[#15171a]/50 dark:bg-gray-800/50 flex items-center space-x-1 py-1 px-2 rounded-full">
                 <svg
                   width="17"
                   height="16"
@@ -54,19 +54,19 @@ export default function ToolsSection() {
             </div>
 
             {/* Title */}
-            <h2 className="text-white font-euclid text-3xl lg:text-4xl xl:text-5xl text-center w-11/12 max-w-3xl text-pretty mx-auto">
+            <h2 className="text-white dark:text-gray-100 font-euclid text-3xl lg:text-4xl xl:text-5xl text-center w-11/12 max-w-3xl text-pretty mx-auto">
               <span className="cursor-default">Free AI Video Tools</span>
             </h2>
 
             {/* Description */}
-            <p className="text-center w-[90%] max-w-lg mx-auto text-pretty">
+            <p className="text-center w-[90%] max-w-lg mx-auto text-pretty dark:text-gray-400">
               Pick the right tool, provide your input, and you'll create a video in no time - customize it however you want.
             </p>
           </div>
 
           {/* Tools Grid Placeholder */}
-          <div className="diagonal-pattern w-full border-y border-[#ffffff10] my-12">
-            <div className="*:p-2 *:bg-transparent *:h-full border-x border-[#ffffff10] bg-[#15171a] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 w-[90%] md:w-[85%] lg:w-[75%] sm:divide-x divide-y divide-[#ffffff10] mx-auto">
+          <div className="diagonal-pattern w-full border-y border-[#ffffff10] dark:border-gray-800 my-12">
+            <div className="*:p-2 *:bg-transparent *:h-full border-x border-[#ffffff10] dark:border-gray-800 bg-[#15171a] dark:bg-gray-900 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 w-[90%] md:w-[85%] lg:w-[75%] sm:divide-x divide-y divide-[#ffffff10] dark:divide-gray-800 mx-auto">
               {/* Tools grid content would go here */}
             </div>
           </div>
