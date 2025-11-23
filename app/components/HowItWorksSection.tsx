@@ -86,7 +86,7 @@ export default function HowItWorksSection() {
     >
       <div className="space-y-4 mb-14">
         {/* Badge */}
-        <div className="bg-[#1a1c1f] flex items-center space-x-1 py-1.5 px-3.5 mx-auto text-green-200 border border-[#252629] w-fit font-medium text-sm rounded-lg p-[1.5px]">
+        <div className="bg-[#1a1c1f] dark:bg-gray-800 flex items-center space-x-1 py-1.5 px-3.5 mx-auto text-green-200 dark:text-green-300 border border-[#252629] dark:border-gray-700 w-fit font-medium text-sm rounded-lg p-[1.5px]">
           <svg
             width="17"
             height="16"
@@ -115,7 +115,7 @@ export default function HowItWorksSection() {
         </div>
 
         {/* Title */}
-        <h2 className="bg-gradient-to-b from-white to-[#999999] bg-clip-text text-transparent font-euclid text-3xl lg:text-4xl xl:text-5xl text-center w-11/12 max-w-3xl text-pretty mx-auto !leading-tight">
+        <h2 className="bg-gradient-to-b from-white dark:from-gray-100 to-[#999999] dark:to-gray-500 bg-clip-text text-transparent font-euclid text-3xl lg:text-4xl xl:text-5xl text-center w-11/12 max-w-3xl text-pretty mx-auto !leading-tight">
           Four Easy Steps To Create &amp; Share Your Story
         </h2>
       </div>
@@ -127,26 +127,26 @@ export default function HowItWorksSection() {
             <div className="grid lg:grid-cols-11 gap-4">
               {/* Content Card */}
               <div
-                className={`flex flex-col justify-between lg:col-span-5 lg:h-full rounded-3xl bg-[#ffffff06] border border-[#252629] p-10 sm:p-6 lg:p-10 my-auto ${
+                className={`flex flex-col justify-between lg:col-span-5 lg:h-full rounded-3xl bg-[#ffffff06] dark:bg-gray-800/50 border border-[#252629] dark:border-gray-700 p-10 sm:p-6 lg:p-10 my-auto ${
                   step.imageOrder === "first" ? "lg:order-last" : ""
                 }`}
               >
                 {/* Number Badge */}
-                <div className="flex items-center justify-center size-24 rounded-3xl border-2 border-white/5 bg-[#0f1114]">
-                  <span className="bg-gradient-to-b from-white to-[#999999] bg-clip-text text-transparent font-euclid text-4xl lg:text-6xl xl:text-7xl text-center max-w-3xl mx-auto">
+                <div className="flex items-center justify-center size-24 rounded-3xl border-2 border-white/5 dark:border-gray-700 bg-[#0f1114] dark:bg-gray-900">
+                  <span className="bg-gradient-to-b from-white dark:from-gray-100 to-[#999999] dark:to-gray-500 bg-clip-text text-transparent font-euclid text-4xl lg:text-6xl xl:text-7xl text-center max-w-3xl mx-auto">
                     {step.number}
                   </span>
                 </div>
 
                 <div>
-                  <h4 className="capitalize pt-10 bg-gradient-to-b from-white to-[#999999] bg-clip-text text-transparent font-euclid text-2xl lg:text-3xl">
+                  <h4 className="capitalize pt-10 bg-gradient-to-b from-white dark:from-gray-100 to-[#999999] dark:to-gray-500 bg-clip-text text-transparent font-euclid text-2xl lg:text-3xl">
                     {step.title}
                   </h4>
-                  <p className="text-[#BEC0C7] py-4">{step.description}</p>
+                  <p className="text-[#BEC0C7] dark:text-gray-400 py-4">{step.description}</p>
 
                   {/* Bullet Points */}
                   {step.bulletPoints.length > 0 && (
-                    <ul className="*:flex *:items-start *:space-x-3 space-y-5 mt-2 lg:space-y-3 *:text-[#eafff2] *:text-md">
+                    <ul className="*:flex *:items-start *:space-x-3 space-y-5 mt-2 lg:space-y-3 *:text-[#eafff2] dark:*:text-green-100 *:text-md">
                       {step.bulletPoints.map((point, pointIndex) => (
                         <li key={pointIndex}>
                           <div className="min-w-5 min-h-5">
@@ -161,7 +161,7 @@ export default function HowItWorksSection() {
               </div>
 
               {/* Image Card */}
-              <div className="overflow-hidden lg:col-span-6 rounded-3xl bg-[#ffffff06] border border-[#252629] p-1.5">
+              <div className="overflow-hidden lg:col-span-6 rounded-3xl bg-[#ffffff06] dark:bg-gray-800/50 border border-[#252629] dark:border-gray-700 p-1.5">
                 <div className="overflow-hidden relative h-80 sm:h-96 lg:h-full w-full">
                   <Image
                     src={step.image}
@@ -221,9 +221,9 @@ export default function HowItWorksSection() {
             className="w-auto h-auto"
             loading="lazy"
           />
-          <span className="text-white font-medium text-xl">Hexwave</span>
+          <span className="text-white dark:text-gray-100 font-medium text-xl">Hexwave</span>
         </div>
-        <p className="text-neutral-dark font-inter">
+        <p className="text-neutral-dark dark:text-gray-400 font-inter">
           Your shortcut to effortless video storytelling.
         </p>
         <div className="flex flex-col gap-2 items-start justify-start">

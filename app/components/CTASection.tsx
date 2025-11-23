@@ -91,7 +91,7 @@ const MarqueeItem = ({
 
 export default function CTASection() {
   return (
-    <section className="content-visibility-auto overflow-visible font-inter text-neutral-dark mt-24 relative -left-[10%] lg:-left-16 flex w-[120%] lg:w-[110%] justify-center items-center mx-auto">
+    <section className="content-visibility-auto overflow-visible font-inter text-neutral-dark dark:text-gray-400 mt-24 relative -left-[10%] lg:-left-16 flex w-[120%] lg:w-[110%] justify-center items-center mx-auto">
       {/* Left Marquee */}
       <div className="relative w-[10%] lg:w-[50%] mr-auto space-y-2">
         {leftMarquees.map((marquee, index) => (
@@ -108,14 +108,14 @@ export default function CTASection() {
       </div>
 
       {/* Center Content */}
-      <div className="space-y-5 py-4 flex flex-col items-center w-[80%] lg:w-full border-x border-[#1a1b1e]">
-        <h2 className="bg-gradient-to-b from-white to-[#999999] bg-clip-text text-transparent font-euclid text-3xl lg:text-4xl xl:text-5xl text-center w-11/12 max-w-3xl text-pretty mx-auto">
+      <div className="space-y-5 py-4 flex flex-col items-center w-[80%] lg:w-full border-x border-[#1a1b1e] dark:border-gray-800">
+        <h2 className="bg-gradient-to-b from-white dark:from-gray-100 to-[#999999] dark:to-gray-500 bg-clip-text text-transparent font-euclid text-3xl lg:text-4xl xl:text-5xl text-center w-11/12 max-w-3xl text-pretty mx-auto">
           Your Stories Deserve More Views
         </h2>
-        <p className="text-center w-[95%] mx-auto text-balance text-[#BEC0C7]">
+        <p className="text-center w-[95%] mx-auto text-balance text-[#BEC0C7] dark:text-gray-400">
           Over 240,900 creators are already turning their ideas into videos that actually get noticed - and they're doing it in minutes, not hours.
         </p>
-        <p className="text-center w-[95%] mx-auto text-balance text-[#BEC0C7]">
+        <p className="text-center w-[95%] mx-auto text-balance text-[#BEC0C7] dark:text-gray-400">
           Join them today!
         </p>
         <div className="flex flex-col gap-2 items-center">
@@ -124,7 +124,7 @@ export default function CTASection() {
               Coming Soon
             </Button>
           </div>
-          <div className="text-white/60 text-xs italic">No credit card required</div>
+          <div className="text-white/60 dark:text-gray-400 text-xs italic">No credit card required</div>
         </div>
       </div>
 

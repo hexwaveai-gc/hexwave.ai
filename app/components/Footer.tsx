@@ -69,25 +69,25 @@ const freeToolsLinks2 = [
 
 export default function Footer() {
   return (
-    <footer className="content-visibility-auto font-inter bg-[#15171A] border-t border-[#252629] w-full">
+    <footer className="content-visibility-auto font-inter bg-[#15171A] dark:bg-gray-950 border-t border-[#252629] dark:border-gray-800 w-full">
       <section className="mx-auto max-w-screen-2xl py-16 px-4 sm:px-6 md:px-16 text-sm space-y-8">
         {/* Links Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 lg:gap-0 lg:grid-cols-6 *:text-[#A8A9B0] mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 lg:gap-0 lg:grid-cols-6 *:text-[#A8A9B0] dark:*:text-gray-400 mb-16">
           {/* Solutions & Products */}
           <div className="md:col-span-2 space-y-3">
             <div className="flex flex-col space-y-4">
-              <h3 className="text-[#feffff] font-semibold mb-2 text-base">Solutions</h3>
+              <h3 className="text-[#feffff] dark:text-gray-100 font-semibold mb-2 text-base">Solutions</h3>
               {solutionsLinks.map((link, index) => (
                 <span
                   key={index}
-                  className="hover:text-slate-200 cursor-default"
+                  className="hover:text-slate-200 dark:hover:text-gray-200 cursor-default"
                 >
                   {link.text}
                 </span>
               ))}
-              <h3 className="text-[#feffff] font-semibold pt-4 pb-2 text-base">Products</h3>
+              <h3 className="text-[#feffff] dark:text-gray-100 font-semibold pt-4 pb-2 text-base">Products</h3>
               {productsLinks.map((link, index) => (
-                <span key={index} className="hover:text-slate-200 cursor-default">
+                <span key={index} className="hover:text-slate-200 dark:hover:text-gray-200 cursor-default">
                   {link.text}
                 </span>
               ))}
@@ -96,11 +96,11 @@ export default function Footer() {
 
           {/* Free AI Video Tools Column 1 */}
           <div className="lg:col-span-2 flex flex-col space-y-4 items-start">
-            <h3 className="text-[#feffff] font-semibold mb-2 text-base">
+            <h3 className="text-[#feffff] dark:text-gray-100 font-semibold mb-2 text-base">
               <span className="cursor-default">Free AI Video Tools</span>
             </h3>
             {freeToolsLinks1.map((link, index) => (
-              <span key={index} className="hover:text-slate-200 cursor-default">
+              <span key={index} className="hover:text-slate-200 dark:hover:text-gray-200 cursor-default">
                 {link.text}
               </span>
             ))}
@@ -109,7 +109,7 @@ export default function Footer() {
           {/* Free AI Video Tools Column 2 */}
           <div className="lg:col-span-2 flex flex-col space-y-4 items-start">
             {freeToolsLinks2.map((link, index) => (
-              <span key={index} className="hover:text-slate-200 cursor-default">
+              <span key={index} className="hover:text-slate-200 dark:hover:text-gray-200 cursor-default">
                 {link.text}
               </span>
             ))}
@@ -117,7 +117,7 @@ export default function Footer() {
         </div>
 
         {/* Divider */}
-        <div className="h-px bg-gradient-to-tr from-white/0 from-25% via-white/25 to-white/0 to-75%"></div>
+        <div className="h-px bg-gradient-to-tr from-white/0 from-25% via-white/25 dark:via-gray-500/25 to-white/0 to-75%"></div>
 
         {/* Bottom Section */}
         <div className="flex flex-col-reverse md:flex-row justify-between items-center">
@@ -131,14 +131,14 @@ export default function Footer() {
                 className="w-auto h-auto"
                 loading="lazy"
               />
-              <span className="text-white font-medium text-xl">Hexwave</span>
+              <span className="text-white dark:text-gray-100 font-medium text-xl">Hexwave</span>
             </div>
-            <p className="text-neutral-dark">
+            <p className="text-neutral-dark dark:text-gray-400">
               Made with 💚
               <span className="underline ml-1 cursor-default">Tibo</span>
             </p>
           </div>
-          <div className="*:text-[#BEFFD6] *:underline *:underline-offset-2 space-x-3">
+          <div className="*:text-[#BEFFD6] dark:*:text-green-400 *:underline *:underline-offset-2 space-x-3">
             <span className="cursor-default">Terms of Service</span>
             <span className="cursor-default">Privacy Policy</span>
           </div>
