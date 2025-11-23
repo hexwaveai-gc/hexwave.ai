@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../components/ui/select";
-import { ModelSettings } from "../lib/s/runwaygen4/settings";
+import { ModelSettings } from "../lib/modelRegistry";
 
 interface DynamicFieldRendererProps {
   settings: ModelSettings;

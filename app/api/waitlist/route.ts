@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import { LoopsClient } from "loops";
 
-const loops = new LoopsClient(process.env.LOOPS_API_KEY as string);
+// Lazy initialization - only create client when API key is available
+const getLoopsClient = () => {
+  const apiKey = process.env.LOOPS_API_KEY;
+  if (!apiKey) {
+    return null;
+  }
+  return new LoopsClient(apiKey);
+};
 
 export async function POST(request: Request) {
   try {
@@ -26,7 +33,8 @@ export async function POST(request: Request) {
 
     // Add contact to Loops waitlist
     try {
-      if (!process.env.LOOPS_API_KEY) {
+      const loops = getLoopsClient();
+      if (!loops) {
         console.warn("LOOPS_API_KEY not configured, skipping Loops integration");
       } else {
         // Create or update contact in Loops

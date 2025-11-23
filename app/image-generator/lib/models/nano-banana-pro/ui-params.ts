@@ -4,7 +4,7 @@
  * Single source of truth for frontend parameter definitions
  */
 
-import { ToolParameter } from "@/config/types";
+import { ToolParameter } from "../../config-types";
 
 /**
  * Nano Banana Pro aspect ratio parameter configuration
