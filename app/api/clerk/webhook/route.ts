@@ -12,7 +12,7 @@ const webhookSecret = process.env.CLERK_USER_WEBHOOK_SECRET || ``;
 const MAX_RETRIES = 3;
 // export const maxDuration = 800;
 
-export const POST = (async (request: Request) => {
+export const POST = async (request: Request) => {
   try {
     try {
       const payload = await validateRequest(request);
@@ -60,7 +60,7 @@ export const POST = (async (request: Request) => {
       { status: 500 }
     );
   }
-});
+};
 
 async function handleUserCreation(payload: WebhookEvent) {
   const userData = getUserDataFromEvent(payload);
