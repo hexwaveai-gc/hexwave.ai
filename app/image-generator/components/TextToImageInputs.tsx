@@ -52,10 +52,11 @@ const HINTS_POOL = [
 export default function TextToImageInputs({
   onGenerate,
 }: TextToImageInputsProps) {
-  const [selectedModel, setSelectedModel] = useState("runwaygen4");
+  const [selectedModel, setSelectedModel] = useState("gemini-25-flash-image");
   const [prompt, setPrompt] = useState("");
   const [modelParams, setModelParams] = useState<Record<string, any>>({});
   const [hintsIndex, setHintsIndex] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const model = getModelById(selectedModel);
   const settings = model?.settings || {};
@@ -116,9 +117,13 @@ export default function TextToImageInputs({
     setPrompt(hintPrompt);
   };
 
-  // Handle refresh - change to next set of hints
+  // Handle refresh - change to next set of hints with animation
   const handleRefreshHints = () => {
-    setHintsIndex((prev) => (prev + 1) % HINTS_POOL.length);
+    setIsRefreshing(true);
+    setTimeout(() => {
+      setHintsIndex((prev) => (prev + 1) % HINTS_POOL.length);
+      setIsRefreshing(false);
+    }, 500);
   };
 
   // Helper function to normalize options (handle both string and object formats)
@@ -168,8 +173,9 @@ export default function TextToImageInputs({
                   className="ml-auto p-2 rounded-lg text-[var(--color-text-2)] hover:text-[var(--color-text-1)] hover:bg-[var(--color-bg-secondary)] transition-colors"
                   type="button"
                   aria-label="Refresh hints"
+                  disabled={isRefreshing}
                 >
-                  <RefreshCw className="h-4 w-4" />
+                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
                 </button>
               </div>
             </div>

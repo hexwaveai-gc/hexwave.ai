@@ -125,7 +125,7 @@ export default function ModelSelectorDialog({
         </button>
       </DialogTrigger>
 
-      <DialogContent className="max-h-[85vh] max-w-4xl gap-0 overflow-hidden rounded-[18px] p-0 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-dialog)] focus-visible:ring-gray-600 dark:focus-visible:ring-[var(--color-border-component)]">
+      <DialogContent className="max-h-[95vh] max-w-6xl w-full gap-0 overflow-hidden rounded-[18px] p-0 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-dialog)] focus-visible:ring-gray-600 dark:focus-visible:ring-[var(--color-border-component)]">
         <DialogHeader className="border-b border-gray-200 px-6 py-4 dark:border-[var(--color-border-container)]">
           <DialogTitle className="text-2xl font-semibold text-gray-900 dark:text-[var(--color-text-1)]">
             Select AI Model
@@ -139,20 +139,20 @@ export default function ModelSelectorDialog({
         <div className="border-b border-gray-200 px-6 py-4 dark:border-[var(--color-border-container)]">
           {/* Search Bar */}
           <div className="relative mb-3">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-[var(--color-text-3)]" />
+            <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 dark:text-[var(--color-text-3)]" />
             <Input
               type="text"
               placeholder="Search models..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-10 rounded-lg dark:bg-[var(--color-bg-primary)] dark:border-[var(--color-border-container)] dark:text-[var(--color-text-1)] dark:placeholder:text-[var(--color-text-3)]"
+              className="h-12 w-full rounded-xl border-0 bg-gray-100 pl-12 pr-12 text-base font-medium shadow-inner focus-visible:ring-1 focus-visible:ring-gray-400 dark:bg-[var(--color-bg-secondary)] dark:text-[var(--color-text-1)] dark:placeholder:text-[var(--color-text-3)] dark:focus-visible:ring-[var(--color-border-component)]"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-[var(--color-text-3)] dark:hover:text-[var(--color-text-2)]"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-[var(--color-text-3)] dark:hover:text-[var(--color-text-2)]"
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
               </button>
             )}
           </div>
@@ -177,7 +177,7 @@ export default function ModelSelectorDialog({
         </div>
 
         {/* Scrollable Model Grid */}
-        <div className="max-h-[calc(85vh-240px)] overflow-y-auto px-6 py-4">
+        <div className="max-h-[calc(95vh-240px)] overflow-y-auto px-6 py-4">
           {filteredModels.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <p className="text-sm text-gray-500 dark:text-[var(--color-text-3)]">
@@ -196,33 +196,41 @@ export default function ModelSelectorDialog({
                       setOpen(false);
                     }}
                     className={cn(
-                      "group relative flex flex-col overflow-hidden rounded-[18px] border-2 text-left transition-all",
+                      "group relative flex flex-col overflow-hidden rounded-3xl border-2 text-left transition-all hover:shadow-lg",
                       isSelected
                         ? "border-gray-600 bg-gray-900 dark:border-[var(--color-border-component)] dark:bg-[var(--color-bg-secondary)]"
-                        : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-md dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:hover:border-[var(--color-border-component)] dark:hover:bg-[var(--color-bg-secondary)]"
+                        : "border-gray-200 bg-white hover:border-gray-300 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:hover:border-[var(--color-border-component)] dark:hover:bg-[var(--color-bg-secondary)]"
                     )}
                   >
-                    {/* Preview Image */}
+                    {/* Preview Image - Main Focus */}
                     {model.previewImage && (
-                      <div className="relative h-20 w-full overflow-hidden bg-gray-100 dark:bg-[var(--color-bg-page)]">
+                      <div className="relative aspect-[3/2] w-full overflow-hidden bg-gray-100 dark:bg-[var(--color-bg-page)]">
                         <Image
                           src={model.previewImage}
                           alt={model.name}
                           fill
-                          className="object-cover transition-transform group-hover:scale-105"
+                          className="object-cover transition-transform duration-500 group-hover:scale-105"
                         />
-                        {/* Overlay on hover */}
-                        <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/10" />
+                        {/* Gradient Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60" />
+                        
+                        {/* Featured Badge on Image */}
+                        {model.featured && (
+                          <div className="absolute left-2 top-2">
+                            <span className="rounded-full bg-yellow-500/90 px-1.5 py-0.5 text-[9px] font-bold text-white backdrop-blur-sm shadow-sm">
+                              FEATURED
+                            </span>
+                          </div>
+                        )}
                       </div>
                     )}
 
-                    {/* Model Info */}
-                    <div className="flex flex-1 flex-col gap-1.5 p-3">
-                      {/* Header with Logo and Name */}
-                      <div className="flex items-center justify-between gap-2">
+                    {/* Model Info Footer */}
+                    <div className="flex flex-col gap-1.5 p-3">
+                      <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-1.5 overflow-hidden">
                           {model.logo && (
-                            <div className="relative h-5 w-5 shrink-0 overflow-hidden rounded bg-white p-0.5">
+                            <div className="relative h-4 w-4 shrink-0 overflow-hidden rounded bg-white p-0.5 shadow-sm">
                               <Image
                                 src={model.logo}
                                 alt={model.name}
@@ -231,39 +239,23 @@ export default function ModelSelectorDialog({
                               />
                             </div>
                           )}
-                          <span className="truncate text-xs font-semibold text-gray-900 dark:text-[var(--color-text-1)]">
+                          <span className="truncate text-xs font-bold text-gray-900 dark:text-[var(--color-text-1)]">
                             {model.name}
                           </span>
                         </div>
+                        
                         {isSelected && (
-                          <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-gray-600 dark:bg-[var(--color-border-component)]">
-                            <Check className="h-2.5 w-2.5 text-white" />
+                          <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-500 shadow-sm dark:bg-blue-600">
+                            <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />
                           </div>
                         )}
                       </div>
 
-                      {/* Category Badge */}
-                      <div className="text-[10px] font-medium text-gray-500 dark:text-[var(--color-text-3)]">
-                        {model.category}
-                      </div>
-
-                      {/* Description */}
-                      <p className="line-clamp-2 text-[10px] leading-relaxed text-gray-600 dark:text-[var(--color-text-3)]">
-                        {model.description}
-                      </p>
-
-                      {/* Featured/Credits Badge */}
-                      <div className="flex items-center gap-1.5">
-                        {model.featured && (
-                          <span className="rounded-full bg-yellow-100 px-1.5 py-0.5 text-[9px] font-medium text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
-                            Featured
-                          </span>
-                        )}
-                        {model.credits_per_generation && (
-                          <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] font-medium text-gray-600 dark:bg-[var(--color-bg-tertiary)] dark:text-[var(--color-text-2)]">
-                            {model.credits_per_generation} credit{model.credits_per_generation > 1 ? 's' : ''}
-                          </span>
-                        )}
+                      {/* Credits Info */}
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] font-medium text-gray-600 dark:bg-[var(--color-bg-tertiary)] dark:text-[var(--color-text-2)]">
+                          ⚡ {model.credits_per_generation || 1} credit{model.credits_per_generation !== 1 ? 's' : ''}
+                        </span>
                       </div>
                     </div>
                   </button>
