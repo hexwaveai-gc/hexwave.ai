@@ -146,7 +146,7 @@ export default function RestyleInputs({ onGenerate }: RestyleInputsProps) {
           {/* Style Prompt */}
           <div className="space-y-3">
             <Label className="text-sm font-medium text-gray-900 dark:text-[var(--color-text-1)]">
-              Style Prompt <span className="text-red-500">*</span>
+              Style Prompt
             </Label>
             <Textarea
               value={stylePrompt}

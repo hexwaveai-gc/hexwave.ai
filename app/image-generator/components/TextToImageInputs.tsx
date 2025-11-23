@@ -87,7 +87,7 @@ export default function TextToImageInputs({
       <div className="flex-1 overflow-y-auto px-[var(--spacing-page-padding)] py-[var(--spacing-element-gap)]">
         <div className="flex h-full flex-col space-y-3">
           <Label className="text-sm font-medium text-gray-900 dark:text-[var(--color-text-1)]">
-            Prompt <span className="text-red-500">*</span>
+            Prompt
           </Label>
           <Textarea
             value={prompt}

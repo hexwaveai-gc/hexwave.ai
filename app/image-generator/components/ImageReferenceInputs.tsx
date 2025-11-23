@@ -160,7 +160,7 @@ export default function ImageReferenceInputs({
           {/* Prompt Section */}
           <div className="space-y-3">
             <Label className="text-sm font-medium text-gray-900 dark:text-[var(--color-text-1)]">
-              Prompt <span className="text-red-500">*</span>
+              Prompt
             </Label>
             <Textarea
               value={prompt}
