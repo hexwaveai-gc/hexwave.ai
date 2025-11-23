@@ -60,7 +60,7 @@ export default function GeneratorLayout({
             minSize={minLeftSize}
             className="flex flex-col"
           >
-            <div className="h-full overflow-y-auto border-r border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
+            <div className="flex h-full flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
               {inputPanel}
             </div>
           </ResizablePanel>
@@ -87,7 +87,7 @@ export default function GeneratorLayout({
       {/* Mobile: Stacked vertically */}
       <div className="flex h-full flex-col md:hidden">
         {/* Input Section */}
-        <div className="flex-1 overflow-y-auto border-b border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
+        <div className="flex-1 border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
           {inputPanel}
         </div>
 

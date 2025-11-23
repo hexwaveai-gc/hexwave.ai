@@ -1,8 +1,8 @@
 "use client";
 
 import { ReactNode } from "react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
 
 export interface TabConfig {
   /** Unique identifier for the tab */
@@ -48,42 +48,34 @@ export default function GeneratorTabs({
     <Tabs
       defaultValue={defaultValue}
       onValueChange={onTabChange}
-      className={cn("w-full", className)}
+      className={cn("flex h-full w-full flex-col", className)}
     >
       {/* Tab List */}
-      <TabsList
-        className={cn(
-          "mb-6 grid w-full rounded-[18px] bg-gray-100 p-1 dark:bg-gray-800",
-          tabs.length === 3 && "grid-cols-3"
-        )}
-      >
-        {tabs.map((tab) => (
-          <TabsTrigger
-            key={tab.id}
-            value={tab.id}
-            className={cn(
-              "inline-flex items-center justify-center gap-2 rounded-[18px] px-3 py-2 text-sm font-medium transition-all",
-              "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100",
-              "data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm",
-              "dark:data-[state=active]:bg-gray-900 dark:data-[state=active]:text-gray-50"
-            )}
-          >
-            {tab.icon && <span className="h-4 w-4">{tab.icon}</span>}
-            <span>{tab.label}</span>
-          </TabsTrigger>
-        ))}
-      </TabsList>
+      <div className="px-6 pt-6">
+        <TabsList className="flex h-auto w-full justify-start gap-6 border-b border-gray-200 bg-transparent p-0 dark:border-gray-700">
+          {tabs.map((tab) => (
+            <TabsTrigger
+              key={tab.id}
+              value={tab.id}
+              className={cn(
+                "relative h-9 rounded-none border-b-2 border-transparent bg-transparent px-1 pb-3 pt-2 font-medium text-gray-500 shadow-none transition-none data-[state=active]:border-gray-900 data-[state=active]:text-gray-900 data-[state=active]:shadow-none dark:text-gray-400 dark:data-[state=active]:border-gray-100 dark:data-[state=active]:text-gray-100"
+              )}
+            >
+              <div className="flex items-center gap-2">
+                {tab.icon && <span className="h-4 w-4">{tab.icon}</span>}
+                <span>{tab.label}</span>
+              </div>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </div>
 
       {/* Tab Content */}
       {tabs.map((tab) => (
         <TabsContent
           key={tab.id}
           value={tab.id}
-          className={cn(
-            "mt-0 transition-all duration-200",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-950 focus-visible:ring-offset-2",
-            "dark:focus-visible:ring-gray-300"
-          )}
+          className="flex-1 overflow-hidden data-[state=inactive]:hidden"
         >
           {tab.content}
         </TabsContent>
@@ -91,4 +83,3 @@ export default function GeneratorTabs({
     </Tabs>
   );
 }
-

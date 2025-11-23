@@ -5,9 +5,16 @@ import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import { Wand2, Upload, X } from "lucide-react";
+import { Upload, X, Plus } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
 import ModelSelector from "./ModelSelector";
-import DynamicFieldRenderer from "./DynamicFieldRenderer";
+import AdvancedSettingsDialog from "./AdvancedSettingsDialog";
 import { getModelById } from "../lib/modelRegistry";
 
 interface ImageReferenceInputsProps {
@@ -64,120 +71,149 @@ export default function ImageReferenceInputs({
   const isGenerateDisabled =
     !prompt.trim() || !selectedModel || referenceImages.length === 0;
 
+  // Extract specific settings for the footer
+  const aspectRatioSetting = settings.aspect_ratio;
+  const resolutionSetting = settings.resolution;
+  const numImagesSetting = settings.num_images;
+
+  // Fields to exclude from Advanced Dialog
+  const excludedFields = [
+    "prompt",
+    "reference_images",
+    "aspect_ratio",
+    "resolution",
+    "num_images",
+  ];
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          Image Reference
-        </h3>
-        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-          Generate images using reference images
-        </p>
+    <div className="flex h-full flex-col">
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="space-y-6">
+          {/* Image Upload Section */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                Reference Images
+              </Label>
+              <span className="text-xs text-gray-500">
+                {referenceImages.length}/{maxFiles}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              {referenceImages.map((file, index) => (
+                <div
+                  key={index}
+                  className="group relative aspect-square overflow-hidden rounded-[18px] border border-gray-200 dark:border-gray-700"
+                >
+                  <img
+                    src={URL.createObjectURL(file)}
+                    alt={`Reference ${index + 1}`}
+                    className="h-full w-full object-cover"
+                  />
+                  <button
+                    onClick={() => handleRemoveImage(index)}
+                    className="absolute right-1 top-1 rounded-full bg-black/50 p-1 text-white opacity-0 backdrop-blur-sm transition-opacity hover:bg-black/70 group-hover:opacity-100"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+
+              {referenceImages.length < maxFiles && (
+                <div className="aspect-square">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageUpload}
+                    disabled={referenceImages.length >= maxFiles}
+                    className="hidden"
+                    id="ref-image-upload"
+                  />
+                  <label
+                    htmlFor="ref-image-upload"
+                    className="flex h-full w-full cursor-pointer flex-col items-center justify-center rounded-[18px] border-2 border-dashed border-gray-200 bg-gray-50 text-gray-400 transition-colors hover:border-gray-300 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600 dark:hover:bg-gray-800/70"
+                  >
+                    <Plus className="h-6 w-6" />
+                    <span className="mt-1 text-[10px] font-medium">Add</span>
+                  </label>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Prompt Section */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              Prompt <span className="text-red-500">*</span>
+            </Label>
+            <Textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Describe how you want to use the reference images..."
+              className="min-h-[120px] w-full resize-none rounded-[18px] border-gray-200 bg-gray-50 p-4 text-base focus:border-blue-500 focus:ring-0 dark:border-gray-700 dark:bg-gray-800"
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Core Field: Model Selector */}
-      <ModelSelector value={selectedModel} onChange={setSelectedModel} />
-
-      {/* Core Field: Image Upload */}
-      <div className="space-y-3">
-        <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-          Reference Images <span className="text-red-500">*</span>
-        </Label>
-
-        {/* Upload Area */}
-        <div className="rounded-[18px] border-2 border-dashed border-gray-300 bg-gray-50 p-6 text-center transition-colors hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:hover:border-gray-500">
-          <Input
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handleImageUpload}
-            disabled={referenceImages.length >= maxFiles}
-            className="hidden"
-            id="image-upload"
-          />
-          <label
-            htmlFor="image-upload"
-            className={`flex cursor-pointer flex-col items-center ${
-              referenceImages.length >= maxFiles
-                ? "cursor-not-allowed opacity-50"
-                : ""
-            }`}
-          >
-            <Upload className="mb-2 h-10 w-10 text-gray-400" />
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Click to upload images
-            </span>
-            <span className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Up to {maxFiles} images • PNG, JPG, WebP
-            </span>
-          </label>
+      {/* Fixed Footer */}
+      <div className="border-t border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
+        {/* Model Selection */}
+        <div className="mb-4">
+          <ModelSelector value={selectedModel} onChange={setSelectedModel} />
         </div>
 
-        {/* Image Previews */}
-        {referenceImages.length > 0 && (
-          <div className="grid grid-cols-3 gap-3">
-            {referenceImages.map((file, index) => (
-              <div
-                key={index}
-                className="group relative aspect-square overflow-hidden rounded-[18px] border border-gray-200 dark:border-gray-700"
+        {/* Controls Row */}
+        <div className="flex items-center gap-3">
+          {/* Aspect Ratio Dropdown */}
+          {aspectRatioSetting && aspectRatioSetting.options && (
+            <div className="w-24 shrink-0">
+              <Select
+                value={
+                  (modelParams.aspect_ratio as string) ||
+                  aspectRatioSetting.default
+                }
+                onValueChange={(val) => handleParamChange("aspect_ratio", val)}
               >
-                <img
-                  src={URL.createObjectURL(file)}
-                  alt={`Reference ${index + 1}`}
-                  className="h-full w-full object-cover"
-                />
-                <button
-                  onClick={() => handleRemoveImage(index)}
-                  className="absolute right-2 top-2 rounded-full bg-red-500 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+                <SelectTrigger className="h-10 rounded-[18px] border-gray-200 px-3 dark:border-gray-700">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-[18px]">
+                  {aspectRatioSetting.options.map((option) => (
+                    <SelectItem
+                      key={option.toString()}
+                      value={option.toString()}
+                      className="rounded-[18px]"
+                    >
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          {settings.reference_images?.description ||
-            "Upload reference images to guide generation"}
-        </p>
+          {/* Advanced Settings */}
+          <AdvancedSettingsDialog
+            settings={settings}
+            values={modelParams}
+            onChange={handleParamChange}
+            excludeFields={excludedFields}
+          />
+
+          {/* Generate Button */}
+          <Button
+            onClick={handleGenerate}
+            disabled={isGenerateDisabled}
+            className="h-10 flex-1 rounded-[18px] bg-green-500 font-semibold text-white hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700"
+          >
+            Generate
+          </Button>
+        </div>
       </div>
-
-      {/* Core Field: Prompt */}
-      <div className="space-y-3">
-        <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-          Prompt <span className="text-red-500">*</span>
-        </Label>
-        <Textarea
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder="Describe how you want to use the reference images..."
-          className="min-h-[100px] rounded-[18px] resize-none"
-        />
-      </div>
-
-      {/* Dynamic Model-Specific Fields */}
-      {model && (
-        <DynamicFieldRenderer
-          settings={settings}
-          values={modelParams}
-          onChange={handleParamChange}
-          excludeFields={["prompt"]}
-        />
-      )}
-
-      {/* Generate Button */}
-      <Button
-        onClick={handleGenerate}
-        disabled={isGenerateDisabled}
-        className="w-full rounded-[18px] bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
-        size="lg"
-      >
-        <Wand2 className="mr-2 h-5 w-5" />
-        Generate Image
-      </Button>
     </div>
   );
 }
-

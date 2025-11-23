@@ -5,9 +5,16 @@ import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import { Wand2, Upload, X } from "lucide-react";
+import { Upload, X } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
 import ModelSelector from "./ModelSelector";
-import DynamicFieldRenderer from "./DynamicFieldRenderer";
+import AdvancedSettingsDialog from "./AdvancedSettingsDialog";
 import { getModelById } from "../lib/modelRegistry";
 
 interface RestyleInputsProps {
@@ -60,107 +67,169 @@ export default function RestyleInputs({ onGenerate }: RestyleInputsProps) {
   const isGenerateDisabled =
     !stylePrompt.trim() || !selectedModel || !originalImage;
 
+  // Extract specific settings for the footer
+  const aspectRatioSetting = settings.aspect_ratio;
+  const numImagesSetting = settings.num_images;
+
+  // Fields to exclude from Advanced Dialog
+  const excludedFields = [
+    "prompt", // not used here but good to exclude if present
+    "reference_images",
+    "aspect_ratio",
+    "num_images",
+    "resolution",
+  ];
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          Restyle
-        </h3>
-        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-          Transform an existing image with a new style
-        </p>
-      </div>
+    <div className="flex h-full flex-col">
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="space-y-6">
+          {/* Original Image Upload */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              Original Image <span className="text-red-500">*</span>
+            </Label>
 
-      {/* Core Field: Model Selector */}
-      <ModelSelector value={selectedModel} onChange={setSelectedModel} />
-
-      {/* Core Field: Original Image Upload */}
-      <div className="space-y-3">
-        <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-          Original Image <span className="text-red-500">*</span>
-        </Label>
-
-        {!originalImage ? (
-          <div className="rounded-[18px] border-2 border-dashed border-gray-300 bg-gray-50 p-8 text-center transition-colors hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:hover:border-gray-500">
-            <Input
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              className="hidden"
-              id="original-image-upload"
-            />
-            <label
-              htmlFor="original-image-upload"
-              className="flex cursor-pointer flex-col items-center"
-            >
-              <Upload className="mb-2 h-12 w-12 text-gray-400" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Click to upload original image
-              </span>
-              <span className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                PNG, JPG, WebP up to 10MB
-              </span>
-            </label>
+            {!originalImage ? (
+              <div className="rounded-[18px] border-2 border-dashed border-gray-200 bg-gray-50 p-8 text-center transition-colors hover:border-gray-300 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600 dark:hover:bg-gray-800/70">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                  id="original-image-upload"
+                />
+                <label
+                  htmlFor="original-image-upload"
+                  className="flex cursor-pointer flex-col items-center"
+                >
+                  <Upload className="mb-2 h-10 w-10 text-gray-400" />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Upload Image
+                  </span>
+                  <span className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    PNG, JPG, WebP up to 10MB
+                  </span>
+                </label>
+              </div>
+            ) : (
+              <div className="group relative overflow-hidden rounded-[18px] border border-gray-200 dark:border-gray-700">
+                <img
+                  src={URL.createObjectURL(originalImage)}
+                  alt="Original"
+                  className="max-h-[300px] w-full object-contain bg-gray-50 dark:bg-gray-900"
+                />
+                <button
+                  onClick={handleRemoveImage}
+                  className="absolute right-3 top-3 rounded-full bg-black/50 p-2 text-white opacity-0 backdrop-blur-sm transition-opacity hover:bg-black/70 group-hover:opacity-100"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="group relative overflow-hidden rounded-[18px] border border-gray-200 dark:border-gray-700">
-            <img
-              src={URL.createObjectURL(originalImage)}
-              alt="Original"
-              className="h-auto w-full object-contain"
+
+          {/* Style Prompt */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+              Style Prompt <span className="text-red-500">*</span>
+            </Label>
+            <Textarea
+              value={stylePrompt}
+              onChange={(e) => setStylePrompt(e.target.value)}
+              placeholder="Describe the style you want to apply..."
+              className="min-h-[120px] w-full resize-none rounded-[18px] border-gray-200 bg-gray-50 p-4 text-base focus:border-blue-500 focus:ring-0 dark:border-gray-700 dark:bg-gray-800"
             />
-            <button
-              onClick={handleRemoveImage}
-              className="absolute right-3 top-3 rounded-full bg-red-500 p-2 text-white opacity-0 transition-opacity group-hover:opacity-100"
-            >
-              <X className="h-5 w-5" />
-            </button>
           </div>
-        )}
-
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          Upload the image you want to restyle
-        </p>
+        </div>
       </div>
 
-      {/* Core Field: Style Prompt */}
-      <div className="space-y-3">
-        <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-          Style Prompt <span className="text-red-500">*</span>
-        </Label>
-        <Textarea
-          value={stylePrompt}
-          onChange={(e) => setStylePrompt(e.target.value)}
-          placeholder="Describe the style you want to apply (e.g., 'watercolor painting', 'cyberpunk style', 'vintage photograph')..."
-          className="min-h-[100px] rounded-[18px] resize-none"
-        />
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          Describe how you want to transform the original image
-        </p>
+      {/* Fixed Footer */}
+      <div className="border-t border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
+        {/* Model Selection */}
+        <div className="mb-4">
+          <ModelSelector value={selectedModel} onChange={setSelectedModel} />
+        </div>
+
+        {/* Controls Row */}
+        <div className="flex items-center gap-3">
+          {/* Aspect Ratio Dropdown */}
+          {aspectRatioSetting && aspectRatioSetting.options && (
+            <div className="w-24 shrink-0">
+              <Select
+                value={
+                  (modelParams.aspect_ratio as string) ||
+                  aspectRatioSetting.default
+                }
+                onValueChange={(val) => handleParamChange("aspect_ratio", val)}
+              >
+                <SelectTrigger className="h-10 rounded-[18px] border-gray-200 px-3 dark:border-gray-700">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-[18px]">
+                  {aspectRatioSetting.options.map((option) => (
+                    <SelectItem
+                      key={option.toString()}
+                      value={option.toString()}
+                      className="rounded-[18px]"
+                    >
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Num Images (Flux) */}
+          {numImagesSetting && (
+            <div className="w-24 shrink-0">
+              <Select
+                value={
+                  (modelParams.num_images as string) ||
+                  numImagesSetting.default?.toString()
+                }
+                onValueChange={(val) =>
+                  handleParamChange("num_images", Number(val))
+                }
+              >
+                <SelectTrigger className="h-10 rounded-[18px] border-gray-200 px-3 dark:border-gray-700">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-[18px]">
+                  {[1, 2, 3, 4].map((num) => (
+                    <SelectItem
+                      key={num}
+                      value={num.toString()}
+                      className="rounded-[18px]"
+                    >
+                      {num} {num === 1 ? "Image" : "Images"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Advanced Settings */}
+          <AdvancedSettingsDialog
+            settings={settings}
+            values={modelParams}
+            onChange={handleParamChange}
+            excludeFields={excludedFields}
+          />
+
+          {/* Generate Button */}
+          <Button
+            onClick={handleGenerate}
+            disabled={isGenerateDisabled}
+            className="h-10 flex-1 rounded-[18px] bg-green-500 font-semibold text-white hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700"
+          >
+            Generate
+          </Button>
+        </div>
       </div>
-
-      {/* Dynamic Model-Specific Fields */}
-      {model && (
-        <DynamicFieldRenderer
-          settings={settings}
-          values={modelParams}
-          onChange={handleParamChange}
-          excludeFields={["prompt", "reference_images"]}
-        />
-      )}
-
-      {/* Generate Button */}
-      <Button
-        onClick={handleGenerate}
-        disabled={isGenerateDisabled}
-        className="w-full rounded-[18px] bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
-        size="lg"
-      >
-        <Wand2 className="mr-2 h-5 w-5" />
-        Restyle Image
-      </Button>
     </div>
   );
 }
-

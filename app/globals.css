@@ -42,13 +42,105 @@
   --sidebar-accent-foreground: hsl(240 5.9% 10%);
   --sidebar-border: hsl(220 13% 91%);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
+
+  /* --- New Color Palette Variables --- */
+  --color-theme-1: #fff;
+  --color-theme-2: #74ff52ff;
+  --color-theme-3: #74ff521f;
+  --color-theme-4: #74ff522e;
+  --color-theme-hover: #9fff75ff;
+  --color-text-1: #f9fbfcff;
+  --color-text-2: #c0c6ccff;
+  --color-text-3: #6c727aff;
+  --color-text-3-light: #99a1adff;
+  --color-text-4: #51545cff;
+  --color-text-5: #000000ff;
+  --color-font-1: #fafffe;
+  --color-bg-page: #ffffff; /* Light mode background */
+  --color-bg-primary: #111214;
+  --color-bg-secondary: #1a1c1f;
+  --color-bg-tertiary: #1f2124ff;
+  --color-bg-popover: #2d2f33ff;
+  --color-bg-popover-1: #383a3dff;
+  --color-bg-dialog: #1e1f21ff;
+  --color-bg-contrary: #ffffffff;
+  --color-bg-deepseek: #5fe03fff;
+  --color-border-frame: #1a1b1fff;
+  --color-border-container: #242629ff;
+  --color-border-component: #3a3c3dff;
+  --color-border-hover: #9da1a3ff;
+  --color-border-focused: #e1e6ebff;
+  --color-border-line: #3c4147ff;
+  --color-fill-success: #2feb48;
+  --color-fill-warning: #faca5aff;
+  --color-fill-error: #f04b22ff;
+  --color-fill-link: #5cbeffff;
+  --color-fill-disabled: #ffffff0f;
+  --color-fill-dark: #00000033;
+  --color-fill-light: #ffffff0a;
+  --color-fill-white: #ffffffff;
+  --color-fill-black: #000000ff;
+  --color-fill-black-1: #00000066;
+  --color-fill-black-2: #000000cc;
+  --color-fill-black-3: #000000a3;
+  --color-fill-red: #e92a1bff;
+  --color-fill-error-24: #f04b223d;
+  --color-fill-green: #00b831;
+  --color-other-1: #ffffff14;
+  --color-other-2: #ffffff1f;
+  --color-other-3: #ffffff29;
+  --color-other-4: #ffffff33;
+  --color-other-5: #ffffff3d;
+  --color-other-6: #00000052;
+  --color-other-7: #0000007a;
+  --color-other-8: #090a0a7a;
+  --color-other-9: #ffffff7a;
+  --color-gradient-button: linear-gradient(148deg, #d3e2f0 0%, #fff 100%);
+  --color-gradient-basic: linear-gradient(148deg, #abbbcc 0%, #fff 100%);
+  --color-gradient-standard: linear-gradient(148deg, #e0d4bc 0%, #f0efeb 100%);
+  --color-gradient-pro: linear-gradient(148deg, #c2deff 0%, #ebf6ff 100%);
+  --color-gradient-premier: linear-gradient(148deg, #ceccff 0%, #ebecff 100%);
+  --color-gradient-ultra: linear-gradient(148deg, #ffba6b 0%, #ffd685 40%, #fff5eb 100%);
+  --color-gradient-hot: linear-gradient(90deg, #f60 0%, #f40 100%);
+  --color-gradient-black: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, .64) 100%);
+  --color-gradient-black-revert: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, .48) 100%);
+  --color-gradient-container: linear-gradient(180deg, rgba(15, 15, 15, 0) 0%, #0f0f0f 100%);
+  --color-gradient-standard-bg: linear-gradient(135deg, #332f2d 0%, #141413 100%);
+  --color-gradient-pro-bg: linear-gradient(136deg, #2c333b 0%, #141414 101.27%);
+  --color-gradient-premier-bg: linear-gradient(136deg, #3e3a49 0%, #212b37 32.75%, #1a1a1a 65.5%, #1a1a1a 102.34%);
+  --color-gradient-ultra-bg: linear-gradient(136deg, #472f14 0%, #292115 12.28%, #14120e 49.12%, #141210 65.5%, #1f1a10 102.34%);
+  --color-gradient-commercialization: linear-gradient(148deg, #ffe4ad 0%, #fff7eb 100%);
+  --box-shadow-container: 0px 4px 40px 0px rgba(0, 0, 0, .4);
+  --box-shadow-component: 0px 2px 16px 0px rgba(0, 0, 0, .24);
+  --box-shadow-component-table-fixed-left: 10px 0px 10px -10px #00000066 inset;
+  --box-shadow-component-table-fixed-right: -10px 0px 10px -10px #00000066 inset;
+  --color-chart-1: #f5c045;
+  --color-chart-2: #48e05c;
+  --color-chart-3: #8b61ff;
+  --color-chart-4: #5fb2fa;
+  --color-chart-5: #ff8edf;
+  --color-chart-6: #fa7250;
+  --color-chart-7: #1bf6fd;
+  --color-chart-8: #a3476c;
+  --color-chart-9: #f5459d;
+  --color-chart-10: #b223c2;
+
+  --top-navigation-height: 64px;
+  --left-navigation-width: 76px;
+  --left-designer-sidebar-width: 72px;
+  --main-background: #0d1116;
+  --theme-color-primary: #72e528;
+  --theme-color-hover: #9ffd38;
+  --color-bg-selection: #557172;
+  --color-bg-selection-safari: #82b3b4;
 }
 
 .dark {
-  --background: #0a0a0a;
+  --background: #0a0a0a; /* Updated to requested black */
+  --color-bg-page: #0a0a0a; /* Dark mode background */
   --foreground: #ededed;
   
-  /* shadcn/ui dark mode colors */
+  /* shadcn/ui dark mode colors - Adjusted for pure black theme */
   --card: hsl(0 0% 3.9%);
   --card-foreground: hsl(0 0% 98%);
   --popover: hsl(0 0% 3.9%);
@@ -83,6 +175,37 @@
   --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
   --sidebar-border: hsl(240 3.7% 15.9%);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
+
+  /* Dark Mode Specific Overrides */
+  --super-color: var(--dark-super-color);
+  --super-bg-color: var(--dark-super-bg-color);
+  --max-color: var(--dark-max-color);
+  --caution-color: var(--dark-caution-color);
+  --attention-color: var(--dark-attention-color);
+  --positive-color: var(--dark-positive-color);
+  --negative-color: var(--dark-negative-color);
+  --background-underlay-color: var(--dark-background-underlay-color);
+  --background-base-color: var(--dark-background-base-color);
+  --background-subtle-color: var(--dark-background-subtle-color);
+  --background-subtler-color: var(--dark-background-subtler-color);
+  --background-subtlest-color: var(--dark-background-subtlest-color);
+  --background-raised-color: var(--dark-background-raised-color);
+  --background-elevated-color: var(--dark-background-elevated-color);
+  --background-inverse-color: var(--dark-background-inverse-color);
+  --foreground-color: var(--dark-foreground-color);
+  --foreground-quiet-color: var(--dark-foreground-quiet-color);
+  --foreground-quieter-color: var(--dark-foreground-quieter-color);
+  --foreground-quietest-color: var(--dark-foreground-quietest-color);
+  --foreground-subtle-color: var(--dark-foreground-subtle-color);
+  --foreground-subtler-color: var(--dark-foreground-subtler-color);
+  --foreground-subtlest-color: var(--dark-foreground-subtlest-color);
+  --foreground-inverse-color: var(--dark-foreground-inverse-color);
+  --border-color: var(--dark-border-color);
+  --backdrop-color: var(--dark-backdrop-color);
+  --shadow-overlay-border: rgba(255, 255, 255, .1);
+  --offset-color: var(--dark-offset-color);
+  --offset-plus-color: var(--dark-offset-plus-color);
+  --raised-offset-color: var(--dark-raised-offset-color);
 }
 
 @theme inline {
