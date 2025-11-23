@@ -369,22 +369,22 @@ async function connectWithRetry(
       return conn;
     } catch (err) {
       const isLast = attempt === MAX_RETRIES;
-      const error = err;
+      const error = err as any; // Type assertion for caught error
 
       // Check if it's a retryable error
       const isRetryableError =
-        error.name === "MongoNetworkTimeoutError" ||
-        error.name === "MongoTimeoutError" ||
-        error.name === "MongoServerSelectionError" ||
-        error.name === "MongoNetworkError" ||
-        error.message?.includes("timed out") ||
-        error.message?.includes("connection") ||
-        error.message?.includes("ECONNRESET") ||
-        error.message?.includes("ENOTFOUND") ||
-        error.message?.includes("TLS") ||
-        error.message?.includes("secure TLS connection") ||
-        (error as any).code === "ETIMEDOUT" ||
-        (error as any).code === "ECONNREFUSED";
+        error?.name === "MongoNetworkTimeoutError" ||
+        error?.name === "MongoTimeoutError" ||
+        error?.name === "MongoServerSelectionError" ||
+        error?.name === "MongoNetworkError" ||
+        error?.message?.includes("timed out") ||
+        error?.message?.includes("connection") ||
+        error?.message?.includes("ECONNRESET") ||
+        error?.message?.includes("ENOTFOUND") ||
+        error?.message?.includes("TLS") ||
+        error?.message?.includes("secure TLS connection") ||
+        error?.code === "ETIMEDOUT" ||
+        error?.code === "ECONNREFUSED";
 
       console.error(
         `[mongo:${dbKey}] connection attempt #${attempt + 1} failed`,
@@ -392,7 +392,7 @@ async function connectWithRetry(
         {
           isRetryable: isRetryableError,
           errorName: error?.name,
-          errorCode: (error as any).code,
+          errorCode: error?.code,
         }
       );
 
