@@ -52,13 +52,13 @@ export default function GeneratorTabs({
     >
       {/* Tab List */}
       <div className="px-6 pt-6">
-        <TabsList className="flex h-auto w-full justify-start gap-6 border-b border-gray-200 bg-transparent p-0 dark:border-gray-700">
+        <TabsList className="flex h-auto w-full justify-start gap-6 border-b border-gray-200 bg-transparent p-0 dark:border-[#242629]">
           {tabs.map((tab) => (
             <TabsTrigger
               key={tab.id}
               value={tab.id}
               className={cn(
-                "relative h-9 rounded-none border-b-2 border-transparent bg-transparent px-1 pb-3 pt-2 font-medium text-gray-500 shadow-none transition-none data-[state=active]:border-gray-900 data-[state=active]:text-gray-900 data-[state=active]:shadow-none dark:text-gray-400 dark:data-[state=active]:border-gray-100 dark:data-[state=active]:text-gray-100"
+                "relative h-9 rounded-none border-b-2 border-transparent bg-transparent px-1 pb-3 pt-2 font-medium text-gray-500 shadow-none transition-none data-[state=active]:border-gray-900 data-[state=active]:text-gray-900 data-[state=active]:shadow-none dark:text-[#6c727a] dark:data-[state=active]:border-[#74ff52] dark:data-[state=active]:text-[#f9fbfc]"
               )}
             >
               <div className="flex items-center gap-2">

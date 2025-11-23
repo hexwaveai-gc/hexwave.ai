@@ -23,7 +23,7 @@ export default function ModelSelector({ value, onChange }: ModelSelectorProps) {
 
   return (
     <div className="space-y-3">
-      <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+      <Label className="text-sm font-medium text-gray-900 dark:text-[#f9fbfc]">
         Model
       </Label>
       <Select value={value} onValueChange={onChange}>
@@ -39,7 +39,7 @@ export default function ModelSelector({ value, onChange }: ModelSelectorProps) {
             >
               <div className="flex flex-col">
                 <span className="font-medium">{model.name}</span>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
+                <span className="text-xs text-gray-500 dark:text-[#6c727a]">
                   {model.description}
                 </span>
               </div>

@@ -73,20 +73,20 @@ export default function TextToImageInputs({
       {/* Scrollable Content - Prompt takes available space */}
       <div className="flex-1 overflow-y-auto p-6">
         <div className="flex h-full flex-col space-y-3">
-          <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+          <Label className="text-sm font-medium text-gray-900 dark:text-[#f9fbfc]">
             Prompt <span className="text-red-500">*</span>
           </Label>
           <Textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder="Describe the creative ideas for the image..."
-            className="h-full min-h-[200px] flex-1 resize-none rounded-[18px] border-gray-200 bg-gray-50 p-4 text-base focus:border-blue-500 focus:ring-0 dark:border-gray-700 dark:bg-gray-800"
+            className="h-full min-h-[200px] flex-1 resize-none rounded-[18px] border-gray-200 bg-gray-50 p-4 text-base focus:border-blue-500 focus:ring-0 dark:border-[#242629] dark:bg-[#111214] dark:text-[#f9fbfc]"
           />
         </div>
       </div>
 
       {/* Fixed Footer */}
-      <div className="border-t border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
+      <div className="border-t border-gray-200 bg-white p-6 dark:border-[#242629] dark:bg-[#0a0a0a]">
         {/* Model Selection */}
         <div className="mb-4">
           <ModelSelector value={selectedModel} onChange={setSelectedModel} />
@@ -104,7 +104,7 @@ export default function TextToImageInputs({
                 }
                 onValueChange={(val) => handleParamChange("aspect_ratio", val)}
               >
-                <SelectTrigger className="h-10 rounded-[18px] border-gray-200 px-3 dark:border-gray-700">
+                <SelectTrigger className="h-10 rounded-[18px] border-gray-200 px-3 dark:border-[#242629] dark:bg-[#111214] dark:text-[#f9fbfc]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-[18px]">
@@ -132,7 +132,7 @@ export default function TextToImageInputs({
                 }
                 onValueChange={(val) => handleParamChange("resolution", val)}
               >
-                <SelectTrigger className="h-10 rounded-[18px] border-gray-200 px-3 dark:border-gray-700">
+                <SelectTrigger className="h-10 rounded-[18px] border-gray-200 px-3 dark:border-[#242629] dark:bg-[#111214] dark:text-[#f9fbfc]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-[18px]">
@@ -162,7 +162,7 @@ export default function TextToImageInputs({
                   handleParamChange("num_images", Number(val))
                 }
               >
-                <SelectTrigger className="h-10 rounded-[18px] border-gray-200 px-3 dark:border-gray-700">
+                <SelectTrigger className="h-10 rounded-[18px] border-gray-200 px-3 dark:border-[#242629] dark:bg-[#111214] dark:text-[#f9fbfc]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-[18px]">

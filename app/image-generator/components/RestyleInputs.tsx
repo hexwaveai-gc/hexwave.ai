@@ -87,12 +87,12 @@ export default function RestyleInputs({ onGenerate }: RestyleInputsProps) {
         <div className="space-y-6">
           {/* Original Image Upload */}
           <div className="space-y-3">
-            <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+            <Label className="text-sm font-medium text-gray-900 dark:text-[#f9fbfc]">
               Original Image <span className="text-red-500">*</span>
             </Label>
 
             {!originalImage ? (
-              <div className="rounded-[18px] border-2 border-dashed border-gray-200 bg-gray-50 p-8 text-center transition-colors hover:border-gray-300 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600 dark:hover:bg-gray-800/70">
+              <div className="rounded-[18px] border-2 border-dashed border-gray-200 bg-gray-50 p-8 text-center transition-colors hover:border-gray-300 hover:bg-gray-100 dark:border-[#242629] dark:bg-[#111214] dark:hover:border-[#3a3c3d] dark:hover:bg-[#1a1c1f]">
                 <Input
                   type="file"
                   accept="image/*"
@@ -105,20 +105,20 @@ export default function RestyleInputs({ onGenerate }: RestyleInputsProps) {
                   className="flex cursor-pointer flex-col items-center"
                 >
                   <Upload className="mb-2 h-10 w-10 text-gray-400" />
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Upload Image
-                  </span>
-                  <span className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  <span className="text-sm font-medium text-gray-700 dark:text-[#c0c6cc]">
+                  Upload Image
+                </span>
+                <span className="mt-1 text-xs text-gray-500 dark:text-[#6c727a]">
                     PNG, JPG, WebP up to 10MB
                   </span>
                 </label>
               </div>
             ) : (
-              <div className="group relative overflow-hidden rounded-[18px] border border-gray-200 dark:border-gray-700">
+              <div className="group relative overflow-hidden rounded-[18px] border border-gray-200 dark:border-[#242629]">
                 <img
                   src={URL.createObjectURL(originalImage)}
                   alt="Original"
-                  className="max-h-[300px] w-full object-contain bg-gray-50 dark:bg-gray-900"
+                  className="max-h-[300px] w-full object-contain bg-gray-50 dark:bg-[#0a0a0a]"
                 />
                 <button
                   onClick={handleRemoveImage}
@@ -132,21 +132,21 @@ export default function RestyleInputs({ onGenerate }: RestyleInputsProps) {
 
           {/* Style Prompt */}
           <div className="space-y-3">
-            <Label className="text-sm font-medium text-gray-900 dark:text-gray-100">
+            <Label className="text-sm font-medium text-gray-900 dark:text-[#f9fbfc]">
               Style Prompt <span className="text-red-500">*</span>
             </Label>
             <Textarea
               value={stylePrompt}
               onChange={(e) => setStylePrompt(e.target.value)}
               placeholder="Describe the style you want to apply..."
-              className="min-h-[120px] w-full resize-none rounded-[18px] border-gray-200 bg-gray-50 p-4 text-base focus:border-blue-500 focus:ring-0 dark:border-gray-700 dark:bg-gray-800"
+              className="min-h-[120px] w-full resize-none rounded-[18px] border-gray-200 bg-gray-50 p-4 text-base focus:border-blue-500 focus:ring-0 dark:border-[#242629] dark:bg-[#111214] dark:text-[#f9fbfc]"
             />
           </div>
         </div>
       </div>
 
       {/* Fixed Footer */}
-      <div className="border-t border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900">
+      <div className="border-t border-gray-200 bg-white p-6 dark:border-[#242629] dark:bg-[#0a0a0a]">
         {/* Model Selection */}
         <div className="mb-4">
           <ModelSelector value={selectedModel} onChange={setSelectedModel} />
@@ -164,7 +164,7 @@ export default function RestyleInputs({ onGenerate }: RestyleInputsProps) {
                 }
                 onValueChange={(val) => handleParamChange("aspect_ratio", val)}
               >
-                <SelectTrigger className="h-10 rounded-[18px] border-gray-200 px-3 dark:border-gray-700">
+                <SelectTrigger className="h-10 rounded-[18px] border-gray-200 px-3 dark:border-[#242629] dark:bg-[#111214] dark:text-[#f9fbfc]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-[18px]">
@@ -194,7 +194,7 @@ export default function RestyleInputs({ onGenerate }: RestyleInputsProps) {
                   handleParamChange("num_images", Number(val))
                 }
               >
-                <SelectTrigger className="h-10 rounded-[18px] border-gray-200 px-3 dark:border-gray-700">
+                <SelectTrigger className="h-10 rounded-[18px] border-gray-200 px-3 dark:border-[#242629] dark:bg-[#111214] dark:text-[#f9fbfc]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-[18px]">

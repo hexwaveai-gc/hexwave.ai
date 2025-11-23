@@ -39,7 +39,7 @@ export default function AdvancedSettingsDialog({
         <Button
           variant="outline"
           size="icon"
-          className="h-10 w-10 shrink-0 rounded-[18px] border-gray-200 dark:border-gray-700"
+          className="h-10 w-10 shrink-0 rounded-[18px] border-gray-200 dark:border-[#242629] dark:bg-[#111214] dark:text-[#f9fbfc]"
         >
           <Settings2 className="h-4 w-4" />
         </Button>

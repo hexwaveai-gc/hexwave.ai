@@ -60,7 +60,7 @@ export default function GeneratorLayout({
             minSize={minLeftSize}
             className="flex flex-col"
           >
-            <div className="flex h-full flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+            <div className="flex h-full flex-col border-r border-gray-200 bg-white dark:border-[#242629] dark:bg-[#0a0a0a]">
               {inputPanel}
             </div>
           </ResizablePanel>
@@ -68,7 +68,7 @@ export default function GeneratorLayout({
           {/* Resizable Handle */}
           <ResizableHandle
             withHandle
-            className="w-1 bg-gray-200 hover:bg-blue-500 dark:bg-gray-700 dark:hover:bg-blue-600"
+            className="w-1 bg-gray-200 hover:bg-blue-500 dark:bg-[#242629] dark:hover:bg-[#74ff52]"
           />
 
           {/* Right Panel - Results */}
@@ -77,7 +77,7 @@ export default function GeneratorLayout({
             minSize={minRightSize}
             className="flex flex-col"
           >
-            <div className="h-full overflow-y-auto bg-gray-50 p-6 dark:bg-gray-800">
+            <div className="h-full overflow-y-auto bg-gray-50 p-6 dark:bg-[#0a0a0a]">
               {resultsPanel}
             </div>
           </ResizablePanel>
@@ -87,12 +87,12 @@ export default function GeneratorLayout({
       {/* Mobile: Stacked vertically */}
       <div className="flex h-full flex-col md:hidden">
         {/* Input Section */}
-        <div className="flex-1 border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+        <div className="flex-1 border-b border-gray-200 bg-white dark:border-[#242629] dark:bg-[#0a0a0a]">
           {inputPanel}
         </div>
 
         {/* Results Section */}
-        <div className="flex-1 overflow-y-auto bg-gray-50 p-4 dark:bg-gray-800">
+        <div className="flex-1 overflow-y-auto bg-gray-50 p-4 dark:bg-[#0a0a0a]">
           {resultsPanel}
         </div>
       </div>
