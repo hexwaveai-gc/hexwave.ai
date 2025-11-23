@@ -77,7 +77,7 @@ export default function GeneratorLayout({
             minSize={minRightSize}
             className="flex flex-col"
           >
-            <div className="h-full overflow-y-auto bg-gray-50 p-6 dark:bg-[var(--color-bg-page)]">
+            <div className="h-full overflow-y-auto bg-gray-50 dark:bg-[var(--color-bg-page)]">
               {resultsPanel}
             </div>
           </ResizablePanel>

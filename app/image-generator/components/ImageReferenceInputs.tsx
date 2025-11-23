@@ -184,18 +184,8 @@ export default function ImageReferenceInputs({
 
         {/* Controls Row */}
         <div className="flex items-center justify-between gap-3">
-          {/* Left Side - Controls and Credits */}
+          {/* Left Side - Controls */}
           <div className="flex items-center gap-3">
-            {/* Generation Credits Display */}
-            <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)]">
-              <span className="text-xs font-medium text-gray-600 dark:text-[var(--color-text-3)]">
-                Credits:
-              </span>
-              <span className="text-sm font-semibold text-gray-900 dark:text-[var(--color-text-1)]">
-                {creditsRequired}
-              </span>
-            </div>
-
             {/* Aspect Ratio Dropdown */}
             {aspectRatioSetting && aspectRatioSetting.options && (
               <div className="w-24 shrink-0">

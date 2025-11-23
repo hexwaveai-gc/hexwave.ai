@@ -52,7 +52,7 @@ export default function GeneratorTabs({
     >
       {/* Tab List */}
       <div className="px-[var(--spacing-page-padding)] pt-0">
-        <TabsList className="flex h-auto w-full justify-start gap-8 border-b border-gray-200 bg-transparent p-0 dark:border-[var(--color-border-container)] dark:bg-transparent">
+        <TabsList className="flex h-auto w-full justify-start gap-8 bg-transparent p-0 dark:bg-transparent mt-1">
           {tabs.map((tab) => (
             <TabsTrigger
               key={tab.id}

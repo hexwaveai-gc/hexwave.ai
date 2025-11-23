@@ -55,13 +55,11 @@ export default function ImageGeneratorPage() {
     <GeneratorLayout
       inputPanel={
         <div className="flex h-full flex-col">
-          <div className="px-[var(--spacing-page-padding)] pt-[var(--spacing-page-padding)] pb-[var(--spacing-header-bottom)]">
+          <div className="border-b border-gray-200 px-[var(--spacing-page-padding)] pt-[var(--spacing-page-padding)] pb-[var(--spacing-header-bottom)] dark:border-[var(--color-border-container)]">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-[var(--color-text-1)]">
               AI Image Generator
             </h1>
-            <p className="mt-2 text-sm text-gray-600 dark:text-[var(--color-text-3)]">
-              Create stunning images with AI-powered generation
-            </p>
+
           </div>
           <div className="flex-1 overflow-hidden">
             <GeneratorTabs tabs={tabs} defaultTab="text-to-image" />
