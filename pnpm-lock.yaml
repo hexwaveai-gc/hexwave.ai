@@ -38,9 +38,6 @@ importers:
       react-dom:
         specifier: 19.2.0
         version: 19.2.0(react@19.2.0)
-      server:
-        specifier: link:@clerk/nextjs/server
-        version: link:@clerk/nextjs/server
       svix:
         specifier: ^1.81.0
         version: 1.81.0
