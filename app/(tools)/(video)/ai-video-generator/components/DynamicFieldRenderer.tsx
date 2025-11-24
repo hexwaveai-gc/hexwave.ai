@@ -186,10 +186,12 @@ export const DynamicFieldRenderer = memo(function DynamicFieldRenderer() {
     <div className="space-y-8 px-(--spacing-page-padding) py-(--spacing-element-gap)">
       {sections.map((section) => (
         <div key={section.title} className="space-y-4">
-          {/* Section Header */}
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-(--color-text-2) uppercase tracking-wide">
-            {section.title}
-          </h3>
+          {/* Section Header - Hide for Prompt section to avoid redundancy with field label */}
+          {section.title !== "Prompt" && (
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-(--color-text-2) uppercase tracking-wide">
+              {section.title}
+            </h3>
+          )}
           
           {/* Section Fields */}
           <div className="space-y-6">

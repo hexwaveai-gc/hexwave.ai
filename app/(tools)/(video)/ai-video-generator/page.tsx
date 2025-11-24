@@ -121,7 +121,7 @@ export default function AiVideoGeneratorPage() {
               </div>
 
               {/* Tabs Content - Scrollable with DynamicFieldRenderer */}
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-hidden min-h-0">
                 <GeneratorTabs
                   tabs={tabs}
                   defaultTab="text-to-video"
