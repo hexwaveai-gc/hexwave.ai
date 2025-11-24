@@ -98,7 +98,7 @@ export default function PromoBanners() {
   return (
     <div className="flex flex-col gap-4 mb-8">
       {/* Top Section: Carousel + Side Banner */}
-      <div className="flex flex-col lg:flex-row gap-4 h-[200px] lg:h-[240px]">
+      <div className="flex flex-col lg:flex-row gap-4 h-[180px] lg:h-[240px]">
         {/* Carousel */}
         <div className="flex-1 relative rounded-xl overflow-hidden w-full lg:w-[65%]">
           <Carousel

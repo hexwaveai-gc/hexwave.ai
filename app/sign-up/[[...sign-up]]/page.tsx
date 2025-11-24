@@ -1,6 +1,6 @@
 'use client'
 
-import { SignIn, SignUp, useSignIn, useSignUp, useUser } from '@clerk/nextjs'
+import { SignUp, useSignUp, useUser } from '@clerk/nextjs'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import { X, ArrowRight } from 'lucide-react'
@@ -10,8 +10,7 @@ import HexwaveLoader from '@/app/components/common/HexwaveLoader'
 export default function Page() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { signIn, setActive, isLoaded } = useSignIn()
-  const { signUp, isLoaded: signUpLoaded, setActive: setActiveSignUp } = useSignUp()
+  const { signUp, setActive, isLoaded } = useSignUp()
   const { isSignedIn } = useUser()
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
@@ -21,14 +20,13 @@ export default function Page() {
   const [error, setError] = useState('')
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0)
   const videoRef = useRef<HTMLVideoElement>(null)
-  const [isSignUpFlow, setIsSignUpFlow] = useState(false) // Track if we're in sign-up flow
 
-  // Handle OAuth sign-in (supports both sign-in and auto sign-up)
-  const handleOAuthSignIn = async (strategy: 'oauth_google' | 'oauth_apple') => {
+  // Handle OAuth sign-up
+  const handleOAuthSignUp = async (strategy: 'oauth_google' | 'oauth_apple') => {
     // Prevent multiple clicks
     if (isLoading) return
     
-    if (!isLoaded || !signIn || !signUpLoaded || !signUp) {
+    if (!isLoaded || !signUp) {
       setError('Authentication service is not ready. Please refresh the page.')
       return
     }
@@ -37,30 +35,20 @@ export default function Page() {
     setError('')
     
     try {
-      // First try sign-in for existing users
-      await signIn.authenticateWithRedirect({
+      // Use sign-up flow with proper SSO callback URL
+      await signUp.authenticateWithRedirect({
         strategy,
-        redirectUrl: '/sign-in/sso-callback',
+        redirectUrl: '/sign-up/sso-callback',
         redirectUrlComplete: '/explore',
       })
-    } catch {
-      // If sign-in fails (user doesn't exist), try sign-up
-      console.log('Sign-in failed, trying sign-up for new user')
-      try {
-        await signUp.authenticateWithRedirect({
-          strategy,
-          redirectUrl: '/sign-up/sso-callback',
-          redirectUrlComplete: '/explore',
-        })
-      } catch (signUpErr: unknown) {
-        const error = signUpErr as { errors?: Array<{ message?: string }> } | Error
-        if (error instanceof Error) {
-          setError(error.message)
-        } else {
-          setError(error.errors?.[0]?.message || 'Failed to authenticate. Please try again.')
-        }
-        setIsLoading(false)
+    } catch (err: unknown) {
+      const error = err as { errors?: Array<{ message?: string }> } | Error
+      if (error instanceof Error) {
+        setError(error.message)
+      } else {
+        setError(error.errors?.[0]?.message || 'Failed to sign up. Please try again.')
       }
+      setIsLoading(false)
     }
   }
 
@@ -99,12 +87,12 @@ export default function Page() {
   // Check if we're in email verification flow
   useEffect(() => {
     const emailParam = searchParams.get('email')
-    if (emailParam && signIn?.status === 'needs_first_factor') {
+    if (emailParam && signUp?.status === 'missing_requirements') {
       setEmail(emailParam)
       setShowEmailInput(true)
       setShowCodeInput(true)
     }
-  }, [searchParams, signIn?.status])
+  }, [searchParams, signUp?.status])
 
   // Handle video end and cycle to next
   const handleVideoEnd = () => {
@@ -141,38 +129,26 @@ export default function Page() {
       return
     }
     
-    if (!isLoaded || !signIn || !signUpLoaded || !signUp) {
+    if (!isLoaded || !signUp) {
       setError('Authentication service is loading. Please try again.')
       return
     }
 
     setIsLoading(true)
     try {
-      // First, try to sign in
-      const result = await signIn.create({
-        identifier: email.trim().toLowerCase(),
+      const result = await signUp.create({
+        emailAddress: email.trim().toLowerCase(),
       })
 
       // Check if email verification code is needed
-      if (result.status === 'needs_first_factor') {
-        // Get the email address ID from supported first factors
-        const emailFactor = result.supportedFirstFactors?.find(
-          (factor) => factor.strategy === 'email_code'
-        )
-        
-        if (emailFactor && 'emailAddressId' in emailFactor) {
-          // Prepare email code verification
-          await signIn.prepareFirstFactor({
-            strategy: 'email_code',
-            emailAddressId: emailFactor.emailAddressId,
-          })
-          setIsSignUpFlow(false)
-          setShowCodeInput(true)
-        } else {
-          setError('Email verification is not available. Please try another method.')
-        }
+      if (result.status === 'missing_requirements') {
+        // Prepare email code verification
+        await signUp.prepareEmailAddressVerification({
+          strategy: 'email_code',
+        })
+        setShowCodeInput(true)
       } else if (result.status === 'complete') {
-        // If sign-in is complete, set active session
+        // If sign-up is complete, set active session
         if (result.createdSessionId) {
           await setActive({ session: result.createdSessionId })
           router.push('/explore')
@@ -180,36 +156,14 @@ export default function Page() {
       }
     } catch (err: unknown) {
       const error = err as { errors?: Array<{ message?: string; code?: string }> }
+      const errorMessage = error.errors?.[0]?.message || 'Something went wrong. Please try again.'
       const errorCode = error.errors?.[0]?.code
       
-      // If user doesn't exist, automatically create account
-      if (errorCode === 'form_identifier_not_found') {
-        try {
-          // Automatically sign up the user
-          const signUpResult = await signUp.create({
-            emailAddress: email.trim().toLowerCase(),
-          })
-
-          // Prepare email verification
-          if (signUpResult.status === 'missing_requirements') {
-            await signUp.prepareEmailAddressVerification({
-              strategy: 'email_code',
-            })
-            setIsSignUpFlow(true)
-            setShowCodeInput(true)
-            setError('') // Clear any previous errors
-          } else if (signUpResult.status === 'complete') {
-            if (signUpResult.createdSessionId) {
-              await setActiveSignUp({ session: signUpResult.createdSessionId })
-              router.push('/explore')
-            }
-          }
-        } catch (signUpErr: unknown) {
-          const signUpError = signUpErr as { errors?: Array<{ message?: string }> }
-          setError(signUpError.errors?.[0]?.message || 'Failed to create account. Please try again.')
-        }
+      // Provide user-friendly error messages
+      if (errorCode === 'form_identifier_exists') {
+        setError('An account with this email already exists. Please sign in instead.')
       } else {
-        setError(error.errors?.[0]?.message || 'Something went wrong. Please try again.')
+        setError(errorMessage)
       }
     } finally {
       setIsLoading(false)
@@ -227,42 +181,25 @@ export default function Page() {
       return
     }
     
-    if (!isLoaded || !signIn || !signUpLoaded || !signUp) {
+    if (!isLoaded || !signUp) {
       setError('Authentication service is loading. Please try again.')
       return
     }
 
     setIsLoading(true)
     try {
-      if (isSignUpFlow) {
-        // We're in sign-up flow (auto-created account)
-        const result = await signUp.attemptEmailAddressVerification({
-          code,
-        })
+      const result = await signUp.attemptEmailAddressVerification({
+        code,
+      })
 
-        if (result.status === 'complete') {
-          if (result.createdSessionId) {
-            await setActiveSignUp({ session: result.createdSessionId })
-            router.push('/explore')
-          }
-        } else {
-          setError('Verification failed. Please try again.')
+      if (result.status === 'complete') {
+        // Sign-up is complete, set active session
+        if (result.createdSessionId) {
+          await setActive({ session: result.createdSessionId })
+          router.push('/explore')
         }
       } else {
-        // We're in sign-in flow (existing account)
-        const result = await signIn.attemptFirstFactor({
-          strategy: 'email_code',
-          code,
-        })
-
-        if (result.status === 'complete') {
-          if (result.createdSessionId) {
-            await setActive({ session: result.createdSessionId })
-            router.push('/explore')
-          }
-        } else {
-          setError('Verification failed. Please try again.')
-        }
+        setError('Verification failed. Please try again.')
       }
     } catch (err: unknown) {
       const error = err as { errors?: Array<{ message?: string; code?: string }> }
@@ -313,7 +250,7 @@ export default function Page() {
          
       </div>
 
-      {/* Right Side - Sign In UI */}
+      {/* Right Side - Sign Up UI */}
       <div className="flex-1 lg:w-1/2 bg-black relative flex items-center justify-center p-8">
         {/* Close Button */}
         <button
@@ -324,20 +261,20 @@ export default function Page() {
           <X className="h-6 w-6" />
         </button>
 
-        {/* Sign In Content */}
+        {/* Sign Up Content */}
         <div className="w-full max-w-md space-y-8">
           {/* Title */}
           <div className="text-center">
             <h1 className="text-4xl font-serif text-white tracking-tight italic">
-              Welcome to Hexwave.ai
+              Join Hexwave.ai
             </h1>
           </div>
 
-          {/* Sign In Options */}
+          {/* Sign Up Options */}
           <div className="space-y-4">
-            {/* Google Sign In */}
+            {/* Google Sign Up */}
             <button 
-              onClick={() => handleOAuthSignIn('oauth_google')}
+              onClick={() => handleOAuthSignUp('oauth_google')}
               disabled={isLoading}
               className="w-full h-12 bg-white text-black hover:bg-white/90 rounded-lg border-0 font-normal text-base flex items-center justify-center gap-3 cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -359,19 +296,19 @@ export default function Page() {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                 />
               </svg>
-              Sign in with Google
+              Sign up with Google
             </button>
 
-            {/* Apple Sign In */}
+            {/* Apple Sign Up */}
             <button 
-              onClick={() => handleOAuthSignIn('oauth_apple')}
+              onClick={() => handleOAuthSignUp('oauth_apple')}
               disabled={isLoading}
               className="w-full h-12 bg-white text-black hover:bg-white/90 rounded-lg border-0 font-normal text-base flex items-center justify-center gap-3 cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
               </svg>
-              Sign in with Apple
+              Sign up with Apple
             </button>
 
             {/* Divider */}
@@ -381,7 +318,7 @@ export default function Page() {
               <div className="flex-grow border-t border-white/20"></div>
             </div>
 
-            {/* Email Sign In */}
+            {/* Email Sign Up */}
             {!showEmailInput && !showCodeInput ? (
               <button
                 onClick={() => setShowEmailInput(true)}
@@ -400,7 +337,7 @@ export default function Page() {
                     d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
                   />
                 </svg>
-                Sign in with email
+                Sign up with email
               </button>
             ) : showCodeInput ? (
               <form onSubmit={handleCodeSubmit} className="space-y-4">
@@ -409,10 +346,7 @@ export default function Page() {
                     Verification code
                   </label>
                   <p className="text-white/40 text-xs mb-3">
-                    {isSignUpFlow 
-                      ? `Account created! We sent a verification code to ${email}` 
-                      : `We sent a verification code to ${email}`
-                    }
+                    We sent a verification code to {email}
                   </p>
                   <input
                     type="text"
@@ -453,32 +387,13 @@ export default function Page() {
                 <button
                   type="button"
                   onClick={async () => {
-                    if (isSignUpFlow && signUp && signUpLoaded) {
+                    if (signUp && isLoaded) {
                       try {
                         await signUp.prepareEmailAddressVerification({
                           strategy: 'email_code',
                         })
                         setError('')
                         alert('Verification code resent!')
-                      } catch (err: unknown) {
-                        const error = err as { errors?: Array<{ message?: string }> }
-                        setError(error.errors?.[0]?.message || 'Failed to resend code')
-                      }
-                    } else if (!isSignUpFlow && signIn && isLoaded) {
-                      try {
-                        // Get the email address ID from supported first factors
-                        const emailFactor = signIn.supportedFirstFactors?.find(
-                          (factor) => factor.strategy === 'email_code'
-                        )
-                        
-                        if (emailFactor && 'emailAddressId' in emailFactor) {
-                          await signIn.prepareFirstFactor({
-                            strategy: 'email_code',
-                            emailAddressId: emailFactor.emailAddressId,
-                          })
-                          setError('')
-                          alert('Verification code resent!')
-                        }
                       } catch (err: unknown) {
                         const error = err as { errors?: Array<{ message?: string }> }
                         setError(error.errors?.[0]?.message || 'Failed to resend code')
@@ -537,8 +452,8 @@ export default function Page() {
 
           {/* Terms and Privacy */}
           <p className="text-xs text-white/60 text-center leading-relaxed">
-            By clicking &quot;Sign in with Google&quot;, &quot;Sign in with Apple&quot; or
-            &quot;Sign in with email&quot;, you agree to our{' '}
+            By clicking &quot;Sign up with Google&quot;, &quot;Sign up with Apple&quot; or
+            &quot;Sign up with email&quot;, you agree to our{' '}
             <a
               href="/terms"
               className="text-green-400 hover:text-green-300 underline"
@@ -555,26 +470,20 @@ export default function Page() {
             .
           </p>
 
-          {/* Link to Sign Up */}
+          {/* Link to Sign In */}
           <p className="text-sm text-white/60 text-center">
-            Don&apos;t have an account?{' '}
+            Already have an account?{' '}
             <a
-              href="/sign-up"
+              href="/sign-in"
               className="text-green-400 hover:text-green-300 underline"
             >
-              Sign up
+              Sign in
             </a>
           </p>
         </div>
 
-        {/* Clerk components for OAuth SSO callback handling */}
+        {/* Clerk SignUp component for OAuth SSO callback handling */}
         <div className="hidden">
-          <SignIn
-            routing="path"
-            path="/sign-in"
-            signUpUrl="/sign-up"
-            forceRedirectUrl="/explore"
-          />
           <SignUp
             routing="path"
             path="/sign-up"
