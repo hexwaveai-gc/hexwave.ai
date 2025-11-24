@@ -35,7 +35,7 @@ const sidebarItems: SidebarItem[] = [
   },
   { id: "assets", label: "Assets", icon: FolderOpen, href: "/assets" },
   { id: "image", label: "Image", icon: ImageIcon, href: "/image-generator" },
-  { id: "video", label: "Video", icon: Video, href: "/video-generator", badge: "NEW" }, 
+  { id: "video", label: "Video", icon: Video, href: "/ai-video-generator", badge: "NEW" }, 
   { id: "tools", label: "All Tools", icon: Wrench, href: "/tools" },
 ];
 
