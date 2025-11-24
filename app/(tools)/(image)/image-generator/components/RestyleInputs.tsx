@@ -172,9 +172,9 @@ export default function RestyleInputs() {
         </div>
 
         {/* Controls Row */}
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {/* Left Side - Controls */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
             {/* Primary Fields - Dynamically rendered based on model settings */}
             <PrimaryFieldsRenderer />
 
@@ -187,7 +187,7 @@ export default function RestyleInputs() {
             onClick={handleGenerate}
             disabled={!isFormValid || !selectedModelId}
             variant="generate"
-            className="h-10 min-w-[140px] rounded-lg px-8"
+            className="h-10 min-w-[140px] shrink-0 rounded-lg px-6 sm:px-8"
           >
             Generate
           </Button>

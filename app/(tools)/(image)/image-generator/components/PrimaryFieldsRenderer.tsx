@@ -274,12 +274,12 @@ export default function PrimaryFieldsRenderer() {
   }
 
   return (
-    <>
+    <div className="flex items-center gap-3 flex-wrap">
       {fieldsToRender.map((fieldName) => {
         const combinedConfig = buildFieldConfig(fieldName, settings);
         return <FieldRenderer key={fieldName} fieldName={fieldName} config={combinedConfig} />;
       })}
-    </>
+    </div>
   );
 }
 

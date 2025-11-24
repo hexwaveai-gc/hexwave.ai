@@ -228,6 +228,12 @@ function validateFieldValue(
 }
 
 /**
+ * Default model ID to use when no model is selected
+ * Using "runwaygen4" as it's featured and commonly used
+ */
+const DEFAULT_MODEL_ID = "runwaygen4";
+
+/**
  * Create the Zustand store with persistence
  */
 export const useImageGenerationStore = create<ImageGenerationStore>()(
@@ -530,6 +536,37 @@ export const useImageGenerationStore = create<ImageGenerationStore>()(
         activeTab: state.activeTab,
         hintsIndex: state.hintsIndex,
       }),
+      // Initialize default model if none is persisted
+      onRehydrateStorage: () => (state) => {
+        if (state && !state.selectedModelId) {
+          // Initialize with default model
+          const model = getModelById(DEFAULT_MODEL_ID);
+          if (model) {
+            const defaults = getDefaultFieldValues(model);
+            state.selectedModelId = DEFAULT_MODEL_ID;
+            state.selectedModel = model;
+            // Only set defaults if fieldValues is empty (first time user)
+            if (!state.fieldValues || Object.keys(state.fieldValues).length === 0) {
+              state.fieldValues = defaults;
+            }
+          }
+        } else if (state && state.selectedModelId && !state.selectedModel) {
+          // If modelId is persisted but model object is missing, restore it
+          const model = getModelById(state.selectedModelId);
+          if (model) {
+            state.selectedModel = model;
+          } else {
+            // Fallback to default if persisted model no longer exists
+            const defaultModel = getModelById(DEFAULT_MODEL_ID);
+            if (defaultModel) {
+              const defaults = getDefaultFieldValues(defaultModel);
+              state.selectedModelId = DEFAULT_MODEL_ID;
+              state.selectedModel = defaultModel;
+              state.fieldValues = defaults;
+            }
+          }
+        }
+      },
     }
   )
 );

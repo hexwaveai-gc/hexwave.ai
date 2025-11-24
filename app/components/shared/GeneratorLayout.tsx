@@ -38,10 +38,10 @@ interface GeneratorLayoutProps {
 export default function GeneratorLayout({
   inputPanel,
   resultsPanel,
-  defaultLeftSize = 35,
-  defaultRightSize = 65,
-  minLeftSize = 25,
-  minRightSize = 50,
+  defaultLeftSize = 48,
+  defaultRightSize = 52,
+  minLeftSize = 30,
+  minRightSize = 40,
   className,
 }: GeneratorLayoutProps) {
   return (
