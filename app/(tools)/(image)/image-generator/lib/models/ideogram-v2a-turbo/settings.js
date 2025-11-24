@@ -1,0 +1,35 @@
+const ideogramV2ATurboSettings = {
+  prompt: {
+    description: "Text prompt for image generation",
+    required: true,
+  },
+  aspect_ratio: {
+    options: [
+      "10:16",
+      "16:10",
+      "9:16",
+      "16:9",
+      "4:3",
+      "3:4",
+      "1:1",
+      "1:3",
+      "3:1",
+      "3:2",
+      "2:3",
+    ],
+    default: "1:1",
+    description:
+      "Aspect ratio. Ignored if a resolution or inpainting image is given.",
+  },
+  style_type: {
+    options: ["Auto", "General", "Realistic", "Design", "Render_3D", "Anime"],
+    default: "Auto",
+    description:
+      "The styles help define the specific aesthetic of the image you want to generate.",
+  },
+  seed: {
+    description: "Random seed. Set for reproducible generation",
+  },
+};
+
+export default ideogramV2ATurboSettings;

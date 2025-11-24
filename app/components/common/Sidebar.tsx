@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Sparkles,
   FolderOpen,
@@ -21,7 +22,7 @@ interface SidebarItem {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   href: string;
-  active?: boolean;
+  matchPaths?: string[]; // Additional paths that should activate this item
   badge?: string;
 }
 
@@ -31,18 +32,18 @@ const sidebarItems: SidebarItem[] = [
     label: "Explore",
     icon: Sparkles,
     href: "/explore",
-    active: true,
   },
   { id: "assets", label: "Assets", icon: FolderOpen, href: "/assets" },
   { id: "image", label: "Image", icon: ImageIcon, href: "/image-generator" },
-  { id: "video", label: "Video", icon: Video, href: "/video-generator", badge: "NEW" },
+  { id: "video", label: "Video", icon: Video, href: "/video-generator", badge: "NEW" }, 
   { id: "tools", label: "All Tools", icon: Wrench, href: "/tools" },
 ];
 
-export default function Sidebar() {
+export default function Sidebar() { 
+  const pathname = usePathname(); 
   const { isSignedIn, user, isLoaded } = useUser();
   const { signOut } = useClerk();
-  const { openModal } = useUpgradePlan();
+  const { openModal } = useUpgradePlan(); 
 
   return (
     <>
@@ -64,7 +65,7 @@ export default function Sidebar() {
               opacity: 1,
             }}
             priority
-          /> 
+          />
         </Link>
       </div>
 
@@ -73,21 +74,21 @@ export default function Sidebar() {
         <div className="flex flex-col gap-2">
           {sidebarItems.map((item) => {
             const Icon = item.icon;
+            const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
+
             return (
               <Link
                 key={item.id}
                 href={item.href}
-                className={`group flex flex-col items-center justify-center gap-1 py-2 rounded-lg transition-colors relative ${
-                  item.active
-                    ? "bg-white/10 text-[#74FF52]"
-                    : "text-white/70 hover:text-white hover:bg-white/5"
-                }`}
+                className={`group flex flex-col items-center justify-center gap-1 py-2 rounded-lg transition-colors relative ${isActive
+                  ? "bg-white/10 text-[#74FF52]"
+                  : "text-white/70 hover:text-white hover:bg-white/5"
+                  }`}
                 title={item.label}
               >
                 <Icon
-                  className={`w-5 h-5 flex-shrink-0 ${
-                    item.active ? "text-[#74FF52]" : ""
-                  }`}
+                  className={`w-5 h-5 flex-shrink-0 ${isActive ? "text-[#74FF52]" : ""
+                    }`}
                 />
                 <span className="text-[10px] font-medium text-center leading-tight">
                   {item.label}

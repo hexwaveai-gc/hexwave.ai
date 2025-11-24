@@ -47,7 +47,7 @@ export default function GeneratorLayout({
   return (
     <div
       className={cn(
-        "h-screen w-full overflow-hidden bg-background",
+        "h-full w-full overflow-hidden bg-background",
         className
       )}
     >
@@ -60,7 +60,7 @@ export default function GeneratorLayout({
             minSize={minLeftSize}
             className="flex flex-col"
           >
-            <div className="flex h-full flex-col border-r border-gray-200 bg-white dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-page)]">
+            <div className="flex h-full flex-col bg-[var(--color-bg-primary)]">
               {inputPanel}
             </div>
           </ResizablePanel>
@@ -68,7 +68,7 @@ export default function GeneratorLayout({
           {/* Resizable Handle */}
           <ResizableHandle
             withHandle
-            className="w-1 bg-gray-200 hover:bg-blue-500 dark:bg-[var(--color-border-container)] dark:hover:bg-[var(--color-theme-2)]"
+            className="group w-px"
           />
 
           {/* Right Panel - Results */}
@@ -77,7 +77,7 @@ export default function GeneratorLayout({
             minSize={minRightSize}
             className="flex flex-col"
           >
-            <div className="h-full overflow-y-auto bg-gray-50 dark:bg-[var(--color-bg-page)]">
+            <div className="h-full overflow-y-auto bg-[var(--color-bg-page)]">
               {resultsPanel}
             </div>
           </ResizablePanel>
@@ -87,12 +87,12 @@ export default function GeneratorLayout({
       {/* Mobile: Stacked vertically */}
       <div className="flex h-full flex-col md:hidden">
         {/* Input Section */}
-        <div className="flex-1 border-b border-gray-200 bg-white dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-page)]">
+        <div className="flex-1 border-b border-[var(--color-border-container)] bg-[var(--color-bg-primary)]">
           {inputPanel}
         </div>
 
         {/* Results Section */}
-        <div className="flex-1 overflow-y-auto bg-gray-50 p-4 dark:bg-[var(--color-bg-page)]">
+        <div className="flex-1 overflow-y-auto bg-[var(--color-bg-page)] p-4">
           {resultsPanel}
         </div>
       </div>

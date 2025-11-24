@@ -1,0 +1,92 @@
+export const leonardoPhotorealSettings = {
+  prompt: {
+    description: "Text prompt for image generation",
+    required: true,
+  },
+  modelId: {
+    options: [
+      "aa77f04e-3eec-4034-9c07-d0f619684628", //Leonardo Kino XL
+    ],
+    default: "aa77f04e-3eec-4034-9c07-d0f619684628",
+    description: "The Leonardo Photoreal model version to use",
+    labels: {
+      "aa77f04e-3eec-4034-9c07-d0f619684628": "Leonardo Kino XL",
+    },
+  },
+  width: {
+    options: [
+      512, 640, 768, 832, 864, 896, 960, 1024, 1088, 1152, 1216, 1280, 1344,
+      1408, 1472, 1536,
+    ],
+    default: 1024,
+    description: "Width of the generated image",
+  },
+  height: {
+    options: [
+      512, 640, 768, 832, 864, 896, 960, 1024, 1088, 1152, 1216, 1280, 1344,
+      1408, 1472, 1536,
+    ],
+    default: 1024,
+    description: "Height of the generated image",
+  },
+  alchemy: {
+    options: [true, false],
+    default: true,
+    description: "Generation mode: Quality (true) or Fast (false)",
+    labels: {
+      true: "Quality",
+      false: "Fast",
+    },
+  },
+  styleUUID: {
+    options: [
+      "BOKEH",
+      "CINEMATIC",
+      "CINEMATIC_CLOSEUP",
+      "CREATIVE",
+      "FASHION",
+      "FILM",
+      "FOOD",
+      "HDR",
+      "LONG_EXPOSURE",
+      "MACRO",
+      "MINIMALISTIC",
+      "MONOCHROME",
+      "MOODY",
+      "NEUTRAL",
+      "PORTRAIT",
+      "RETRO",
+      "STOCK_PHOTO",
+      "VIBRANT",
+      "UNPROCESSED",
+    ],
+    default: "VIBRANT",
+    description: "Preset style to apply to the generated image",
+    labels: {
+      BOKEH: "Bokeh",
+      CINEMATIC: "Cinematic",
+      CINEMATIC_CLOSEUP: "Cinematic (Closeup)",
+      CREATIVE: "Creative",
+      FASHION: "Fashion",
+      FILM: "Film",
+      FOOD: "Food",
+      HDR: "HDR",
+      LONG_EXPOSURE: "Long Exposure",
+      MACRO: "Macro",
+      MINIMALISTIC: "Minimalistic",
+      MONOCHROME: "Monochrome",
+      MOODY: "Moody",
+      NEUTRAL: "Neutral",
+      PORTRAIT: "Portrait",
+      RETRO: "Retro",
+      STOCK_PHOTO: "Stock Photo",
+      VIBRANT: "Vibrant",
+      UNPROCESSED: "Unprocessed",
+    },
+  },
+  num_images: {
+    options: [1, 2, 3, 4],
+    default: 1,
+    description: "Number of images to generate",
+  },
+};

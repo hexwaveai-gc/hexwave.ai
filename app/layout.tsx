@@ -1,9 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { ClerkProvider } from "@clerk/nextjs"; 
-import { IconSprite } from "./components/ui/icon-sprite";
-import { UpgradePlanProvider } from "./providers/UpgradePlanProvider";
+import { ClerkProvider } from "@clerk/nextjs";
+import { IconSprite } from "./components/ui/icon-sprite"; 
+import { UpgradePlanProvider } from "@/providers/UpgradePlanProvider"; 
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -74,12 +74,13 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
   },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 5,
-    userScalable: true,
-  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#0a0a0a" },
     { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
@@ -101,14 +102,16 @@ export default function RootLayout({
         },
       }}
     >
-      <html lang="en" suppressHydrationWarning>
+      <html lang="en" className="dark" suppressHydrationWarning>
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        >
+        > 
+            <IconSprite />
+            {children} 
           <UpgradePlanProvider>
             <IconSprite />
             {children}
-          </UpgradePlanProvider>
+          </UpgradePlanProvider> 
         </body>
       </html>
     </ClerkProvider>
