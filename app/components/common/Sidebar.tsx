@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Sparkles,
   FolderOpen,
@@ -27,15 +28,16 @@ const sidebarItems: SidebarItem[] = [
     label: "Explore",
     icon: Sparkles,
     href: "/explore",
-    active: true,
   },
   { id: "assets", label: "Assets", icon: FolderOpen, href: "/assets" },
-  { id: "image", label: "Image", icon: ImageIcon, href: "/image" },
-  { id: "video", label: "Video", icon: Video, href: "/video", badge: "NEW" },
+  { id: "image", label: "Image", icon: ImageIcon, href: "/image-generator" },
+  { id: "video", label: "Video", icon: Video, href: "/ai-video-generator", badge: "NEW" },
   { id: "tools", label: "All Tools", icon: Wrench, href: "/tools" },
 ];
 
 export default function Sidebar() {
+  const pathname = usePathname();
+
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-19 bg-[#0a0a0a] flex flex-col z-50">
       {/* Logo */}
@@ -55,7 +57,7 @@ export default function Sidebar() {
               opacity: 1,
             }}
             priority
-          /> 
+          />
         </Link>
       </div>
 
@@ -64,21 +66,21 @@ export default function Sidebar() {
         <div className="flex flex-col gap-2">
           {sidebarItems.map((item) => {
             const Icon = item.icon;
+            const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
+
             return (
               <Link
                 key={item.id}
                 href={item.href}
-                className={`group flex flex-col items-center justify-center gap-1 py-2 rounded-lg transition-colors relative ${
-                  item.active
-                    ? "bg-white/10 text-[#74FF52]"
-                    : "text-white/70 hover:text-white hover:bg-white/5"
-                }`}
+                className={`group flex flex-col items-center justify-center gap-1 py-2 rounded-lg transition-colors relative ${isActive
+                  ? "bg-white/10 text-[#74FF52]"
+                  : "text-white/70 hover:text-white hover:bg-white/5"
+                  }`}
                 title={item.label}
               >
                 <Icon
-                  className={`w-5 h-5 flex-shrink-0 ${
-                    item.active ? "text-[#74FF52]" : ""
-                  }`}
+                  className={`w-5 h-5 flex-shrink-0 ${isActive ? "text-[#74FF52]" : ""
+                    }`}
                 />
                 <span className="text-[10px] font-medium text-center leading-tight">
                   {item.label}
