@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import { X, ArrowRight } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
+import HexwaveLoader from '@/app/components/common/HexwaveLoader'
 
 export default function Page() {
   const router = useRouter()
@@ -36,25 +37,23 @@ export default function Page() {
     setError('')
     
     try {
-      // For OAuth, try sign-up first as it handles both new and existing users
-      // Clerk's OAuth flow automatically signs in existing users
-      await signUp.authenticateWithRedirect({
+      // First try sign-in for existing users
+      await signIn.authenticateWithRedirect({
         strategy,
-        redirectUrl: '/explore',
+        redirectUrl: '/sign-in/sso-callback',
         redirectUrlComplete: '/explore',
       })
-      // Note: authenticateWithRedirect will redirect, so setIsLoading(false) won't execute
-    } catch (err: unknown) {
-      // If sign-up fails, try sign-in as fallback
-      console.error('OAuth sign-up attempt failed, trying sign-in:', err)
+    } catch {
+      // If sign-in fails (user doesn't exist), try sign-up
+      console.log('Sign-in failed, trying sign-up for new user')
       try {
-        await signIn.authenticateWithRedirect({
+        await signUp.authenticateWithRedirect({
           strategy,
-          redirectUrl: '/explore',
+          redirectUrl: '/sign-up/sso-callback',
           redirectUrlComplete: '/explore',
         })
-      } catch (signInErr: unknown) {
-        const error = signInErr as { errors?: Array<{ message?: string }> } | Error
+      } catch (signUpErr: unknown) {
+        const error = signUpErr as { errors?: Array<{ message?: string }> } | Error
         if (error instanceof Error) {
           setError(error.message)
         } else {
@@ -284,13 +283,10 @@ export default function Page() {
 
 
   // Show loading while checking auth status
-  if (isSignedIn) {
+  if (true) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-black">
-        <div className="text-white text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p>Already signed in. Redirecting...</p>
-        </div>
+        <HexwaveLoader message="Already signed in. Redirecting..." size="lg" />
       </div>
     )
   }
@@ -571,21 +567,19 @@ export default function Page() {
           </p>
         </div>
 
-        {/* Clerk components for OAuth flows - hidden but needed for OAuth to work */}
+        {/* Clerk components for OAuth SSO callback handling */}
         <div className="hidden">
           <SignIn
             routing="path"
             path="/sign-in"
             signUpUrl="/sign-up"
-            afterSignInUrl="/explore"
-            fallbackRedirectUrl="/explore"
+            forceRedirectUrl="/explore"
           />
           <SignUp
             routing="path"
-            path="/sign-in/sign-up-oauth"
+            path="/sign-up"
             signInUrl="/sign-in"
-            afterSignUpUrl="/explore"
-            fallbackRedirectUrl="/explore"
+            forceRedirectUrl="/explore"
           />
         </div>
       </div>

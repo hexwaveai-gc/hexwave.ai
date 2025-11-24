@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import { X, ArrowRight } from 'lucide-react'
 import { Button } from '@/app/components/ui/button'
+import HexwaveLoader from '@/app/components/common/HexwaveLoader'
 
 export default function Page() {
   const router = useRouter()
@@ -34,13 +35,12 @@ export default function Page() {
     setError('')
     
     try {
-      // Use the correct strategy names for Clerk
+      // Use sign-up flow with proper SSO callback URL
       await signUp.authenticateWithRedirect({
         strategy,
-        redirectUrl: '/explore',
+        redirectUrl: '/sign-up/sso-callback',
         redirectUrlComplete: '/explore',
       })
-      // Note: authenticateWithRedirect will redirect, so setIsLoading(false) won't execute
     } catch (err: unknown) {
       const error = err as { errors?: Array<{ message?: string }> } | Error
       if (error instanceof Error) {
@@ -223,10 +223,7 @@ export default function Page() {
   if (isSignedIn) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-black">
-        <div className="text-white text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p>Already signed in. Redirecting...</p>
-        </div>
+        <HexwaveLoader message="Already signed in. Redirecting..." size="lg" />
       </div>
     )
   }
@@ -485,14 +482,13 @@ export default function Page() {
           </p>
         </div>
 
-        {/* Clerk SignUp component for OAuth flows and fallback */}
+        {/* Clerk SignUp component for OAuth SSO callback handling */}
         <div className="hidden">
           <SignUp
             routing="path"
             path="/sign-up"
             signInUrl="/sign-in"
-            afterSignUpUrl="/explore"
-            fallbackRedirectUrl="/explore"
+            forceRedirectUrl="/explore"
           />
         </div>
       </div>
