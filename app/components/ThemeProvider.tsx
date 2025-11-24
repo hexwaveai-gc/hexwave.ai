@@ -1,21 +1,25 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useThemeStore } from '@/app/store/useThemeStore';
+import type { ReactNode } from "react";
+import { ThemeProvider as NextThemesProvider } from "next-themes";
+
+interface ThemeProviderProps {
+  children: ReactNode;
+}
 
 /**
- * ThemeProvider component that applies the theme class to the document
- * Should be placed in the root layout
+ * Wraps the app with next-themes so the theme toggle can update the DOM class.
  */
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const theme = useThemeStore((state) => state.theme);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    root.classList.remove('light', 'dark');
-    root.classList.add(theme);
-  }, [theme]);
-
-  return <>{children}</>;
+export function ThemeProvider({ children }: ThemeProviderProps) {
+  return (
+    <NextThemesProvider
+      attribute="class"
+      defaultTheme="dark"
+      enableSystem
+      disableTransitionOnChange
+    >
+      {children}
+    </NextThemesProvider>
+  );
 }
 
