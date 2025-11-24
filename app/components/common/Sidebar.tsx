@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -11,8 +10,11 @@ import {
   Wrench,
   LogIn,
   Zap,
+  User,
+  LogOut,
 } from "lucide-react";
-import UpgradePlanModal from "./planModal/UpgradePlanModal";
+import { useUser, useClerk } from "@clerk/nextjs";
+import { useUpgradePlan } from "@/app/providers/UpgradePlanProvider";
 
 interface SidebarItem {
   id: string;
@@ -32,13 +34,15 @@ const sidebarItems: SidebarItem[] = [
     active: true,
   },
   { id: "assets", label: "Assets", icon: FolderOpen, href: "/assets" },
-  { id: "image", label: "Image", icon: ImageIcon, href: "/image" },
-  { id: "video", label: "Video", icon: Video, href: "/video", badge: "NEW" },
+  { id: "image", label: "Image", icon: ImageIcon, href: "/image-generator" },
+  { id: "video", label: "Video", icon: Video, href: "/video-generator", badge: "NEW" },
   { id: "tools", label: "All Tools", icon: Wrench, href: "/tools" },
 ];
 
 export default function Sidebar() {
-  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const { isSignedIn, user, isLoaded } = useUser();
+  const { signOut } = useClerk();
+  const { openModal } = useUpgradePlan();
 
   return (
     <>
@@ -101,19 +105,61 @@ export default function Sidebar() {
 
       {/* Bottom Section */}
       <div className="p-2 space-y-1.5">
-        <Link
-          href="/sign-in"
-          className="flex flex-col items-center justify-center gap-1 py-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition-colors"
-          title="Sign In"
-        >
-          <LogIn className="w-5 h-5 flex-shrink-0" />
-          <span className="text-[10px] font-medium text-center leading-tight">
-            Sign In
-          </span>
-        </Link>
+        {isLoaded && (
+          <>
+            {isSignedIn && user ? (
+              <>
+                {/* User Profile */}
+                <div className="flex flex-col items-center justify-center gap-1 py-2 rounded-lg text-white/70">
+                  <div className="relative">
+                    {user.imageUrl ? (
+                      <Image
+                        src={user.imageUrl}
+                        alt={user.fullName || user.emailAddresses[0]?.emailAddress || "User"}
+                        width={20}
+                        height={20}
+                        className="w-5 h-5 rounded-full"
+                      />
+                    ) : (
+                      <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center">
+                        <User className="w-3 h-3" />
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-[9px] font-medium text-center leading-tight truncate w-full px-1" title={user.fullName || user.emailAddresses[0]?.emailAddress || "User"}>
+                    {user.firstName || user.emailAddresses[0]?.emailAddress?.split('@')[0] || "User"}
+                  </span>
+                </div>
+
+                {/* Sign Out */}
+                <button
+                  onClick={() => signOut({ redirectUrl: '/explore' })}
+                  className="flex flex-col items-center justify-center gap-1 py-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition-colors w-full"
+                  title="Sign Out"
+                >
+                  <LogOut className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-[10px] font-medium text-center leading-tight">
+                    Sign Out
+                  </span>
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/sign-in"
+                className="flex flex-col items-center justify-center gap-1 py-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition-colors"
+                title="Sign In"
+              >
+                <LogIn className="w-5 h-5 flex-shrink-0" />
+                <span className="text-[10px] font-medium text-center leading-tight">
+                  Sign In
+                </span>
+              </Link>
+            )}
+          </>
+        )}
 
         <button
-          onClick={() => setIsUpgradeModalOpen(true)}
+          onClick={openModal}
           className="flex flex-col items-center justify-center gap-1 py-2 px-1.5 rounded-lg bg-[#74FF52] text-[#0a0a0a] hover:bg-[#66e648] transition-colors font-semibold"
           title="SALE 50% off"
         >
@@ -122,18 +168,8 @@ export default function Sidebar() {
             SALE 50% off
           </span>
         </button>
-
-        <div className="pt-1.5">
-          <span className="block text-white/40 text-[9px] text-center">
-            API
-          </span>
-        </div>
       </div>
       </aside>
-      <UpgradePlanModal
-        open={isUpgradeModalOpen}
-        onOpenChange={setIsUpgradeModalOpen}
-      />
     </>
   );
 }
