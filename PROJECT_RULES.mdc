@@ -1,0 +1,209 @@
+---
+description: When we are making POST requests from the front end. 
+alwaysApply: false
+---
+### 3. Backend Validation with Zod
+
+**MANDATORY**: All API routes MUST validate request bodies using the same Zod schemas.
+
+#### Rules:
+- ✅ **DO**: Import and reuse Zod schemas from shared schema files
+- ✅ **DO**: Validate request bodies in API routes before processing
+- ✅ **DO**: Return clear error messages from Zod validation failures
+- ✅ **DO**: Use `z.parse()` or `z.safeParse()` for validation
+- ❌ **DON'T**: Write separate validation logic in API routes
+- ❌ **DON'T**: Skip validation in API routes assuming frontend validation is sufficient
+
+#### Example API Route:
+```typescript
+import { NextResponse } from "next/server";
+import { waitlistSchema } from "@/lib/schemas/waitlist.schema";
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    
+    // Validate using Zod schema
+    const validationResult = waitlistSchema.safeParse(body);
+    
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { 
+          error: "Validation failed",
+          details: validationResult.error.errors 
+        },
+        { status: 400 }
+      );
+    }
+    
+    const { email, name } = validationResult.data;
+    
+    // Process validated data...
+    
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+---
+
+### 4. Schema Sharing Strategy
+
+#### Frontend and Backend Schema Sharing:
+- **Shared Schemas**: Place schemas in `lib/schemas/` directory
+- **Import Pattern**: Both frontend components and API routes import from the same schema files
+- **Type Safety**: Use `z.infer<typeof schema>` to derive TypeScript types
+
+#### Schema File Structure:
+```typescript
+// lib/schemas/waitlist.schema.ts
+import { z } from "zod";
+
+// Base schema
+export const waitlistSchema = z.object({
+  email: z.string().email(),
+  name: z.string().optional(),
+});
+
+// Derived types
+export type WaitlistFormData = z.infer<typeof waitlistSchema>;
+
+// API-specific schemas (if needed)
+export const waitlistApiSchema = waitlistSchema.extend({
+  source: z.string().optional(),
+});
+```
+
+---
+
+### 5. Form Component Patterns
+
+#### Required Pattern for All Forms:
+1. **Define Zod Schema** → Create schema with validation rules
+2. **Create Form Hook** → Use `useForm` with `zodResolver`
+3. **Wrap with Form Provider** → Use `<Form {...form}>` wrapper
+4. **Use FormField Components** → Use FormField, FormItem, FormLabel, FormControl, FormMessage
+5. **Handle Submission** → Use `form.handleSubmit(onSubmit)`
+
+#### Field Registration Pattern:
+```typescript
+<FormField
+  control={form.control}
+  name="fieldName"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>Field Label</FormLabel>
+      <FormControl>
+        <Input {...field} placeholder="Enter value" />
+      </FormControl>
+      <FormDescription>Help text (optional)</FormDescription>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
+```
+
+---
+
+### 6. Error Handling
+
+#### Frontend Error Display:
+- ✅ **DO**: Let react-hook-form handle validation errors automatically
+- ✅ **DO**: Use `<FormMessage />` component to display field errors
+- ✅ **DO**: Show server-side validation errors using `form.setError()`
+- ❌ **DON'T**: Manually manage error state when using react-hook-form
+
+#### Backend Error Response:
+- ✅ **DO**: Return structured error responses with Zod validation errors
+- ✅ **DO**: Include field-level error messages
+- ✅ **DO**: Use HTTP status codes appropriately (400 for validation errors)
+
+---
+
+### 7. Migration Guidelines
+
+#### For Existing Forms:
+1. Identify forms using `useState` or manual validation
+2. Create Zod schema matching current validation logic
+3. Replace `useState` with `useForm` hook
+4. Replace manual inputs with `FormField` components
+5. Update API routes to use Zod validation
+6. Test thoroughly before deploying
+
+#### Priority Order:
+1. **High Priority**: Forms with API submissions (e.g., WaitlistForm)
+2. **Medium Priority**: Forms with complex validation
+3. **Low Priority**: Simple forms with minimal validation
+
+---
+
+### 8. Best Practices
+
+#### Schema Design:
+- ✅ Use descriptive error messages: `z.string().min(2, "Name must be at least 2 characters")`
+- ✅ Use `.optional()` or `.nullable()` appropriately
+- ✅ Use `.refine()` for complex custom validations
+- ✅ Export both schema and TypeScript types
+
+#### Form Performance:
+- ✅ Use `React.memo()` for form components when appropriate
+- ✅ Avoid unnecessary re-renders by properly using `control` prop
+- ✅ Use `defaultValues` in `useForm` for initial values
+
+#### Code Organization:
+- ✅ Keep schemas close to where they're used, or in shared `lib/schemas/`
+- ✅ Name schemas descriptively: `waitlistSchema`, `videoGenerationSchema`
+- ✅ Export types alongside schemas: `export type WaitlistFormData = z.infer<typeof waitlistSchema>`
+
+---
+
+### 9. Checklist for New Forms
+
+When creating a new form, ensure:
+
+- [ ] Zod schema is defined with all validation rules
+- [ ] Schema is exported from appropriate location
+- [ ] `useForm` hook uses `zodResolver` with the schema
+- [ ] Form is wrapped with `<Form>` provider
+- [ ] All inputs use `<FormField>` component
+- [ ] Error messages are displayed using `<FormMessage>`
+- [ ] API route validates request body using the same schema
+- [ ] TypeScript types are derived from schema using `z.infer`
+- [ ] Form submission handler receives typed data
+
+---
+
+### 10. Examples Reference
+
+#### Simple Form Example:
+See: `lib/schemas/waitlist.schema.ts` (to be created)
+See: `app/components/WaitlistForm.tsx` (to be migrated)
+See: `app/api/waitlist/route.ts` (to be updated)
+
+#### Complex Form Example:
+For complex forms with multiple field types, refer to:
+- `app/components/ui/form.tsx` - Form component library
+- `@hookform/resolvers` documentation for advanced patterns
+
+---
+
+## Summary
+
+**Core Principles:**
+1. ✅ Always use `react-hook-form` for form state
+2. ✅ Always use Zod schemas for validation
+3. ✅ Share schemas between frontend and backend
+4. ✅ Use existing form UI components from `app/components/ui/form.tsx`
+5. ✅ Follow TypeScript best practices with inferred types
+
+**Key Benefits:**
+- Type safety across frontend and backend
+- Single source of truth for validation rules
+- Better developer experience with auto-completion
+- Consistent error handling
+- Reduced code duplication
