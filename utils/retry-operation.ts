@@ -6,6 +6,13 @@ export interface RetryOptions {
   onRetry?: (attempt: number, error: Error) => void;
 }
 
+export const DEFAULT_RETRY_CONFIG = {
+  maxAttempts: 3,
+  baseDelay: 1000,
+  maxDelay: 2000,
+  exponentialBackoff: true,
+}
+
 export async function retryOperation<T>(
   operation: () => Promise<T>,
   options: RetryOptions = {}
