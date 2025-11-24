@@ -1,44 +1,41 @@
 "use client";
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/app/components/ui/select";
+import { useMemo } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/app/components/ui/select";
 import { useImageGenerationStore } from "../store/useImageGenerationStore";
 import { useFieldValue } from "../store/selectors";
+import { getFieldMetadata, humanizeFieldName, PRIMARY_FIELD_KEYS } from "../lib/fieldMetadata";
+
+type OptionInput =
+  | string
+  | number
+  | {
+      value: string | number;
+      label?: string;
+      helperText?: string;
+    };
 
 /**
- * Primary fields that should be shown in the footer
- * These fields are rendered dynamically based on model settings
+ * Helper function to normalize options (handle string, number, and object formats)
  */
-const PRIMARY_FIELD_NAMES = [
-  "aspect_ratio",
-  "resolution",
-  "num_images",
-  "quantity", // Alternative name for num_images (used by GPT Image 1)
-  "quality",
-  "output_quality", // Alternative name for quality (used by Stable Diffusion)
-  "rendering_speed", // Used by Ideogram (has quality-related options)
-] as const;
-
-/**
- * Helper function to normalize options (handle both string and object formats)
- */
-function normalizeOption(option: string | { value: string; label: string }) {
-  if (typeof option === "string") {
-    return { value: option, label: option };
+function normalizeOption(option: OptionInput) {
+  if (typeof option === "string" || typeof option === "number") {
+    const value = option.toString();
+    return { value, label: option.toString() };
   }
-  return option;
+
+  return {
+    value: option.value.toString(),
+    label: option.label ?? option.value.toString(),
+    helperText: option.helperText,
+  };
 }
 
 /**
  * Check if a field setting supports rendering as a select dropdown
  */
 function isSelectField(config: any): boolean {
-  return config && (config.options || (Array.isArray(config) && config.length > 0));
+  return config && Array.isArray(config.options) && config.options.length > 0;
 }
 
 /**
@@ -76,11 +73,11 @@ function SelectField({
           <SelectValue />
         </SelectTrigger>
         <SelectContent className="rounded-lg">
-          {options.map((option: string | { value: string; label: string }) => {
+          {options.map((option: OptionInput, index: number) => {
             const normalized = normalizeOption(option);
             return (
               <SelectItem
-                key={normalized.value}
+                key={`${normalized.value}-${index}`}
                 value={normalized.value}
                 className="rounded-lg"
               >
@@ -108,13 +105,13 @@ function NumImagesField({
   value: any;
   onValueChange: (value: string) => void;
 }) {
-  const defaultValue = config?.default || 1;
-  const min = config?.min || 1;
-  const max = config?.max || 4;
-  const displayValue = value?.toString() || defaultValue.toString();
-
-  // Generate options array from min to max
-  const options = Array.from({ length: max - min + 1 }, (_, i) => min + i);
+  const displayValue = value?.toString() || config.default?.toString() || "";
+  const options =
+    config.options ||
+    Array.from(
+      { length: (config.max || 4) - (config.min || 1) + 1 },
+      (_, i) => (config.min || 1) + i
+    ).map((num) => ({ value: num.toString(), label: `${num} ${num === 1 ? "Image" : "Images"}` }));
 
   return (
     <div className="w-24 shrink-0">
@@ -123,15 +120,39 @@ function NumImagesField({
           <SelectValue />
         </SelectTrigger>
         <SelectContent className="rounded-lg">
-          {options.map((num) => (
-            <SelectItem key={num} value={num.toString()} className="rounded-lg">
-              {num} {num === 1 ? "Image" : "Images"}
-            </SelectItem>
-          ))}
+          {options.map((option: OptionInput, index: number) => {
+            const normalized = normalizeOption(option);
+            return (
+              <SelectItem
+                key={`${normalized.value ?? index}`}
+                value={normalized.value}
+                className="rounded-lg"
+              >
+                {normalized.label}
+              </SelectItem>
+            );
+          })}
         </SelectContent>
       </Select>
     </div>
   );
+}
+
+function buildFieldConfig(fieldName: string, settings: Record<string, any>) {
+  const metadata = getFieldMetadata(fieldName);
+  const overrides = settings[fieldName] || {};
+  const base = metadata ? { ...metadata } : {};
+
+  const options = overrides.options || metadata?.options;
+
+  return {
+    ...base,
+    ...overrides,
+    label: overrides.label || metadata?.label || humanizeFieldName(fieldName),
+    description: overrides.description || metadata?.description,
+    default: overrides.default ?? metadata?.defaultValue,
+    options,
+  };
 }
 
 /**
@@ -160,17 +181,14 @@ function FieldRenderer({
 
   // Special handling for num_images/quantity
   if (fieldName === "num_images" || fieldName === "quantity") {
-    if (isIntegerField(config)) {
-      return (
-        <NumImagesField
-          fieldName={fieldName}
-          config={config}
-          value={value}
-          onValueChange={handleValueChange}
-        />
-      );
-    }
-    return null;
+    return (
+      <NumImagesField
+        fieldName={fieldName}
+        config={config}
+        value={value}
+        onValueChange={handleValueChange}
+      />
+    );
   }
 
   // Handle select fields
@@ -201,57 +219,65 @@ function FieldRenderer({
  */
 export default function PrimaryFieldsRenderer() {
   const selectedModel = useImageGenerationStore((s) => s.selectedModel);
+  const settings = selectedModel?.settings;
 
-  if (!selectedModel || !selectedModel.settings) {
+  // Define field order for rendering
+  const fieldOrder: string[] = Array.from(PRIMARY_FIELD_KEYS);
+
+  // Compute renderable fields
+  const fieldsToRender = useMemo(() => {
+    if (!settings) {
+      return [];
+    }
+
+    return fieldOrder.filter((fieldName) => {
+      if (fieldName === "quantity" && !settings.quantity) {
+        return false;
+      }
+      if (fieldName === "quantity" && settings.num_images) {
+        return false;
+      }
+      if (fieldName === "num_images" && !settings.num_images && settings.quantity) {
+        return false;
+      }
+      if (fieldName === "output_quality" && settings.quality) {
+        return false;
+      }
+      if (fieldName === "rendering_speed" && (settings.quality || settings.output_quality)) {
+        return false;
+      }
+
+      const config = buildFieldConfig(fieldName, settings);
+
+      if (!config) {
+        return false;
+      }
+
+      if (!isSelectField(config) && !isIntegerField(config)) {
+        return false;
+      }
+
+      if (isSelectField(config) && (!config.options || config.options.length === 0)) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [settings]);
+
+  if (fieldsToRender.length === 0) {
     return null;
   }
 
-  const settings = selectedModel.settings;
-
-  // Define field order for rendering
-  const fieldOrder: string[] = [
-    "aspect_ratio",
-    "resolution",
-    "num_images",
-    "quantity", // Check quantity if num_images doesn't exist
-    "quality",
-    "output_quality", // Check output_quality if quality doesn't exist
-    "rendering_speed", // Check rendering_speed if quality doesn't exist
-  ];
-
-  // Filter and order fields based on availability
-  const fieldsToRender = fieldOrder.filter((fieldName) => {
-    // Skip if already processed (e.g., skip quantity if num_images exists)
-    if (fieldName === "quantity" && settings.num_images) {
-      return false;
-    }
-    if (fieldName === "output_quality" && settings.quality) {
-      return false;
-    }
-    if (fieldName === "rendering_speed" && (settings.quality || settings.output_quality)) {
-      return false;
-    }
-
-    const config = settings[fieldName];
-    if (!config) {
-      return false;
-    }
-
-    // Check if field can be rendered
-    return isSelectField(config) || isIntegerField(config);
-  });
-
-  if (fieldsToRender.length === 0) {
+  if (!selectedModel || !settings) {
     return null;
   }
 
   return (
     <>
       {fieldsToRender.map((fieldName) => {
-        const config = settings[fieldName];
-        return (
-          <FieldRenderer key={fieldName} fieldName={fieldName} config={config} />
-        );
+        const combinedConfig = buildFieldConfig(fieldName, settings);
+        return <FieldRenderer key={fieldName} fieldName={fieldName} config={combinedConfig} />;
       })}
     </>
   );
@@ -262,6 +288,6 @@ export default function PrimaryFieldsRenderer() {
  * Used by AdvancedSettingsDialog to exclude primary fields
  */
 export function getPrimaryFieldNames(): string[] {
-  return Array.from(PRIMARY_FIELD_NAMES);
+  return Array.from(PRIMARY_FIELD_KEYS);
 }
 

@@ -7,13 +7,19 @@
 
 import { Model, ModelSettings } from "../lib/modelRegistry";
 import { ActiveTab } from "../store/useImageGenerationStore";
-import { uploadToCloudinary, uploadMultipleToCloudinary, extractCloudinaryUrl, extractCloudinaryUrls } from "./cloudinary";
-import { isFile, isFileArray, FileFieldType } from "../types/api.types";
+import {
+  uploadToCloudinary,
+  uploadMultipleToCloudinary,
+  extractCloudinaryUrl,
+  extractCloudinaryUrls,
+} from "./cloudinary";
+import { isFile, isFileArray } from "../types/api.types";
+import { getFieldMetadata } from "./fieldMetadata";
 
 /**
  * Field name mappings for API normalization
  */
-const FIELD_NAME_MAP: Record<string, string> = {
+const LEGACY_FIELD_NAME_MAP: Record<string, string> = {
   quantity: "num_images",
   output_quality: "quality",
 };
@@ -21,34 +27,41 @@ const FIELD_NAME_MAP: Record<string, string> = {
 /**
  * Get the standard field name (maps aliases to standard names)
  */
-function getStandardFieldName(fieldName: string): string {
-  return FIELD_NAME_MAP[fieldName] || fieldName;
+function resolveBackendKey(fieldName: string, fieldConfig?: Record<string, any>): string {
+  const metadata = getFieldMetadata(fieldName);
+  if (fieldConfig?.backendKey) {
+    return fieldConfig.backendKey;
+  }
+  if (metadata?.backendKey) {
+    return metadata.backendKey;
+  }
+  return LEGACY_FIELD_NAME_MAP[fieldName] || fieldName;
 }
 
 /**
  * Check if a field is a file field based on model settings or field name
  */
 function isFileField(fieldName: string, config: any): boolean {
+  const metadata = getFieldMetadata(fieldName);
+  if (metadata?.kind === "file-array" || metadata?.kind === "file-single") {
+    return true;
+  }
+
   // Check common file field names first (works even without config)
-  const fileFieldNames = [
-    "reference_images",
-    "original_image",
-    "image_urls",
-    "uploaded_images",
-  ];
-  
+  const fileFieldNames = ["reference_images", "original_image", "image_urls", "uploaded_images"];
+
   if (fileFieldNames.includes(fieldName)) {
     return true;
   }
-  
+
   // If no config, can't determine from settings
   if (!config) return false;
-  
+
   // Check if it's explicitly marked as a file type
   if (config.type === "array" && config.max_files !== undefined) {
     return true; // Multiple file upload
   }
-  
+
   return false;
 }
 
@@ -61,47 +74,27 @@ async function processFileFields(
 ): Promise<Record<string, any>> {
   const processedValues: Record<string, any> = { ...fieldValues };
   
-  console.log(`[ParameterBuilder] Processing file fields. Field values:`, Object.keys(fieldValues));
-  console.log(`[ParameterBuilder] Model settings keys:`, Object.keys(settings));
-  
   // Process each field
   for (const [fieldName, value] of Object.entries(fieldValues)) {
     const config = settings[fieldName];
-    
-    console.log(`[ParameterBuilder] Checking field: ${fieldName}`, {
-      hasConfig: !!config,
-      configType: config?.type,
-      valueType: Array.isArray(value) ? 'array' : typeof value,
-      isFile: value instanceof File,
-      isFileArray: Array.isArray(value) && value.length > 0 && value[0] instanceof File,
-    });
-    
+
     // Skip if not a file field
     if (!isFileField(fieldName, config)) {
-      console.log(`[ParameterBuilder] Skipping ${fieldName} - not a file field`);
       continue;
     }
-    
+
     // Skip if value is null, undefined, or empty array
     if (value === null || value === undefined || (Array.isArray(value) && value.length === 0)) {
-      console.log(`[ParameterBuilder] Skipping ${fieldName} - empty value`);
       continue;
     }
-    
+
     // Handle single file
     if (isFile(value)) {
       try {
         const uploadResponse = await uploadToCloudinary(value);
         const url = extractCloudinaryUrl(uploadResponse);
-        
-        // Map field name to API format
-        const apiFieldName = fieldName === "original_image" 
-          ? "original_image_url" 
-          : `${fieldName}_url`;
-        
-        processedValues[apiFieldName] = url;
-        delete processedValues[fieldName]; // Remove original File object
-        console.log(`[ParameterBuilder] File uploaded successfully: ${fieldName} -> ${apiFieldName}`, { url });
+
+        processedValues[fieldName] = url;
       } catch (error) {
         console.error(`Failed to upload ${fieldName}:`, error);
         throw new Error(`Failed to upload ${fieldName}: ${error instanceof Error ? error.message : "Unknown error"}`);
@@ -109,41 +102,35 @@ async function processFileFields(
     }
     // Handle multiple files
     else if (isFileArray(value)) {
-      console.log(`[ParameterBuilder] Uploading ${value.length} files: ${fieldName}`);
       try {
         const uploadResponses = await uploadMultipleToCloudinary(value);
         const urls = extractCloudinaryUrls(uploadResponses);
-        
-        // Map field name to API format
-        const apiFieldName = fieldName === "reference_images"
-          ? "reference_image_urls"
-          : `${fieldName}_urls`;
-        
-        processedValues[apiFieldName] = urls;
-        delete processedValues[fieldName]; // Remove original File array
-        console.log(`[ParameterBuilder] Files uploaded successfully: ${fieldName} -> ${apiFieldName}`, { urls });
+
+        processedValues[fieldName] = urls;
       } catch (error) {
         console.error(`Failed to upload ${fieldName}:`, error);
         throw new Error(`Failed to upload ${fieldName}: ${error instanceof Error ? error.message : "Unknown error"}`);
       }
     }
   }
-  
-  console.log(`[ParameterBuilder] Processed file fields. Final params:`, processedValues);
+
   return processedValues;
 }
 
 /**
  * Normalize field names to API format
  */
-function normalizeFieldNames(fieldValues: Record<string, any>): Record<string, any> {
+function normalizeFieldNames(
+  fieldValues: Record<string, any>,
+  settings: ModelSettings
+): Record<string, any> {
   const normalized: Record<string, any> = {};
-  
+
   for (const [fieldName, value] of Object.entries(fieldValues)) {
-    const standardName = getStandardFieldName(fieldName);
-    normalized[standardName] = value;
+    const backendKey = resolveBackendKey(fieldName, settings[fieldName]);
+    normalized[backendKey] = value;
   }
-  
+
   return normalized;
 }
 
@@ -184,6 +171,8 @@ function applySettingDefaults(
       return;
     }
 
+    const metadata = getFieldMetadata(fieldName);
+
     const hasValue =
       valuesWithDefaults[fieldName] !== undefined &&
       valuesWithDefaults[fieldName] !== null;
@@ -194,6 +183,11 @@ function applySettingDefaults(
 
     if (config.default !== undefined) {
       valuesWithDefaults[fieldName] = config.default;
+      return;
+    }
+
+    if (metadata?.defaultValue !== undefined) {
+      valuesWithDefaults[fieldName] = metadata.defaultValue;
       return;
     }
 
@@ -224,10 +218,7 @@ export async function buildGenerationParams(
   activeTab: ActiveTab
 ): Promise<Record<string, any>> {
   const settings = model.settings || {};
-  
-  console.log(`[ParameterBuilder] Building params for model: ${model.id}, tab: ${activeTab}`);
-  console.log(`[ParameterBuilder] Input fieldValues:`, fieldValues);
-  
+
   // Step 0: Apply defaults from settings for missing values
   const valuesWithDefaults = applySettingDefaults(fieldValues, settings);
 
@@ -235,13 +226,11 @@ export async function buildGenerationParams(
   const processedValues = await processFileFields(valuesWithDefaults, settings);
   
   // Step 2: Normalize field names (quantity → num_images, etc.)
-  const normalizedValues = normalizeFieldNames(processedValues);
+  const normalizedValues = normalizeFieldNames(processedValues, settings);
   
   // Step 3: Clean up undefined/null/empty values
   const cleanedParams = cleanParameters(normalizedValues);
-  
-  console.log(`[ParameterBuilder] Final cleaned params:`, cleanedParams);
-  
+
   return cleanedParams;
 }
 
