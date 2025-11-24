@@ -1,9 +1,8 @@
 import { CloudinaryUploadResponse } from "../types/api.types";
-import { uploadImage } from "@/lib/cloudinary/upload/upload-service";
-import { UploadOptions } from "@/lib/cloudinary/upload/types";
 
-const DEFAULT_OPTIONS: UploadOptions = {
+const DEFAULT_OPTIONS = {
   folder: "image-generator",
+  resourceType: "image" as const,
 };
 
 async function fileToBase64(file: File): Promise<string> {
@@ -29,16 +28,32 @@ async function validateFile(file: File) {
 export async function uploadToCloudinary(file: File): Promise<CloudinaryUploadResponse> {
   await validateFile(file);
   const fileBase64 = await fileToBase64(file);
-  const response = await uploadImage(fileBase64, {
-    ...DEFAULT_OPTIONS,
+  
+  // Call API route instead of importing server-side Cloudinary
+  const response = await fetch("/api/cloudinary/upload", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      file: fileBase64,
+      options: DEFAULT_OPTIONS,
+    }),
   });
 
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `Upload failed with status ${response.status}`);
+  }
+
+  const result = await response.json();
+
   return {
-    url: response.secureUrl || response.url,
-    publicId: response.publicId,
-    format: response.format,
-    width: response.width,
-    height: response.height,
+    url: result.secureUrl || result.url,
+    publicId: result.publicId,
+    format: result.format,
+    width: result.width,
+    height: result.height,
   };
 }
 
