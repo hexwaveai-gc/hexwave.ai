@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { Video, Image, Layers } from "lucide-react";
 import Sidebar from "@/app/components/common/Sidebar";
 import GeneratorLayout from "@/app/components/shared/GeneratorLayout";
@@ -9,7 +9,6 @@ import ResultsPanel from "@/app/components/shared/ResultsPanel";
 import GenerateButton from "@/app/components/shared/GenerateButton";
 import VideoModelSelector from "./components/VideoModelSelector";
 import { DynamicFieldRenderer } from "./components/DynamicFieldRenderer";
-import { CostDisplay } from "./components/CostDisplay";
 import { useGenerationStore } from "./store/useGenerationStore";
 import { useIsFormValid } from "./store/selectors";
 import { MODELS } from "./configs/models.constant";
@@ -21,7 +20,6 @@ import { MODELS } from "./configs/models.constant";
  * - Zero prop drilling: All state in Zustand
  * - DRY: Single DynamicFieldRenderer for all models
  * - Smart tabs: Filter models by category (Text/Image/Video)
- * - Real-time cost calculation
  * - Production-grade state management
  * 
  * Reasoning: Scales to 76+ models with zero code changes when adding new models.
@@ -51,6 +49,17 @@ export default function AiVideoGeneratorPage() {
         return [];
     }
   }, [activeTab]);
+
+  // Auto-select first model when no model is selected or when selected model is not in filtered list
+  // Reasoning: Provides better UX by having a model ready to configure immediately
+  useEffect(() => {
+    if (filteredModels.length > 0) {
+      // If no model is selected, or selected model is not in the current filtered list, select first model
+      if (!selectedModel || !filteredModels.find((m) => m.id === selectedModel.id)) {
+        setModel(filteredModels[0]);
+      }
+    }
+  }, [filteredModels, selectedModel, setModel]);
 
   /**
    * Handle video generation
@@ -109,9 +118,6 @@ export default function AiVideoGeneratorPage() {
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-(--color-text-1)">
                   AI Video Generator
                 </h1>
-                <p className="mt-1 text-sm text-gray-600 dark:text-(--color-text-2)">
-                  {filteredModels.length} models available
-                </p>
               </div>
 
               {/* Tabs Content - Scrollable with DynamicFieldRenderer */}
@@ -123,7 +129,7 @@ export default function AiVideoGeneratorPage() {
                 />
               </div>
 
-              {/* Footer - Model Selection, Cost, Generate Button */}
+              {/* Footer - Model Selection, Generate Button */}
               <div className="border-t border-gray-200 bg-white px-(--spacing-page-padding) py-(--spacing-footer-padding) dark:border-(--color-border-container) dark:bg-(--color-bg-page)">
                 {/* Model Selection */}
                 <div className="mb-4">
@@ -135,13 +141,6 @@ export default function AiVideoGeneratorPage() {
                     onModelSelect={setModel}
                   />
                 </div>
-
-                {/* Cost Display */}
-                {selectedModel && (
-                  <div className="mb-4">
-                    <CostDisplay />
-                  </div>
-                )}
 
                 {/* Generate Button */}
                 <GenerateButton

@@ -52,13 +52,13 @@ export default function GeneratorTabs({
     >
       {/* Tab List */}
       <div className="px-[var(--spacing-page-padding)] pt-0">
-        <TabsList className="flex h-auto w-full justify-start gap-8 bg-transparent p-0 dark:bg-transparent mt-1">
+        <TabsList className="flex h-auto w-full justify-start gap-4 bg-transparent p-0 dark:bg-transparent mt-1">
           {tabs.map((tab) => (
             <TabsTrigger
               key={tab.id}
               value={tab.id}
               className={cn(
-                "relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-0 pb-3 pt-2 text-sm font-medium shadow-none transition-colors",
+                "relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-0 pb-3 pt-2 text-xs font-medium shadow-none transition-colors",
                 // Inactive state - muted gray text and icons, no background
                 "text-gray-500 dark:text-[var(--color-text-3)] dark:bg-transparent",
                 "[&_svg]:h-4 [&_svg]:w-4 [&_svg]:text-gray-500 [&_svg]:dark:text-[var(--color-text-3)] [&_svg]:transition-colors",

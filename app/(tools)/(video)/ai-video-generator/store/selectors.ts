@@ -139,20 +139,6 @@ export const selectHasErrors = (state: GenerationStore): boolean => {
 };
 
 /**
- * Select cost display string
- */
-export const selectCostDisplay = (state: GenerationStore): string => {
-  return state.estimatedCost?.display || "Calculating...";
-};
-
-/**
- * Select cost breakdown
- */
-export const selectCostBreakdown = (state: GenerationStore): string[] => {
-  return state.estimatedCost?.breakdown || [];
-};
-
-/**
  * Select if model is a favorite
  */
 export const selectIsModelFavorite = (modelId: string) => (state: GenerationStore): boolean => {

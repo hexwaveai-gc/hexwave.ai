@@ -16,6 +16,7 @@ import { Check, Search, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGenerationStore } from "../store/useGenerationStore";
 import { formatCostRange } from "../utils/costCalculator";
+import MarqueeText from "@/app/components/shared/MarqueeText";
 
 interface VideoModelSelectorProps {
   models: ModelType[];
@@ -42,12 +43,12 @@ export default function VideoModelSelector({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
-  
+
   const selectedModel = useGenerationStore((s) => s.selectedModel);
   const favoriteModels = useGenerationStore((s) => s.favoriteModels);
   const recentModels = useGenerationStore((s) => s.recentModels);
   const toggleFavorite = useGenerationStore((s) => s.toggleFavorite);
-  
+
   // Filter models based on search and features
   const filteredModels = useMemo(() => {
     return models.filter((model) => {
@@ -56,7 +57,7 @@ export default function VideoModelSelector({
         model.name.toLowerCase().includes(search.toLowerCase()) ||
         model.provider?.toLowerCase().includes(search.toLowerCase()) ||
         model.description?.toLowerCase().includes(search.toLowerCase());
-      
+
       // Feature filters
       const matchesFeatures = selectedFeatures.length === 0 || selectedFeatures.every((feature) => {
         if (feature === "audio") {
@@ -73,35 +74,35 @@ export default function VideoModelSelector({
         }
         return false;
       });
-      
+
       return matchesSearch && matchesFeatures;
     });
   }, [models, search, selectedFeatures]);
-  
+
   // Sort models: favorites first, then recent, then alphabetical
   const sortedModels = useMemo(() => {
     return [...filteredModels].sort((a, b) => {
       const aIsFavorite = favoriteModels.includes(a.id);
       const bIsFavorite = favoriteModels.includes(b.id);
-      
+
       if (aIsFavorite && !bIsFavorite) return -1;
       if (!aIsFavorite && bIsFavorite) return 1;
-      
+
       const aIsRecent = recentModels.includes(a.id);
       const bIsRecent = recentModels.includes(b.id);
-      
+
       if (aIsRecent && !bIsRecent) return -1;
       if (!aIsRecent && bIsRecent) return 1;
-      
+
       return a.name.localeCompare(b.name);
     });
   }, [filteredModels, favoriteModels, recentModels]);
-  
+
   const handleModelSelect = (model: ModelType) => {
     onModelSelect(model);
     setOpen(false);
   };
-  
+
   const toggleFeature = (feature: string) => {
     setSelectedFeatures((prev) =>
       prev.includes(feature)
@@ -117,14 +118,20 @@ export default function VideoModelSelector({
           variant="outline"
           className="h-auto w-full justify-between rounded-lg border-gray-200 px-4 py-3 text-left dark:border-(--color-border-container) dark:bg-(--color-bg-primary) dark:text-(--color-text-1) hover:dark:bg-(--color-bg-secondary)"
         >
-          <div className="flex flex-col items-start">
-            <span className="text-base font-medium">
+          <div className="flex flex-col items-start min-w-0 flex-1 overflow-hidden">
+            <span className="text-base font-medium truncate w-full">
               {selectedModel?.name || "Select Model"}
             </span>
             {selectedModel?.description && (
-              <span className="text-xs text-gray-500 dark:text-(--color-text-3) line-clamp-1">
+              <MarqueeText
+                duration={8}
+                direction="left"
+                pauseOnHover={true}
+                className="w-full"
+                contentClassName="text-xs text-gray-500 dark:text-(--color-text-3)"
+              >
                 {selectedModel.description}
-              </span>
+              </MarqueeText>
             )}
           </div>
         </Button>
@@ -138,7 +145,7 @@ export default function VideoModelSelector({
             Choose from {models.length} available AI models
           </DialogDescription>
         </DialogHeader>
-        
+
         {/* Search Bar */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -150,7 +157,7 @@ export default function VideoModelSelector({
             className="pl-9 rounded-lg"
           />
         </div>
-        
+
         {/* Feature Filters */}
         <div className="flex flex-wrap gap-2">
           {["audio", "1080p", "endFrame", "fast"].map((feature) => (
@@ -171,7 +178,7 @@ export default function VideoModelSelector({
             </button>
           ))}
         </div>
-        
+
         {/* Model List - Scrollable */}
         <div className="mt-4 space-y-2 max-h-[400px] overflow-y-auto pr-2">
           {sortedModels.length === 0 ? (
@@ -184,7 +191,7 @@ export default function VideoModelSelector({
                 key={model.id}
                 onClick={() => handleModelSelect(model)}
                 className={cn(
-                  "flex w-full items-start gap-3 rounded-lg border-2 p-4 text-left transition-all",
+                  "flex w-full items-start gap-3 rounded-lg border-2 p-4 text-left transition-all overflow-hidden",
                   selectedModel?.id === model.id
                     ? "border-blue-500 bg-blue-50 dark:border-blue-600 dark:bg-blue-950/20"
                     : "border-transparent bg-gray-50 hover:bg-gray-100 dark:bg-(--color-bg-primary) dark:hover:bg-(--color-bg-secondary)"
@@ -192,16 +199,16 @@ export default function VideoModelSelector({
               >
                 {/* Provider Logo */}
                 {model.logo && (
-                  <img 
-                    src={model.logo} 
-                    alt={model.provider || ""} 
-                    className="h-8 w-8 rounded object-contain"
+                  <img
+                    src={model.logo}
+                    alt={model.provider || ""}
+                    className="h-8 w-8 rounded object-contain shrink-0"
                   />
                 )}
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base font-semibold text-gray-900 dark:text-(--color-text-1)">
+
+                <div className="flex-1 min-w-0 overflow-hidden">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-base font-semibold text-gray-900 dark:text-(--color-text-1) truncate">
                       {model.name}
                     </span>
                     {selectedModel?.id === model.id && (
@@ -211,15 +218,15 @@ export default function VideoModelSelector({
                       <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 shrink-0" />
                     )}
                   </div>
-                  
-                  <p className="mt-0.5 text-xs text-gray-500 dark:text-(--color-text-3)">
+
+                  <p className="mt-0.5 text-xs text-gray-500 dark:text-(--color-text-3) truncate">
                     {model.provider}
                   </p>
-                  
-                  <p className="mt-1 text-sm text-gray-600 dark:text-(--color-text-2) line-clamp-2">
+
+                  <p className="mt-1 text-sm text-gray-600 dark:text-(--color-text-2) line-clamp-2 break-words">
                     {model.description}
                   </p>
-                  
+
                   {/* Features badges */}
                   {model.features && model.features.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
@@ -233,13 +240,13 @@ export default function VideoModelSelector({
                       ))}
                     </div>
                   )}
-                  
+
                   {/* Cost display */}
                   <p className="mt-2 text-xs font-medium text-blue-600 dark:text-blue-400">
                     {formatCostRange(model)}
                   </p>
                 </div>
-                
+
                 {/* Favorite Toggle */}
                 <button
                   onClick={(e) => {
@@ -249,13 +256,13 @@ export default function VideoModelSelector({
                   className="shrink-0 p-1 hover:bg-gray-200 dark:hover:bg-(--color-bg-secondary) rounded"
                   aria-label="Toggle favorite"
                 >
-                  <Star 
+                  <Star
                     className={cn(
                       "h-4 w-4",
                       favoriteModels.includes(model.id)
                         ? "text-yellow-500 fill-yellow-500"
                         : "text-gray-400"
-                    )} 
+                    )}
                   />
                 </button>
               </button>

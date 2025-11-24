@@ -7,8 +7,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { ModelType } from "../types/index.types";
-import { CostResult } from "../types/cost.types";
-import { calculateCost, getDefaultFieldValues } from "../utils/costCalculator";
+import { getDefaultFieldValues } from "../utils/costCalculator";
 
 /**
  * Video generation result
@@ -123,16 +122,6 @@ export interface GenerationStore {
   
   /** Toggle model favorite status */
   toggleFavorite: (modelId: string) => void;
-  
-  // ============================================================
-  // COST TRACKING
-  // ============================================================
-  
-  /** Estimated cost for current configuration */
-  estimatedCost: CostResult | null;
-  
-  /** Update cost calculation */
-  updateCost: () => void;
 }
 
 /**
@@ -155,7 +144,6 @@ export const useGenerationStore = create<GenerationStore>()(
       results: [],
       recentModels: [],
       favoriteModels: [],
-      estimatedCost: null,
       
       // ============================================================
       // MODEL SELECTION ACTIONS
@@ -169,7 +157,6 @@ export const useGenerationStore = create<GenerationStore>()(
           selectedModel: null,
           fieldValues: {},
           fieldErrors: {},
-          estimatedCost: null,
         });
       },
       
@@ -177,15 +164,11 @@ export const useGenerationStore = create<GenerationStore>()(
         // Get default field values from model
         const defaults = getDefaultFieldValues(model);
         
-        // Calculate initial cost
-        const cost = calculateCost(model, defaults);
-        
         set({
           selectedModelId: model.id,
           selectedModel: model,
           fieldValues: defaults,
           fieldErrors: {},
-          estimatedCost: cost,
         });
         
         // Add to recent models
@@ -214,15 +197,9 @@ export const useGenerationStore = create<GenerationStore>()(
             delete newErrors[fieldName];
           }
           
-          // Update cost
-          const newCost = state.selectedModel
-            ? calculateCost(state.selectedModel, newValues)
-            : null;
-          
           return {
             fieldValues: newValues,
             fieldErrors: newErrors,
-            estimatedCost: newCost,
           };
         });
       },
@@ -231,14 +208,8 @@ export const useGenerationStore = create<GenerationStore>()(
         set((state) => {
           const newValues = { ...state.fieldValues, ...fields };
           
-          // Update cost
-          const newCost = state.selectedModel
-            ? calculateCost(state.selectedModel, newValues)
-            : null;
-          
           return {
             fieldValues: newValues,
-            estimatedCost: newCost,
           };
         });
       },
@@ -247,11 +218,9 @@ export const useGenerationStore = create<GenerationStore>()(
         const { selectedModel } = get();
         if (selectedModel) {
           const defaults = getDefaultFieldValues(selectedModel);
-          const cost = calculateCost(selectedModel, defaults);
           set({
             fieldValues: defaults,
             fieldErrors: {},
-            estimatedCost: cost,
           });
         }
       },
@@ -259,13 +228,9 @@ export const useGenerationStore = create<GenerationStore>()(
       loadDraft: (draft) => {
         set((state) => {
           const newValues = { ...state.fieldValues, ...draft };
-          const newCost = state.selectedModel
-            ? calculateCost(state.selectedModel, newValues)
-            : null;
           
           return {
             fieldValues: newValues,
-            estimatedCost: newCost,
           };
         });
       },
@@ -340,7 +305,7 @@ export const useGenerationStore = create<GenerationStore>()(
       // ============================================================
       
       startGeneration: async () => {
-        const { validateAll, fieldValues, selectedModel, estimatedCost } = get();
+        const { validateAll, fieldValues, selectedModel } = get();
         
         // Validate all fields
         if (!validateAll()) {
@@ -368,7 +333,7 @@ export const useGenerationStore = create<GenerationStore>()(
             thumbnail: "https://via.placeholder.com/200x113",
             createdAt: new Date(),
             model: selectedModel.id,
-            cost: estimatedCost?.amount || 0,
+            cost: 0,
           };
           
           set((state) => ({
@@ -413,18 +378,6 @@ export const useGenerationStore = create<GenerationStore>()(
             : [...state.favoriteModels, modelId];
           return { favoriteModels: newFavorites };
         });
-      },
-      
-      // ============================================================
-      // COST TRACKING ACTIONS
-      // ============================================================
-      
-      updateCost: () => {
-        const { selectedModel, fieldValues } = get();
-        if (selectedModel) {
-          const cost = calculateCost(selectedModel, fieldValues);
-          set({ estimatedCost: cost });
-        }
       },
     }),
     {
