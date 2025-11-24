@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useEffect } from "react";
 import { Label } from "@/app/components/ui/label";
 import { Textarea } from "@/app/components/ui/textarea";
 import { Button } from "@/app/components/ui/button";
@@ -28,14 +29,53 @@ export default function RestyleInputs() {
   const startGeneration = useImageGenerationStore((s) => s.startGeneration);
   const isFormValid = useIsFormValid();
 
+  // Ensure we have a valid File object
+  const validOriginalImage = useMemo(() => {
+    if (!originalImage) return null;
+    if (originalImage instanceof File) return originalImage;
+    // If it's not a File, clear it
+    console.warn("original_image is not a valid File object, clearing it");
+    return null;
+  }, [originalImage]);
+
+  // Generate object URL for preview
+  const imageUrl = useMemo(() => {
+    if (!validOriginalImage) return null;
+    try {
+      return URL.createObjectURL(validOriginalImage);
+    } catch (error) {
+      console.error("Failed to create object URL:", error);
+      return null;
+    }
+  }, [validOriginalImage]);
+
+  // Cleanup object URL on unmount or when image changes
+  useEffect(() => {
+    return () => {
+      if (imageUrl) {
+        URL.revokeObjectURL(imageUrl);
+      }
+    };
+  }, [imageUrl]);
+
+  // Clear invalid image on mount if needed
+  useEffect(() => {
+    if (originalImage && !(originalImage instanceof File)) {
+      updateField("original_image", null);
+    }
+  }, [originalImage, updateField]);
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
+    if (file && file instanceof File) {
       updateField("original_image", file);
     }
   };
 
   const handleRemoveImage = () => {
+    if (imageUrl) {
+      URL.revokeObjectURL(imageUrl);
+    }
     updateField("original_image", null);
   };
 
@@ -67,7 +107,7 @@ export default function RestyleInputs() {
               Original Image <span className="text-red-500">*</span>
             </Label>
 
-            {!originalImage ? (
+            {!validOriginalImage ? (
               <div className="rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 p-8 text-center transition-colors hover:border-gray-300 hover:bg-gray-100 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:hover:border-[var(--color-border-component)] dark:hover:bg-[var(--color-bg-secondary)]">
                 <Input
                   type="file"
@@ -89,10 +129,10 @@ export default function RestyleInputs() {
                   </span>
                 </label>
               </div>
-            ) : (
+            ) : imageUrl ? (
               <div className="group relative overflow-hidden rounded-lg border border-gray-200 dark:border-[var(--color-border-container)]">
                 <img
-                  src={URL.createObjectURL(originalImage)}
+                  src={imageUrl}
                   alt="Original"
                   className="max-h-[300px] w-full object-contain bg-gray-50 dark:bg-[var(--color-bg-page)]"
                 />
@@ -103,7 +143,7 @@ export default function RestyleInputs() {
                   <X className="h-4 w-4" />
                 </button>
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* Style Prompt */}

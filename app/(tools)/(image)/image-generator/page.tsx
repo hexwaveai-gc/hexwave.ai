@@ -28,6 +28,8 @@ export default function ImageGeneratorPage() {
   const generatedImages = useImageGenerationStore((s) => s.generatedImages);
   const maximizedImage = useImageGenerationStore((s) => s.maximizedImage);
   const setMaximizedImage = useImageGenerationStore((s) => s.setMaximizedImage);
+  const activeTab = useImageGenerationStore((s) => s.activeTab);
+  const setActiveTab = useImageGenerationStore((s) => s.setActiveTab);
 
   const tabs = [
     {
@@ -66,7 +68,20 @@ export default function ImageGeneratorPage() {
                 </h1>
               </div>
               <div className="flex-1 overflow-hidden">
-                <GeneratorTabs tabs={tabs} defaultTab="text-to-image" />
+                <GeneratorTabs
+                  tabs={tabs}
+                  defaultTab="text-to-image"
+                  value={activeTab}
+                  onTabChange={(tabId) => {
+                    if (
+                      tabId === "text-to-image" ||
+                      tabId === "image-reference" ||
+                      tabId === "restyle"
+                    ) {
+                      setActiveTab(tabId);
+                    }
+                  }}
+                />
               </div>
             </div>
           }

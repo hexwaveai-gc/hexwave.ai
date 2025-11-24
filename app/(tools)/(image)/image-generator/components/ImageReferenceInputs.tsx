@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useEffect } from "react";
 import { Label } from "@/app/components/ui/label";
 import { Textarea } from "@/app/components/ui/textarea";
 import { Button } from "@/app/components/ui/button";
@@ -31,16 +32,50 @@ export default function ImageReferenceInputs() {
   const settings = selectedModel?.settings || {};
   const maxFiles = settings.reference_images?.max_files || 3;
 
+  // Filter out invalid file objects and ensure we only have File instances
+  const validReferenceImages = useMemo(() => {
+    return (referenceImages || []).filter(
+      (file): file is File => file instanceof File
+    );
+  }, [referenceImages]);
+
+  // Generate object URLs for preview
+  const imageUrls = useMemo(() => {
+    return validReferenceImages.map((file) => {
+      try {
+        return URL.createObjectURL(file);
+      } catch (error) {
+        console.error("Failed to create object URL:", error);
+        return "";
+      }
+    });
+  }, [validReferenceImages]);
+
+  // Cleanup object URLs on unmount
+  useEffect(() => {
+    return () => {
+      imageUrls.forEach((url) => {
+        if (url) {
+          URL.revokeObjectURL(url);
+        }
+      });
+    };
+  }, [imageUrls]);
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    const remainingSlots = maxFiles - referenceImages.length;
+    const remainingSlots = maxFiles - validReferenceImages.length;
     const filesToAdd = files.slice(0, remainingSlots);
 
-    updateField("reference_images", [...referenceImages, ...filesToAdd]);
+    updateField("reference_images", [...validReferenceImages, ...filesToAdd]);
   };
 
   const handleRemoveImage = (index: number) => {
-    const newImages = referenceImages.filter((_, i) => i !== index);
+    // Revoke the object URL before removing
+    if (imageUrls[index]) {
+      URL.revokeObjectURL(imageUrls[index]);
+    }
+    const newImages = validReferenceImages.filter((_, i) => i !== index);
     updateField("reference_images", newImages);
   };
 
@@ -71,38 +106,43 @@ export default function ImageReferenceInputs() {
                 Reference Images
               </Label>
               <span className="text-xs text-gray-500">
-                {referenceImages.length}/{maxFiles}
+                {validReferenceImages.length}/{maxFiles}
               </span>
             </div>
 
             <div className="grid grid-cols-3 gap-3">
-              {referenceImages.map((file, index) => (
-                <div
-                  key={index}
-                  className="group relative aspect-square overflow-hidden rounded-lg border border-gray-200 dark:border-[var(--color-border-container)]"
-                >
-                  <img
-                    src={URL.createObjectURL(file)}
-                    alt={`Reference ${index + 1}`}
-                    className="h-full w-full object-cover"
-                  />
-                  <button
-                    onClick={() => handleRemoveImage(index)}
-                    className="absolute right-1 top-1 rounded-full bg-black/50 p-1 text-white opacity-0 backdrop-blur-sm transition-opacity hover:bg-black/70 group-hover:opacity-100"
+              {validReferenceImages.map((file, index) => {
+                const imageUrl = imageUrls[index];
+                if (!imageUrl) return null;
+                
+                return (
+                  <div
+                    key={index}
+                    className="group relative aspect-square overflow-hidden rounded-lg border border-gray-200 dark:border-[var(--color-border-container)]"
                   >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
+                    <img
+                      src={imageUrl}
+                      alt={`Reference ${index + 1}`}
+                      className="h-full w-full object-cover"
+                    />
+                    <button
+                      onClick={() => handleRemoveImage(index)}
+                      className="absolute right-1 top-1 rounded-full bg-black/50 p-1 text-white opacity-0 backdrop-blur-sm transition-opacity hover:bg-black/70 group-hover:opacity-100"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                );
+              })}
 
-              {referenceImages.length < maxFiles && (
+              {validReferenceImages.length < maxFiles && (
                 <div className="aspect-square">
                   <Input
                     type="file"
                     accept="image/*"
                     multiple
                     onChange={handleImageUpload}
-                    disabled={referenceImages.length >= maxFiles}
+                    disabled={validReferenceImages.length >= maxFiles}
                     className="hidden"
                     id="ref-image-upload"
                   />

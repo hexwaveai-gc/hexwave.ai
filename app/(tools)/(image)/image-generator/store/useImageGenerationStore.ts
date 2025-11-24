@@ -456,22 +456,33 @@ export const useImageGenerationStore = create<ImageGenerationStore>()(
         set({ isGenerating: true });
         
         try {
-          // TODO: Replace with actual API call
-          // For now, simulate generation
-          await new Promise((resolve) => setTimeout(resolve, 2000));
+          // Import API service dynamically to avoid circular dependencies
+          const { generateImage } = await import("../lib/api/imageGenerationApi");
           
-          // Create mock results
-          const mockImages = [
-            "https://images.unsplash.com/photo-1707343843437-caacff5cfa74?w=800",
-            "https://images.unsplash.com/photo-1707344088547-3cf7cea5ca49?w=800",
-          ];
+          // Call API service
+          const response = await generateImage(selectedModel, fieldValues, activeTab);
           
+          if (!response.success) {
+            throw new Error(response.error || "Image generation failed");
+          }
+          
+          // Update generated images with response
           set((state) => ({
-            generatedImages: [...state.generatedImages, ...mockImages],
+            generatedImages: [...state.generatedImages, ...response.images],
             isGenerating: false,
           }));
         } catch (error) {
           set({ isGenerating: false });
+          
+          // Set error message in store
+          const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+          set((state) => ({
+            fieldErrors: {
+              ...state.fieldErrors,
+              _general: errorMessage,
+            },
+          }));
+          
           throw error;
         }
       },
