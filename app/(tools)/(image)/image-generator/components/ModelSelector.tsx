@@ -1,13 +1,13 @@
 "use client";
 
-import { Label } from "../../components/ui/label";
+import { Label } from "@/app/components/ui/label";
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from "../../components/ui/select";
+} from "@/app/components/ui/select";
 import { getAllModels } from "../lib/modelRegistry";
 
 interface ModelSelectorProps {

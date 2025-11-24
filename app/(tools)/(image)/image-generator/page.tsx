@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { ImageIcon, RefreshCw, Palette, Maximize2, Download, X } from "lucide-react";
 import Sidebar from "@/app/components/common/Sidebar";
-import GeneratorLayout from "../components/shared/GeneratorLayout";
-import GeneratorTabs from "../components/shared/GeneratorTabs";
-import ResultsPanel from "../components/shared/ResultsPanel";
+import GeneratorLayout from "@/app/components/shared/GeneratorLayout";
+import GeneratorTabs from "@/app/components/shared/GeneratorTabs";
+import ResultsPanel from "@/app/components/shared/ResultsPanel";
 import TextToImageInputs from "./components/TextToImageInputs";
 import ImageReferenceInputs from "./components/ImageReferenceInputs";
 import RestyleInputs from "./components/RestyleInputs";
@@ -14,49 +13,40 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "../components/ui/dialog";
+} from "@/app/components/ui/dialog";
+import { useImageGenerationStore } from "./store/useImageGenerationStore";
 
 /**
  * Main Image Generator page with sidebar layout similar to explore page
  * Features resizable two-column layout for inputs and results
+ * 
+ * Refactored to use Zustand store for state management - eliminates prop drilling
  */
 export default function ImageGeneratorPage() {
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedImages, setGeneratedImages] = useState<string[]>([]);
-  const [maximizedImage, setMaximizedImage] = useState<string | null>(null);
-
-  const handleGenerate = async (params: any) => {
-    console.log("Generate with params:", params);
-    setIsGenerating(true);
-
-    // Simulate generation
-    setTimeout(() => {
-      setGeneratedImages([
-        "https://images.unsplash.com/photo-1707343843437-caacff5cfa74?w=800",
-        "https://images.unsplash.com/photo-1707344088547-3cf7cea5ca49?w=800",
-      ]);
-      setIsGenerating(false);
-    }, 3000);
-  };
+  // Get state from Zustand store
+  const isGenerating = useImageGenerationStore((s) => s.isGenerating);
+  const generatedImages = useImageGenerationStore((s) => s.generatedImages);
+  const maximizedImage = useImageGenerationStore((s) => s.maximizedImage);
+  const setMaximizedImage = useImageGenerationStore((s) => s.setMaximizedImage);
 
   const tabs = [
     {
       id: "text-to-image",
       label: "Text to Image",
       icon: <ImageIcon className="h-4 w-4" />,
-      content: <TextToImageInputs onGenerate={handleGenerate} />,
+      content: <TextToImageInputs />,
     },
     {
       id: "image-reference",
       label: "Image Reference",
       icon: <RefreshCw className="h-4 w-4" />,
-      content: <ImageReferenceInputs onGenerate={handleGenerate} />,
+      content: <ImageReferenceInputs />,
     },
     {
       id: "restyle",
       label: "Restyle",
       icon: <Palette className="h-4 w-4" />,
-      content: <RestyleInputs onGenerate={handleGenerate} />,
+      content: <RestyleInputs />,
     },
   ];
 

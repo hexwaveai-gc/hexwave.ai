@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useMemo } from "react";   
-import { Label } from "../../components/ui/label";
-import { Textarea } from "../../components/ui/textarea";
-import { Button } from "../../components/ui/button";
+import { Label } from "@/app/components/ui/label";
+import { Textarea } from "@/app/components/ui/textarea";
+import { Button } from "@/app/components/ui/button";
 import { Wand2, RefreshCw } from "lucide-react";
 import {
   Select,
@@ -11,19 +11,18 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../components/ui/select";
+} from "@/app/components/ui/select";
 import ModelSelectorDialog from "./ModelSelectorDialog";
 import AdvancedSettingsDialog from "./AdvancedSettingsDialog";
-import { getModelById } from "../lib/modelRegistry";
-
-interface TextToImageInputsProps {
-  onGenerate?: (params: any) => void;
-}
+import { useImageGenerationStore } from "../store/useImageGenerationStore";
+import { useFieldValue, useIsFormValid } from "../store/selectors";
 
 /**
  * Text to Image input form with dynamic model-based fields
  * Core fields: prompt, model selector
  * Dynamic fields: based on selected model's settings
+ * 
+ * Refactored to use Zustand store - eliminates prop drilling
  */
 // Hints pool with multiple sets of prompts
 const HINTS_POOL = [
@@ -49,54 +48,30 @@ const HINTS_POOL = [
   ],
 ];
 
-export default function TextToImageInputs({
-  onGenerate,
-}: TextToImageInputsProps) {
-  const [selectedModel, setSelectedModel] = useState("gemini-25-flash-image");
-  const [prompt, setPrompt] = useState("");
-  const [modelParams, setModelParams] = useState<Record<string, any>>({});
-  const [hintsIndex, setHintsIndex] = useState(0);
+export default function TextToImageInputs() {
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Get state from store
+  const selectedModel = useImageGenerationStore((s) => s.selectedModel);
+  const selectedModelId = useImageGenerationStore((s) => s.selectedModelId);
+  const prompt = useFieldValue<string>("prompt", "");
+  const hintsIndex = useImageGenerationStore((s) => s.hintsIndex);
+  const setHintsIndex = useImageGenerationStore((s) => s.setHintsIndex);
+  const updateField = useImageGenerationStore((s) => s.updateField);
+  const startGeneration = useImageGenerationStore((s) => s.startGeneration);
+  const isFormValid = useIsFormValid();
 
-  const model = getModelById(selectedModel);
-  const settings = model?.settings || {};
-
-  const handleParamChange = (key: string, value: any) => {
-    setModelParams((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
-  };
-
-  const handleGenerate = () => {
-    if (onGenerate) {
-      onGenerate({
-        model: selectedModel,
-        prompt,
-        ...modelParams,
-      });
-    }
-  };
-
-  const isGenerateDisabled = !prompt.trim() || !selectedModel;
+  const settings = selectedModel?.settings || {};
 
   // Extract specific settings for the footer
   const aspectRatioSetting = settings.aspect_ratio;
   const resolutionSetting = settings.resolution; // Using resolution instead of num_images for Runway
   const numImagesSetting = settings.num_images; // For Flux
-
-  // Calculate generation credits (dynamic - ready for backend integration)
-  const calculateCredits = () => {
-    // TODO: Replace with actual backend call
-    // For now, calculate based on model and settings
-    const baseCredits = model?.credits_per_generation || 1;
-    const numImages = numImagesSetting 
-      ? (modelParams.num_images || numImagesSetting.default || 1)
-      : 1;
-    return baseCredits * numImages;
-  };
-
-  const creditsRequired = calculateCredits();
+  
+  // Get field values from store
+  const aspectRatio = useFieldValue<string>("aspect_ratio", aspectRatioSetting?.default);
+  const resolution = useFieldValue<string>("resolution", resolutionSetting?.default);
+  const numImages = useFieldValue<number>("num_images", numImagesSetting?.default || 1);
 
   // Fields to exclude from Advanced Dialog (because they are in footer or main area)
   const excludedFields = [
@@ -114,16 +89,25 @@ export default function TextToImageInputs({
 
   // Handle hint click - fill textarea with prompt
   const handleHintClick = (hintPrompt: string) => {
-    setPrompt(hintPrompt);
+    updateField("prompt", hintPrompt);
   };
 
   // Handle refresh - change to next set of hints with animation
   const handleRefreshHints = () => {
     setIsRefreshing(true);
     setTimeout(() => {
-      setHintsIndex((prev) => (prev + 1) % HINTS_POOL.length);
+      setHintsIndex((hintsIndex + 1) % HINTS_POOL.length);
       setIsRefreshing(false);
     }, 500);
+  };
+  
+  // Handle generate
+  const handleGenerate = async () => {
+    try {
+      await startGeneration();
+    } catch (error) {
+      console.error("Generation failed:", error);
+    }
   };
 
   // Helper function to normalize options (handle both string and object formats)
@@ -147,7 +131,7 @@ export default function TextToImageInputs({
           <div className="relative flex flex-col rounded-lg border border-[var(--color-border-container)] bg-[var(--color-bg-primary)] focus-within:border-[var(--color-theme-2)] transition-colors">
             <Textarea
               value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
+              onChange={(e) => updateField("prompt", e.target.value)}
               placeholder="Please describe your creative ideas for the image, or have DeepSeek generate the prompt or view Help Center for a quick start."
               className="min-h-[180px] w-full max-w-full resize-none border-0 bg-transparent p-4 text-base text-[var(--color-text-1)] placeholder:text-[var(--color-text-3)] focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none"
             />
@@ -190,7 +174,7 @@ export default function TextToImageInputs({
           <Label className="mb-2 block text-sm font-medium text-[var(--color-text-1)]">
             Model
           </Label>
-          <ModelSelectorDialog value={selectedModel} onChange={setSelectedModel} />
+          <ModelSelectorDialog />
         </div>
 
         {/* Controls Row */}
@@ -201,11 +185,8 @@ export default function TextToImageInputs({
             {aspectRatioSetting && aspectRatioSetting.options && (
               <div className="w-24 shrink-0">
                 <Select
-                  value={
-                    (modelParams.aspect_ratio as string) ||
-                    aspectRatioSetting.default
-                  }
-                  onValueChange={(val) => handleParamChange("aspect_ratio", val)}
+                  value={aspectRatio || aspectRatioSetting.default}
+                  onValueChange={(val) => updateField("aspect_ratio", val)}
                 >
                   <SelectTrigger className="h-10 rounded-lg border-[var(--color-border-container)] bg-[var(--color-bg-primary)] text-[var(--color-text-1)] px-3">
                     <SelectValue />
@@ -232,11 +213,8 @@ export default function TextToImageInputs({
             {resolutionSetting && resolutionSetting.options && (
               <div className="w-28 shrink-0">
                 <Select
-                  value={
-                    (modelParams.resolution as string) ||
-                    resolutionSetting.default
-                  }
-                  onValueChange={(val) => handleParamChange("resolution", val)}
+                  value={resolution || resolutionSetting.default}
+                  onValueChange={(val) => updateField("resolution", val)}
                 >
                   <SelectTrigger className="h-10 rounded-lg border-[var(--color-border-container)] bg-[var(--color-bg-primary)] text-[var(--color-text-1)] px-3">
                     <SelectValue />
@@ -263,13 +241,8 @@ export default function TextToImageInputs({
             {numImagesSetting && (
               <div className="w-24 shrink-0">
                 <Select
-                  value={
-                    (modelParams.num_images as string) ||
-                    numImagesSetting.default?.toString()
-                  }
-                  onValueChange={(val) =>
-                    handleParamChange("num_images", Number(val))
-                  }
+                  value={numImages?.toString() || numImagesSetting.default?.toString()}
+                  onValueChange={(val) => updateField("num_images", Number(val))}
                 >
                   <SelectTrigger className="h-10 rounded-lg border-[var(--color-border-container)] bg-[var(--color-bg-primary)] text-[var(--color-text-1)] px-3">
                     <SelectValue />
@@ -290,18 +263,13 @@ export default function TextToImageInputs({
             )}
 
             {/* Advanced Settings */}
-            <AdvancedSettingsDialog
-              settings={settings}
-              values={modelParams}
-              onChange={handleParamChange}
-              excludeFields={excludedFields}
-            />
+            <AdvancedSettingsDialog excludeFields={excludedFields} />
           </div>
 
           {/* Right Side - Generate Button */}
           <Button
             onClick={handleGenerate}
-            disabled={isGenerateDisabled}
+            disabled={!isFormValid || !selectedModelId}
             variant="generate"
             className="h-10 min-w-[140px] rounded-lg px-8"
           >

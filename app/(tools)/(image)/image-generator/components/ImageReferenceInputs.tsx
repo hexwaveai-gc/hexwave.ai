@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { Label } from "../../components/ui/label";
-import { Textarea } from "../../components/ui/textarea";
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
+import { Label } from "@/app/components/ui/label";
+import { Textarea } from "@/app/components/ui/textarea";
+import { Button } from "@/app/components/ui/button";
+import { Input } from "@/app/components/ui/input";
 import { Upload, X, Plus } from "lucide-react";
 import {
   Select,
@@ -12,37 +11,42 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../components/ui/select";
+} from "@/app/components/ui/select";
 import ModelSelectorDialog from "./ModelSelectorDialog";
 import AdvancedSettingsDialog from "./AdvancedSettingsDialog";
-import { getModelById } from "../lib/modelRegistry";
-
-interface ImageReferenceInputsProps {
-  onGenerate?: (params: any) => void;
-}
+import { useImageGenerationStore } from "../store/useImageGenerationStore";
+import { useFieldValue, useIsFormValid } from "../store/selectors";
 
 /**
  * Image Reference input form with dynamic model-based fields
  * Core fields: image upload, prompt, model selector
  * Dynamic fields: based on selected model's settings
+ * 
+ * Refactored to use Zustand store - eliminates prop drilling
  */
-export default function ImageReferenceInputs({
-  onGenerate,
-}: ImageReferenceInputsProps) {
-  const [selectedModel, setSelectedModel] = useState("runwaygen4");
-  const [prompt, setPrompt] = useState("");
-  const [referenceImages, setReferenceImages] = useState<File[]>([]);
-  const [modelParams, setModelParams] = useState<Record<string, any>>({});
+export default function ImageReferenceInputs() {
+  // Get state from store
+  const selectedModel = useImageGenerationStore((s) => s.selectedModel);
+  const selectedModelId = useImageGenerationStore((s) => s.selectedModelId);
+  const prompt = useFieldValue<string>("prompt", "");
+  const referenceImages = useFieldValue<File[]>("reference_images", []);
+  const updateField = useImageGenerationStore((s) => s.updateField);
+  const startGeneration = useImageGenerationStore((s) => s.startGeneration);
+  const isFormValid = useIsFormValid();
 
-  const model = getModelById(selectedModel);
-  const settings = model?.settings || {};
+  const settings = selectedModel?.settings || {};
   const maxFiles = settings.reference_images?.max_files || 3;
-
-  const handleParamChange = (key: string, value: any) => {
-    setModelParams((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
+  
+  // Extract specific settings for the footer
+  const aspectRatioSetting = settings.aspect_ratio;
+  const aspectRatio = useFieldValue<string>("aspect_ratio", aspectRatioSetting?.default);
+  
+  // Helper function to normalize options
+  const normalizeOption = (option: string | { value: string; label: string }) => {
+    if (typeof option === "string") {
+      return { value: option, label: option };
+    }
+    return option;
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,61 +54,28 @@ export default function ImageReferenceInputs({
     const remainingSlots = maxFiles - referenceImages.length;
     const filesToAdd = files.slice(0, remainingSlots);
 
-    setReferenceImages((prev) => [...prev, ...filesToAdd]);
+    updateField("reference_images", [...referenceImages, ...filesToAdd]);
   };
 
   const handleRemoveImage = (index: number) => {
-    setReferenceImages((prev) => prev.filter((_, i) => i !== index));
+    const newImages = referenceImages.filter((_, i) => i !== index);
+    updateField("reference_images", newImages);
   };
 
-  const handleGenerate = () => {
-    if (onGenerate) {
-      onGenerate({
-        model: selectedModel,
-        prompt,
-        reference_images: referenceImages,
-        ...modelParams,
-      });
+  const handleGenerate = async () => {
+    try {
+      await startGeneration();
+    } catch (error) {
+      console.error("Generation failed:", error);
     }
   };
-
-  const isGenerateDisabled =
-    !prompt.trim() || !selectedModel || referenceImages.length === 0;
-
-  // Extract specific settings for the footer
-  const aspectRatioSetting = settings.aspect_ratio;
-  const resolutionSetting = settings.resolution;
-  const numImagesSetting = settings.num_images;
-
-  // Calculate generation credits (dynamic - ready for backend integration)
-  const calculateCredits = () => {
-    // TODO: Replace with actual backend call
-    // For now, calculate based on model and settings
-    const baseCredits = model?.credits_per_generation || 1;
-    const numImages = numImagesSetting 
-      ? (modelParams.num_images || numImagesSetting.default || 1)
-      : 1;
-    return baseCredits * numImages;
-  };
-
-  const creditsRequired = calculateCredits();
 
   // Fields to exclude from Advanced Dialog
   const excludedFields = [
     "prompt",
     "reference_images",
     "aspect_ratio",
-    "resolution",
-    "num_images",
   ];
-
-  // Helper function to normalize options (handle both string and object formats)
-  const normalizeOption = (option: string | { value: string; label: string }) => {
-    if (typeof option === "string") {
-      return { value: option, label: option };
-    }
-    return option;
-  };
 
   return (
     <div className="flex h-full flex-col">
@@ -172,7 +143,7 @@ export default function ImageReferenceInputs({
             </Label>
             <Textarea
               value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
+              onChange={(e) => updateField("prompt", e.target.value)}
               placeholder="Describe how you want to use the reference images..."
               className="min-h-[180px] w-full resize-none rounded-lg border-gray-200 bg-gray-50 p-4 text-base focus:border-blue-500 focus:ring-0 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:text-[var(--color-text-1)] dark:placeholder:text-[var(--color-text-3)]"
             />
@@ -187,7 +158,7 @@ export default function ImageReferenceInputs({
           <Label className="mb-2 block text-sm font-medium text-gray-900 dark:text-[var(--color-text-1)]">
             Model
           </Label>
-          <ModelSelectorDialog value={selectedModel} onChange={setSelectedModel} />
+          <ModelSelectorDialog />
         </div>
 
         {/* Controls Row */}
@@ -198,11 +169,8 @@ export default function ImageReferenceInputs({
             {aspectRatioSetting && aspectRatioSetting.options && (
               <div className="w-24 shrink-0">
                 <Select
-                  value={
-                    (modelParams.aspect_ratio as string) ||
-                    aspectRatioSetting.default
-                  }
-                  onValueChange={(val) => handleParamChange("aspect_ratio", val)}
+                  value={aspectRatio || aspectRatioSetting.default}
+                  onValueChange={(val) => updateField("aspect_ratio", val)}
                 >
                   <SelectTrigger className="h-10 rounded-lg border-gray-200 px-3 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:text-[var(--color-text-1)]">
                     <SelectValue />
@@ -226,18 +194,13 @@ export default function ImageReferenceInputs({
             )}
 
             {/* Advanced Settings */}
-            <AdvancedSettingsDialog
-              settings={settings}
-              values={modelParams}
-              onChange={handleParamChange}
-              excludeFields={excludedFields}
-            />
+            <AdvancedSettingsDialog excludeFields={excludedFields} />
           </div>
 
           {/* Right Side - Generate Button */}
           <Button
             onClick={handleGenerate}
-            disabled={isGenerateDisabled}
+            disabled={!isFormValid || !selectedModelId}
             variant="generate"
             className="h-10 min-w-[140px] rounded-lg px-8"
           >

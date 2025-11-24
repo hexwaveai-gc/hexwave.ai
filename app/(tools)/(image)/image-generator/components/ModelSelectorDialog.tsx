@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Check, Search, X } from "lucide-react";
-import { Button } from "../../components/ui/button";
+import { Button } from "@/app/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,36 +10,33 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "../../components/ui/dialog";
-import { Input } from "../../components/ui/input";
+} from "@/app/components/ui/dialog";
+import { Input } from "@/app/components/ui/input";
 import { cn } from "@/lib/utils";
 import { getAllModels, getModelById } from "../lib/modelRegistry";
 import { modelOptions } from "../_config/constants";
 import Image from "next/image";
-
-interface ModelSelectorDialogProps {
-  value: string;
-  onChange: (modelId: string) => void;
-}
+import { useImageGenerationStore } from "../store/useImageGenerationStore";
 
 /**
  * Enhanced dialog-based model selector with logos, preview images, and search
  * Features responsive design with proper scrolling for all screen sizes
  * 
+ * Refactored to use Zustand store - eliminates prop drilling
+ * 
  * Reasoning: Using dialog instead of dropdown allows for richer model presentation
  * with logos, preview images, and better categorization while maintaining
  * accessibility and responsive behavior
  */
-export default function ModelSelectorDialog({
-  value,
-  onChange,
-}: ModelSelectorDialogProps) {
+export default function ModelSelectorDialog() {
+  const selectedModelId = useImageGenerationStore((s) => s.selectedModelId);
+  const setModel = useImageGenerationStore((s) => s.setModel);
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("popular");
   
   const models = getAllModels();
-  const selectedModel = getModelById(value);
+  const selectedModel = selectedModelId ? getModelById(selectedModelId) : null;
 
   // Create a map of model data from constants for quick lookup
   const modelDataMap = useMemo(() => {
@@ -85,7 +82,7 @@ export default function ModelSelectorDialog({
     return filtered;
   }, [enrichedModels, searchQuery, selectedCategory]);
 
-  const selectedModelData = modelDataMap[value];
+  const selectedModelData = selectedModelId ? modelDataMap[selectedModelId] : null;
 
   const categories = [
     { id: "all", label: "All Models" },
@@ -187,12 +184,12 @@ export default function ModelSelectorDialog({
           ) : (
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {filteredModels.map((model) => {
-                const isSelected = value === model.id;
+                const isSelected = selectedModelId === model.id;
                 return (
                   <button
                     key={model.id}
                     onClick={() => {
-                      onChange(model.id);
+                      setModel(model.id);
                       setOpen(false);
                     }}
                     className={cn(

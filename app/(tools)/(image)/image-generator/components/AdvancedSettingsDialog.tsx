@@ -1,7 +1,7 @@
 "use client";
 
 import { Settings2 } from "lucide-react";
-import { Button } from "../../components/ui/button";
+import { Button } from "@/app/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -9,23 +9,29 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "../../components/ui/dialog";
+} from "@/app/components/ui/dialog";
 import DynamicFieldRenderer from "./DynamicFieldRenderer";
-import { ModelSettings } from "../lib/modelRegistry";
+import { useImageGenerationStore } from "../store/useImageGenerationStore";
 
 interface AdvancedSettingsDialogProps {
-  settings: ModelSettings;
-  values: Record<string, any>;
-  onChange: (key: string, value: any) => void;
   excludeFields?: string[];
 }
 
+/**
+ * Advanced Settings Dialog
+ * Refactored to use Zustand store - eliminates prop drilling
+ */
 export default function AdvancedSettingsDialog({
-  settings,
-  values,
-  onChange,
   excludeFields = [],
 }: AdvancedSettingsDialogProps) {
+  const selectedModel = useImageGenerationStore((s) => s.selectedModel);
+  
+  if (!selectedModel || !selectedModel.settings) {
+    return null;
+  }
+  
+  const settings = selectedModel.settings;
+  
   // Check if there are any fields to show
   const hasAdvancedFields = Object.keys(settings).some(
     (key) => !excludeFields.includes(key)
@@ -52,12 +58,7 @@ export default function AdvancedSettingsDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
-          <DynamicFieldRenderer
-            settings={settings}
-            values={values}
-            onChange={onChange}
-            excludeFields={excludeFields}
-          />
+          <DynamicFieldRenderer excludeFields={excludeFields} />
         </div>
       </DialogContent>
     </Dialog>

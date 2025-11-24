@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { Label } from "../../components/ui/label";
-import { Textarea } from "../../components/ui/textarea";
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
+import { Label } from "@/app/components/ui/label";
+import { Textarea } from "@/app/components/ui/textarea";
+import { Button } from "@/app/components/ui/button";
+import { Input } from "@/app/components/ui/input";
 import { Upload, X } from "lucide-react";
 import {
   Select,
@@ -12,77 +11,57 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../components/ui/select";
+} from "@/app/components/ui/select";
 import ModelSelectorDialog from "./ModelSelectorDialog";
 import AdvancedSettingsDialog from "./AdvancedSettingsDialog";
-import { getModelById } from "../lib/modelRegistry";
-
-interface RestyleInputsProps {
-  onGenerate?: (params: any) => void;
-}
+import { useImageGenerationStore } from "../store/useImageGenerationStore";
+import { useFieldValue, useIsFormValid } from "../store/selectors";
 
 /**
  * Restyle input form for transforming existing images
  * Core fields: original image upload, style prompt, model selector
  * Dynamic fields: based on selected model's settings
+ * 
+ * Refactored to use Zustand store - eliminates prop drilling
  */
-export default function RestyleInputs({ onGenerate }: RestyleInputsProps) {
-  const [selectedModel, setSelectedModel] = useState("flux");
-  const [stylePrompt, setStylePrompt] = useState("");
-  const [originalImage, setOriginalImage] = useState<File | null>(null);
-  const [modelParams, setModelParams] = useState<Record<string, any>>({});
+export default function RestyleInputs() {
+  // Get state from store
+  const selectedModel = useImageGenerationStore((s) => s.selectedModel);
+  const selectedModelId = useImageGenerationStore((s) => s.selectedModelId);
+  const stylePrompt = useFieldValue<string>("style_prompt", "");
+  const originalImage = useFieldValue<File | null>("original_image", null);
+  const updateField = useImageGenerationStore((s) => s.updateField);
+  const startGeneration = useImageGenerationStore((s) => s.startGeneration);
+  const isFormValid = useIsFormValid();
 
-  const model = getModelById(selectedModel);
-  const settings = model?.settings || {};
-
-  const handleParamChange = (key: string, value: any) => {
-    setModelParams((prev) => ({
-      ...prev,
-      [key]: value,
-    }));
-  };
+  const settings = selectedModel?.settings || {};
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setOriginalImage(file);
+      updateField("original_image", file);
     }
   };
 
   const handleRemoveImage = () => {
-    setOriginalImage(null);
+    updateField("original_image", null);
   };
 
-  const handleGenerate = () => {
-    if (onGenerate) {
-      onGenerate({
-        model: selectedModel,
-        style_prompt: stylePrompt,
-        original_image: originalImage,
-        ...modelParams,
-      });
+  const handleGenerate = async () => {
+    try {
+      await startGeneration();
+    } catch (error) {
+      console.error("Generation failed:", error);
     }
   };
-
-  const isGenerateDisabled =
-    !stylePrompt.trim() || !selectedModel || !originalImage;
 
   // Extract specific settings for the footer
   const aspectRatioSetting = settings.aspect_ratio;
   const numImagesSetting = settings.num_images;
-
-  // Calculate generation credits (dynamic - ready for backend integration)
-  const calculateCredits = () => {
-    // TODO: Replace with actual backend call
-    // For now, calculate based on model and settings
-    const baseCredits = model?.credits_per_generation || 1;
-    const numImages = numImagesSetting 
-      ? (modelParams.num_images || numImagesSetting.default || 1)
-      : 1;
-    return baseCredits * numImages;
-  };
-
-  const creditsRequired = calculateCredits();
+  
+  // Get field values from store
+  const aspectRatio = useFieldValue<string>("aspect_ratio", aspectRatioSetting?.default);
+  const numImages = useFieldValue<number>("num_images", numImagesSetting?.default || 1);
 
   // Fields to exclude from Advanced Dialog
   const excludedFields = [
@@ -158,7 +137,7 @@ export default function RestyleInputs({ onGenerate }: RestyleInputsProps) {
             </Label>
             <Textarea
               value={stylePrompt}
-              onChange={(e) => setStylePrompt(e.target.value)}
+              onChange={(e) => updateField("style_prompt", e.target.value)}
               placeholder="Describe the style you want to apply..."
               className="min-h-[180px] w-full resize-none rounded-lg border-gray-200 bg-gray-50 p-4 text-base focus:border-blue-500 focus:ring-0 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:text-[var(--color-text-1)] dark:placeholder:text-[var(--color-text-3)]"
             />
@@ -173,7 +152,7 @@ export default function RestyleInputs({ onGenerate }: RestyleInputsProps) {
           <Label className="mb-2 block text-sm font-medium text-gray-900 dark:text-[var(--color-text-1)]">
             Model
           </Label>
-          <ModelSelectorDialog value={selectedModel} onChange={setSelectedModel} />
+          <ModelSelectorDialog />
         </div>
 
         {/* Controls Row */}
@@ -184,11 +163,8 @@ export default function RestyleInputs({ onGenerate }: RestyleInputsProps) {
             {aspectRatioSetting && aspectRatioSetting.options && (
               <div className="w-24 shrink-0">
                 <Select
-                  value={
-                    (modelParams.aspect_ratio as string) ||
-                    aspectRatioSetting.default
-                  }
-                  onValueChange={(val) => handleParamChange("aspect_ratio", val)}
+                  value={aspectRatio || aspectRatioSetting.default}
+                  onValueChange={(val) => updateField("aspect_ratio", val)}
                 >
                   <SelectTrigger className="h-10 rounded-lg border-gray-200 px-3 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:text-[var(--color-text-1)]">
                     <SelectValue />
@@ -215,13 +191,8 @@ export default function RestyleInputs({ onGenerate }: RestyleInputsProps) {
             {numImagesSetting && (
               <div className="w-24 shrink-0">
                 <Select
-                  value={
-                    (modelParams.num_images as string) ||
-                    numImagesSetting.default?.toString()
-                  }
-                  onValueChange={(val) =>
-                    handleParamChange("num_images", Number(val))
-                  }
+                  value={numImages?.toString() || numImagesSetting.default?.toString()}
+                  onValueChange={(val) => updateField("num_images", Number(val))}
                 >
                   <SelectTrigger className="h-10 rounded-lg border-gray-200 px-3 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:text-[var(--color-text-1)]">
                     <SelectValue />
@@ -242,18 +213,13 @@ export default function RestyleInputs({ onGenerate }: RestyleInputsProps) {
             )}
 
             {/* Advanced Settings */}
-            <AdvancedSettingsDialog
-              settings={settings}
-              values={modelParams}
-              onChange={handleParamChange}
-              excludeFields={excludedFields}
-            />
+            <AdvancedSettingsDialog excludeFields={excludedFields} />
           </div>
 
           {/* Right Side - Generate Button */}
           <Button
             onClick={handleGenerate}
-            disabled={isGenerateDisabled}
+            disabled={!isFormValid || !selectedModelId}
             variant="generate"
             className="h-10 min-w-[140px] rounded-lg px-8"
           >
