@@ -283,7 +283,7 @@ export default function Page() {
 
 
   // Show loading while checking auth status
-  if (true) {
+  if (isSignedIn) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-black">
         <HexwaveLoader message="Already signed in. Redirecting..." size="lg" />
