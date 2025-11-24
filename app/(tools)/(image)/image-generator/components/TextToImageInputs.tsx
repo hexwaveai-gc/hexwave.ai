@@ -4,16 +4,10 @@ import { useState, useMemo } from "react";
 import { Label } from "@/app/components/ui/label";
 import { Textarea } from "@/app/components/ui/textarea";
 import { Button } from "@/app/components/ui/button";
-import { Wand2, RefreshCw } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/app/components/ui/select";
+import { RefreshCw } from "lucide-react";
 import ModelSelectorDialog from "./ModelSelectorDialog";
 import AdvancedSettingsDialog from "./AdvancedSettingsDialog";
+import PrimaryFieldsRenderer, { getPrimaryFieldNames } from "./PrimaryFieldsRenderer";
 import { useImageGenerationStore } from "../store/useImageGenerationStore";
 import { useFieldValue, useIsFormValid } from "../store/selectors";
 
@@ -61,25 +55,11 @@ export default function TextToImageInputs() {
   const startGeneration = useImageGenerationStore((s) => s.startGeneration);
   const isFormValid = useIsFormValid();
 
-  const settings = selectedModel?.settings || {};
-
-  // Extract specific settings for the footer
-  const aspectRatioSetting = settings.aspect_ratio;
-  const resolutionSetting = settings.resolution; // Using resolution instead of num_images for Runway
-  const numImagesSetting = settings.num_images; // For Flux
-  
-  // Get field values from store
-  const aspectRatio = useFieldValue<string>("aspect_ratio", aspectRatioSetting?.default);
-  const resolution = useFieldValue<string>("resolution", resolutionSetting?.default);
-  const numImages = useFieldValue<number>("num_images", numImagesSetting?.default || 1);
-
   // Fields to exclude from Advanced Dialog (because they are in footer or main area)
   const excludedFields = [
     "prompt",
     "reference_images", // Not used in Text to Image
-    "aspect_ratio",
-    "resolution",
-    "num_images",
+    ...getPrimaryFieldNames(), // Exclude all primary fields
   ];
 
   // Get current hints based on index
@@ -108,14 +88,6 @@ export default function TextToImageInputs() {
     } catch (error) {
       console.error("Generation failed:", error);
     }
-  };
-
-  // Helper function to normalize options (handle both string and object formats)
-  const normalizeOption = (option: string | { value: string; label: string }) => {
-    if (typeof option === "string") {
-      return { value: option, label: option };
-    }
-    return option;
   };
 
   return (
@@ -181,86 +153,8 @@ export default function TextToImageInputs() {
         <div className="flex items-center justify-between gap-3">
           {/* Left Side - Controls */}
           <div className="flex items-center gap-3">
-            {/* Aspect Ratio Dropdown */}
-            {aspectRatioSetting && aspectRatioSetting.options && (
-              <div className="w-24 shrink-0">
-                <Select
-                  value={aspectRatio || aspectRatioSetting.default}
-                  onValueChange={(val) => updateField("aspect_ratio", val)}
-                >
-                  <SelectTrigger className="h-10 rounded-lg border-[var(--color-border-container)] bg-[var(--color-bg-primary)] text-[var(--color-text-1)] px-3">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-lg">
-                    {aspectRatioSetting.options.map((option: string | { value: string; label: string }) => {
-                      const normalized = normalizeOption(option);
-                      return (
-                        <SelectItem
-                          key={normalized.value}
-                          value={normalized.value}
-                          className="rounded-lg"
-                        >
-                          {normalized.label}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {/* Resolution or Count Dropdown */}
-            {resolutionSetting && resolutionSetting.options && (
-              <div className="w-28 shrink-0">
-                <Select
-                  value={resolution || resolutionSetting.default}
-                  onValueChange={(val) => updateField("resolution", val)}
-                >
-                  <SelectTrigger className="h-10 rounded-lg border-[var(--color-border-container)] bg-[var(--color-bg-primary)] text-[var(--color-text-1)] px-3">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-lg">
-                    {resolutionSetting.options.map((option: string | { value: string; label: string }) => {
-                      const normalized = normalizeOption(option);
-                      return (
-                        <SelectItem
-                          key={normalized.value}
-                          value={normalized.value}
-                          className="rounded-lg"
-                        >
-                          {normalized.label}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {/* Num Images (Flux) */}
-            {numImagesSetting && (
-              <div className="w-24 shrink-0">
-                <Select
-                  value={numImages?.toString() || numImagesSetting.default?.toString()}
-                  onValueChange={(val) => updateField("num_images", Number(val))}
-                >
-                  <SelectTrigger className="h-10 rounded-lg border-[var(--color-border-container)] bg-[var(--color-bg-primary)] text-[var(--color-text-1)] px-3">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-lg">
-                    {[1, 2, 3, 4].map((num) => (
-                      <SelectItem
-                        key={num}
-                        value={num.toString()}
-                        className="rounded-lg"
-                      >
-                        {num} {num === 1 ? "Image" : "Images"}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            {/* Primary Fields - Dynamically rendered based on model settings */}
+            <PrimaryFieldsRenderer />
 
             {/* Advanced Settings */}
             <AdvancedSettingsDialog excludeFields={excludedFields} />

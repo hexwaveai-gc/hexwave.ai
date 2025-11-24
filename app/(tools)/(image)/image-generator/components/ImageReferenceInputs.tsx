@@ -5,15 +5,9 @@ import { Textarea } from "@/app/components/ui/textarea";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { Upload, X, Plus } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/app/components/ui/select";
 import ModelSelectorDialog from "./ModelSelectorDialog";
 import AdvancedSettingsDialog from "./AdvancedSettingsDialog";
+import PrimaryFieldsRenderer, { getPrimaryFieldNames } from "./PrimaryFieldsRenderer";
 import { useImageGenerationStore } from "../store/useImageGenerationStore";
 import { useFieldValue, useIsFormValid } from "../store/selectors";
 
@@ -36,18 +30,6 @@ export default function ImageReferenceInputs() {
 
   const settings = selectedModel?.settings || {};
   const maxFiles = settings.reference_images?.max_files || 3;
-  
-  // Extract specific settings for the footer
-  const aspectRatioSetting = settings.aspect_ratio;
-  const aspectRatio = useFieldValue<string>("aspect_ratio", aspectRatioSetting?.default);
-  
-  // Helper function to normalize options
-  const normalizeOption = (option: string | { value: string; label: string }) => {
-    if (typeof option === "string") {
-      return { value: option, label: option };
-    }
-    return option;
-  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -74,7 +56,7 @@ export default function ImageReferenceInputs() {
   const excludedFields = [
     "prompt",
     "reference_images",
-    "aspect_ratio",
+    ...getPrimaryFieldNames(), // Exclude all primary fields
   ];
 
   return (
@@ -165,33 +147,8 @@ export default function ImageReferenceInputs() {
         <div className="flex items-center justify-between gap-3">
           {/* Left Side - Controls */}
           <div className="flex items-center gap-3">
-            {/* Aspect Ratio Dropdown */}
-            {aspectRatioSetting && aspectRatioSetting.options && (
-              <div className="w-24 shrink-0">
-                <Select
-                  value={aspectRatio || aspectRatioSetting.default}
-                  onValueChange={(val) => updateField("aspect_ratio", val)}
-                >
-                  <SelectTrigger className="h-10 rounded-lg border-gray-200 px-3 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:text-[var(--color-text-1)]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-lg">
-                    {aspectRatioSetting.options.map((option: string | { value: string; label: string }) => {
-                      const normalized = normalizeOption(option);
-                      return (
-                        <SelectItem
-                          key={normalized.value}
-                          value={normalized.value}
-                          className="rounded-lg"
-                        >
-                          {normalized.label}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            {/* Primary Fields - Dynamically rendered based on model settings */}
+            <PrimaryFieldsRenderer />
 
             {/* Advanced Settings */}
             <AdvancedSettingsDialog excludeFields={excludedFields} />
