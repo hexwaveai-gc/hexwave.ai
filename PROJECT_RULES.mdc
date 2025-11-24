@@ -192,6 +192,65 @@ For complex forms with multiple field types, refer to:
 
 ---
 
+### 11. Constants Management
+
+**MANDATORY**: All magic numbers, hardcoded values, and configuration constants MUST be stored in the `constants` folder.
+
+#### Rules:
+- ✅ **DO**: Store all constants in the `constants` folder at the project root
+- ✅ **DO**: Structure constants files logically (e.g., `constants/api.ts`, `constants/ui.ts`, `constants/explore/`)
+- ✅ **DO**: Use descriptive constant names that clearly indicate their purpose
+- ✅ **DO**: Group related constants together in the same file
+- ✅ **DO**: Export constants as named exports for better tree-shaking
+- ✅ **DO**: Use `const` declarations with `UPPER_SNAKE_CASE` for constant values
+- ❌ **DON'T**: Scatter magic numbers or hardcoded values throughout the codebase
+- ❌ **DON'T**: Use inline numeric or string literals without extracting them to constants
+- ❌ **DON'T**: Store constants in component files or utility files
+
+#### What Qualifies as Constants:
+- API endpoints and URLs
+- Timeout values and delays
+- Default values and limits
+- Configuration values (dimensions, sizes, counts)
+- Status codes and error messages
+- Feature flags and environment-specific values
+- Any hardcoded numeric or string values that might need to change
+
+#### Constants File Structure:
+```typescript
+// constants/api.ts
+export const API_TIMEOUT = 30000; // 30 seconds
+export const MAX_RETRY_ATTEMPTS = 3;
+export const DEFAULT_PAGE_SIZE = 20;
+
+// constants/ui.ts
+export const MODAL_MAX_WIDTH = 600;
+export const ANIMATION_DURATION = 300;
+export const DEBOUNCE_DELAY = 500;
+
+// constants/explore/tabs.ts (existing example)
+export const EXPLORE_TABS = [...];
+```
+
+#### Usage Pattern:
+```typescript
+// ❌ BAD: Magic number in component
+const timeout = setTimeout(() => {}, 5000);
+
+// ✅ GOOD: Import from constants
+import { DEBOUNCE_DELAY } from "@/constants/ui";
+const timeout = setTimeout(() => {}, DEBOUNCE_DELAY);
+```
+
+#### Migration Guidelines:
+1. Identify magic numbers and hardcoded values in existing code
+2. Extract them to appropriate constants files
+3. Group related constants together
+4. Update all references to use the new constants
+5. Document complex constants with comments explaining their purpose
+
+---
+
 ## Summary
 
 **Core Principles:**
@@ -200,6 +259,7 @@ For complex forms with multiple field types, refer to:
 3. ✅ Share schemas between frontend and backend
 4. ✅ Use existing form UI components from `app/components/ui/form.tsx`
 5. ✅ Follow TypeScript best practices with inferred types
+6. ✅ Store all constants in the `constants` folder (no magic numbers)
 
 **Key Benefits:**
 - Type safety across frontend and backend
