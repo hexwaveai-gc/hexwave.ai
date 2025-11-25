@@ -18,7 +18,7 @@ import {
   type FileUploaderProps 
 } from "@/app/components/common/file-upload";
 import { useGenerationStore } from "../../store/useGenerationStore";
-import { useFieldError, useFieldValue } from "../../store/selectors";
+import { useFieldValue } from "../../store/selectors";
 
 interface FileUploadFieldProps {
   /** Field name in the store */
@@ -75,7 +75,6 @@ export const FileUploadField = memo(function FileUploadField({
   previewColumns,
 }: FileUploadFieldProps) {
   const value = useFieldValue(fieldName) as string | string[] | null;
-  const error = useFieldError(fieldName);
   const updateField = useGenerationStore((s) => s.updateField);
 
   // Handle file change (upload or remove)
@@ -100,7 +99,6 @@ export const FileUploadField = memo(function FileUploadField({
         variant={variant}
         value={value}
         onChange={handleChange}
-        hasError={!!error}
         buttonLabel={buttonLabel}
         dropzoneLabel={dropzoneLabel}
         allowedContent={allowedContent}
@@ -109,15 +107,9 @@ export const FileUploadField = memo(function FileUploadField({
         showVideoControls={false}
       />
 
-      {helpText && !error && (
+      {helpText && (
         <p className="text-[10px] md:text-xs text-gray-500 dark:text-(--color-text-3)">
           {helpText}
-        </p>
-      )}
-
-      {error && (
-        <p className="text-[10px] md:text-xs text-red-500" role="alert">
-          {error}
         </p>
       )}
     </div>

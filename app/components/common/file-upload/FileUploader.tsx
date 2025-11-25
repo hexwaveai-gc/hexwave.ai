@@ -21,6 +21,7 @@ import {
 import { UploadButton, UploadDropzone } from "@/utils/uploadthing";
 import { FilePreview, detectFileType, type FileType } from "./FilePreview";
 import { cn } from "@/lib/utils";
+import HexwaveLoader from "../HexwaveLoader";
 import type { FileRouteEndpoint } from "@/app/api/uploadthing/core";
 
 // Type definitions
@@ -341,6 +342,7 @@ export const FileUploader = memo(function FileUploader({
   previewColumns = 3,
 }: FileUploaderProps) {
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   
   // Determine if multi-file mode
   const isMultiMode = maxFiles > 1;
@@ -385,6 +387,7 @@ export const FileUploader = memo(function FileUploader({
   // Handle upload start
   const handleUploadBegin = useCallback(() => {
     setIsUploading(true);
+    setUploadProgress(0);
     onUploadBegin?.();
   }, [onUploadBegin]);
 
@@ -392,6 +395,7 @@ export const FileUploader = memo(function FileUploader({
   const handleUploadComplete = useCallback(
     (res: UploadResponse[]) => {
       setIsUploading(false);
+      setUploadProgress(0);
       
       if (isMultiMode) {
         // Multi-file mode: append new files to existing
@@ -428,6 +432,7 @@ export const FileUploader = memo(function FileUploader({
   const handleUploadError = useCallback(
     (error: Error) => {
       setIsUploading(false);
+      setUploadProgress(0);
       console.error("Upload failed:", error);
 
       if (onUploadError) {
@@ -585,13 +590,15 @@ export const FileUploader = memo(function FileUploader({
           onUploadBegin={handleUploadBegin}
           onClientUploadComplete={handleUploadComplete}
           onUploadError={handleUploadError}
+          onUploadProgress={setUploadProgress}
           appearance={{
             container: cn(
-              "flex w-full cursor-pointer flex-col items-center justify-center",
-              "rounded-lg border-2 border-dashed transition-colors",
-              previewHeight,
-              hasError
-                ? "border-red-500 bg-red-50 dark:bg-red-950/20"
+              "relative flex w-full cursor-pointer flex-col items-center justify-center",
+              "rounded-lg border-2 border-dashed transition-all duration-300",
+              // Expand height during upload to accommodate the loader (sm = 64px + text + gaps)
+              isUploading ? "min-h-[160px]" : previewHeight,
+              isUploading
+                ? "border-[var(--color-theme-2)]/50 bg-[var(--color-theme-2)]/5 dark:bg-[var(--color-theme-2)]/10"
                 : cn(
                     "border-gray-300 bg-gray-50",
                     "hover:border-gray-400 hover:bg-gray-100",
@@ -599,17 +606,26 @@ export const FileUploader = memo(function FileUploader({
                     "dark:hover:border-[var(--color-border-component)] dark:hover:bg-[var(--color-bg-secondary)]"
                   )
             ),
-            button: sharedAppearance.button,
+            // Hide button completely during upload
+            button: isUploading ? "!hidden" : sharedAppearance.button,
             allowedContent: sharedAppearance.allowedContent,
           }}
           content={{
             button: () => (
               <span className="flex items-center gap-2">
                 <IconComponent className="h-4 w-4" />
-                {isUploading ? "Uploading..." : resolvedButtonLabel}
+                {resolvedButtonLabel}
               </span>
             ),
-            allowedContent: () => <span>{resolvedAllowedContent}</span>,
+            allowedContent: () =>
+              isUploading ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
+                  <HexwaveLoader size="sm" />
+                  <UploadProgressBar progress={uploadProgress} />
+                </div>
+              ) : (
+                <span>{resolvedAllowedContent}</span>
+              ),
           }}
         />
       </div>
@@ -624,41 +640,55 @@ export const FileUploader = memo(function FileUploader({
       onUploadBegin={handleUploadBegin}
       onClientUploadComplete={handleUploadComplete}
       onUploadError={handleUploadError}
+      onUploadProgress={setUploadProgress}
       config={{ mode: "auto" }}
       appearance={{
         container: cn(
-          "w-full rounded-[18px] border p-6 transition-colors cursor-pointer",
-          hasError
-            ? "border-red-500 bg-red-50 dark:bg-red-950/20"
+          "relative w-full rounded-[18px] border transition-all duration-300 cursor-pointer",
+          // Add more padding during upload for the loader
+          isUploading ? "p-8 flex items-center justify-center min-h-[200px]" : "p-6",
+          isUploading
+            ? "border-[var(--color-theme-2)]/50 bg-[var(--color-theme-2)]/5 dark:bg-[var(--color-theme-2)]/10"
             : cn(
                 "border-gray-200 bg-gray-50/50",
                 "hover:bg-gray-50/80",
                 "dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)]/50",
                 "dark:hover:bg-[var(--color-bg-primary)]/80"
               ),
-          "ut-uploading:border-[var(--color-theme-2)]/50",
           className
         ),
         uploadIcon: "hidden",
         label: cn(
-          "text-sm font-medium text-gray-900",
-          "dark:text-[var(--color-text-1)]",
-          "hover:text-[var(--color-theme-2)]"
+          "text-sm font-medium",
+          isUploading
+            ? "text-[var(--color-theme-2)]"
+            : "text-gray-900 dark:text-[var(--color-text-1)] hover:text-[var(--color-theme-2)]"
         ),
         allowedContent:
           "text-[10px] text-gray-500/60 dark:text-[var(--color-text-3)]/60",
-        button: sharedAppearance.button,
+        // Completely hide button during upload
+        button: isUploading 
+          ? "!hidden" 
+          : sharedAppearance.button,
       }}
       content={{
-        uploadIcon: () => <DropzoneIcon Icon={IconComponent} />,
-        label: () => (
-          <span className="text-sm font-medium">
-            {isUploading ? "Uploading..." : resolvedDropzoneLabel}
-          </span>
-        ),
-        allowedContent: () => (
-          <span className="mt-2 block">{resolvedAllowedContent}</span>
-        ),
+        uploadIcon: () =>
+          isUploading ? (
+            <div className="flex flex-col items-center gap-4">
+              <HexwaveLoader size="sm" />
+              <UploadProgressBar progress={uploadProgress} />
+            </div>
+          ) : (
+            <DropzoneIcon Icon={IconComponent} />
+          ),
+        label: () =>
+          isUploading ? null : (
+            <span className="text-sm font-medium">{resolvedDropzoneLabel}</span>
+          ),
+        allowedContent: () =>
+          isUploading ? null : (
+            <span className="mt-2 block">{resolvedAllowedContent}</span>
+          ),
       }}
     />
   );
@@ -688,6 +718,40 @@ function DropzoneIcon({ Icon }: { Icon: LucideIcon }) {
       >
         <span className="text-[10px] font-bold text-black">+</span>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Upload Progress Bar Component
+ * Styled progress bar with percentage display
+ */
+function UploadProgressBar({ progress }: { progress: number }) {
+  return (
+    <div className="w-full max-w-[180px] space-y-2">
+      {/* Progress bar container */}
+      <div className="relative h-2 w-full overflow-hidden rounded-full bg-black/20 dark:bg-white/10">
+        {/* Animated background glow */}
+        <div 
+          className="absolute inset-0 opacity-30"
+          style={{
+            background: `linear-gradient(90deg, transparent, var(--color-theme-2), transparent)`,
+            animation: 'shimmer 2s infinite',
+          }}
+        />
+        {/* Progress fill */}
+        <div 
+          className={cn(
+            "h-full rounded-full transition-all duration-300 ease-out",
+            "bg-linear-to-r from-(--color-theme-2) to-(--color-theme-2)/80"
+          )}
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      {/* Percentage text */}
+      <p className="text-center text-xs font-medium text-(--color-text-2) dark:text-(--color-text-3)">
+        Uploading... {progress}%
+      </p>
     </div>
   );
 }
