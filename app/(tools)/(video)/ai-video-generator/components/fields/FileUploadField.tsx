@@ -106,6 +106,7 @@ export const FileUploadField = memo(function FileUploadField({
         allowedContent={allowedContent}
         previewHeight={previewHeight}
         previewColumns={previewColumns}
+        showVideoControls={false}
       />
 
       {helpText && !error && (

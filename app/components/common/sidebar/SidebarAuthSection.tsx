@@ -79,3 +79,4 @@ export function SidebarAuthSection({ variant = "compact", onClose }: SidebarAuth
   );
 }
 
+

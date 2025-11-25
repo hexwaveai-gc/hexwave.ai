@@ -4,12 +4,19 @@
  * FilePreview Component
  * Unified preview component for images, videos, and PDFs
  * 
+ * Uses Next.js Image for optimized loading with:
+ * - Automatic format optimization (WebP/AVIF)
+ * - Lazy loading
+ * - Blur placeholder while loading
+ * 
  * @see README.md for documentation
  */
 
 import { memo, useMemo } from "react";
+import Image from "next/image";
 import { X, FileText, Play, Image as ImageIcon, File } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ExpandableMedia, type MediaType } from "./ExpandableMedia";
 
 // File type detection utilities
 export type FileType = "image" | "video" | "pdf" | "unknown";
@@ -127,6 +134,12 @@ export interface FilePreviewProps {
    * @default false
    */
   readOnly?: boolean;
+
+  /**
+   * Whether to enable expand functionality (click to view full-size)
+   * @default true
+   */
+  enableExpand?: boolean;
 }
 
 /**
@@ -176,8 +189,9 @@ export const FilePreview = memo(function FilePreview({
   className,
   previewHeight = "h-32",
   rounded = "lg",
-  showVideoControls = true,
+  showVideoControls = false,
   readOnly = false,
+  enableExpand = true,
 }: FilePreviewProps) {
   // Auto-detect file type if not explicitly provided
   const fileType = useMemo(
@@ -193,16 +207,63 @@ export const FilePreview = memo(function FilePreview({
     "2xl": "rounded-2xl",
   }[rounded];
 
+  // Determine if file type supports expansion
+  const canExpand = enableExpand && (fileType === "image" || fileType === "video");
+
   // Render appropriate preview based on file type
   const renderPreview = () => {
+    // Wrap expandable media types with ExpandableMedia component
+    if (canExpand) {
+      const mediaType = fileType as MediaType;
+      
+      return (
+        <ExpandableMedia
+          src={src}
+          mediaType={mediaType}
+          alt={alt}
+          fileName={fileName}
+          showVideoControls={showVideoControls}
+          className={cn("w-full", previewHeight)}
+        >
+          {fileType === "image" ? (
+            <div className="relative w-full h-full">
+              <Image
+                src={src}
+                alt={alt}
+                fill
+                className="object-contain"
+                sizes="(max-width: 768px) 100vw, 50vw"
+                unoptimized={src.includes('blob:') || src.startsWith('data:')}
+              />
+            </div>
+          ) : (
+            <div className="relative w-full h-full">
+              <video
+                src={src}
+                controls={showVideoControls}
+                className="h-full w-full object-contain"
+                preload="metadata"
+              />
+            </div>
+          )}
+        </ExpandableMedia>
+      );
+    }
+
+    // Non-expandable media types (PDF, unknown)
     switch (fileType) {
       case "image":
         return (
-          <img
-            src={src}
-            alt={alt}
-            className={cn("w-full object-cover", previewHeight)}
-          />
+          <div className={cn("relative w-full", previewHeight)}>
+            <Image
+              src={src}
+              alt={alt}
+              fill
+              className="object-contain"
+              sizes="(max-width: 768px) 100vw, 50vw"
+              unoptimized={src.includes('blob:') || src.startsWith('data:')}
+            />
+          </div>
         );
 
       case "video":
@@ -211,7 +272,7 @@ export const FilePreview = memo(function FilePreview({
             <video
               src={src}
               controls={showVideoControls}
-              className="h-full w-full object-cover"
+              className="h-full w-full object-contain"
               preload="metadata"
             />
             {!showVideoControls && (

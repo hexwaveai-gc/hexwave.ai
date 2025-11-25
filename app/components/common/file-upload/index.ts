@@ -35,3 +35,9 @@ export {
   type FilePreviewProps, 
   type FileType 
 } from "./FilePreview";
+
+export {
+  ExpandableMedia,
+  type ExpandableMediaProps,
+  type MediaType
+} from "./ExpandableMedia";
