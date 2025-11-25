@@ -4,8 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/app/components/ui/button";
-import { ThemeToggle } from "@/app/components/ui/theme-toggle";
-
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -25,21 +23,18 @@ export default function Navbar() {
             className="w-auto h-auto"
             priority
           />
-          <span className="text-white dark:text-gray-100 font-medium text-xl">Hexwave</span>
+          <span className="text-white font-medium text-xl">Hexwave</span>
         </div>
 
         <div id="navbar" className="flex items-center justify-end gap-3">
-          {/* Theme Toggle */}
-          <ThemeToggle />
-
           {/* Navigation Links */}
           <div
             id="navlinks"
-            className={`text-[#BEC0C7] dark:text-gray-400 text-base font-medium ${
+            className={`text-[#BEC0C7] text-base font-medium ${
               isMenuOpen
                 ? "visible translate-y-0 scale-100 opacity-100"
                 : "invisible -translate-y-4 opacity-0"
-            } absolute top-full left-0 z-20 w-full origin-top-right bg-[#101215] dark:bg-gray-900 flex-col flex-wrap justify-end gap-6 p-6 shadow-2xl shadow-gray-600/10 transition-all duration-300 dark:border-gray-700 dark:shadow-none lg:visible lg:relative lg:flex lg:w-auto lg:translate-y-0 lg:scale-100 lg:flex-row lg:items-center lg:gap-0 lg:border-none lg:bg-transparent lg:p-0 lg:opacity-100 lg:shadow-none dark:lg:bg-transparent`}
+            } absolute top-full left-0 z-20 w-full origin-top-right bg-[#101215] flex-col flex-wrap justify-end gap-6 p-6 shadow-2xl shadow-gray-600/10 transition-all duration-300 lg:visible lg:relative lg:flex lg:w-auto lg:translate-y-0 lg:scale-100 lg:flex-row lg:items-center lg:gap-0 lg:border-none lg:bg-transparent lg:p-0 lg:opacity-100 lg:shadow-none`}
           >
             <div className="lg:pr-4 lg:ml-8">
               <ul className="divide-y lg:divide-y-0 divide-white/5 gap-8 *:py-4 lg:hover:*:bg-transparent lg:hover:*:pl-0 tracking-wide lg:flex lg:space-y-0 lg:text-sm lg:items-center">
@@ -70,13 +65,13 @@ export default function Navbar() {
           >
             <div
               aria-hidden="true"
-              className={`m-auto h-0.5 w-5 rounded transition duration-300 bg-sky-50 dark:bg-gray-100 ${
+              className={`m-auto h-0.5 w-5 rounded transition duration-300 bg-gray-100 ${
                 isMenuOpen ? "rotate-45 translate-y-1.5" : ""
               }`}
             ></div>
             <div
               aria-hidden="true"
-              className={`m-auto mt-1.5 h-0.5 w-5 rounded transition duration-300 bg-sky-50 dark:bg-gray-100 ${
+              className={`m-auto mt-1.5 h-0.5 w-5 rounded transition duration-300 bg-gray-100 ${
                 isMenuOpen ? "-rotate-45 -translate-y-1.5" : ""
               }`}
             ></div>

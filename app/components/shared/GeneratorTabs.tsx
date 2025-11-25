@@ -25,6 +25,9 @@ interface GeneratorTabsProps {
   /** ID of the default active tab */
   defaultTab?: string;
 
+  /** Controlled active tab value */
+  value?: string;
+
   /** Callback when tab changes */
   onTabChange?: (tabId: string) => void;
 
@@ -39,15 +42,23 @@ interface GeneratorTabsProps {
 export default function GeneratorTabs({
   tabs,
   defaultTab,
+  value,
   onTabChange,
   className,
 }: GeneratorTabsProps) {
   const defaultValue = defaultTab || tabs[0]?.id;
 
+  const handleTabChange = (tabId: string) => {
+    if (onTabChange) {
+      onTabChange(tabId);
+    }
+  };
+
   return (
     <Tabs
       defaultValue={defaultValue}
-      onValueChange={onTabChange}
+      value={value}
+      onValueChange={handleTabChange}
       className={cn("flex h-full w-full flex-col", className)}
     >
       {/* Tab List */}
