@@ -21,6 +21,9 @@
 // Re-export query utilities for convenience
 export { queryKeys, useQuery, useMutation, useQueryClient } from "@/lib/query";
 
+// Task hooks (example implementation)
+export * from "./use-tasks";
+
 // =============================================================================
 // Example Query Options (using queryOptions pattern)
 // =============================================================================
