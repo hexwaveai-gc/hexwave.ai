@@ -578,7 +578,7 @@ export const FileUploader = memo(function FileUploader({
   // Render button variant (empty state)
   if (variant === "button") {
     return (
-      <div className={cn("relative", className)}>
+      <div className={cn("relative w-full", className)}>
         <UploadButton
           endpoint={endpoint}
           disabled={disabled}

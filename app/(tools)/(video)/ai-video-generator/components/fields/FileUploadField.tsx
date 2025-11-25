@@ -89,8 +89,8 @@ export const FileUploadField = memo(function FileUploadField({
   const displayLabel = label || formatFieldLabel(fieldName);
 
   return (
-    <div className="space-y-3">
-      <Label className="text-sm font-medium text-gray-900 dark:text-(--color-text-1)">
+    <div className="space-y-2 md:space-y-3">
+      <Label className="text-xs md:text-sm font-medium text-gray-900 dark:text-(--color-text-1)">
         {displayLabel}
       </Label>
 
@@ -109,13 +109,13 @@ export const FileUploadField = memo(function FileUploadField({
       />
 
       {helpText && !error && (
-        <p className="text-xs text-gray-500 dark:text-(--color-text-3)">
+        <p className="text-[10px] md:text-xs text-gray-500 dark:text-(--color-text-3)">
           {helpText}
         </p>
       )}
 
       {error && (
-        <p className="text-xs text-red-500" role="alert">
+        <p className="text-[10px] md:text-xs text-red-500" role="alert">
           {error}
         </p>
       )}

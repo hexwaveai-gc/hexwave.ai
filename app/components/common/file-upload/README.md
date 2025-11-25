@@ -259,3 +259,4 @@ Components automatically support dark mode using CSS variables:
 - Screen reader friendly
 - Proper alt text support
 
+

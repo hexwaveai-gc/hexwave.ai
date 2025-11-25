@@ -50,7 +50,7 @@ function isIntegerField(config: any): boolean {
 }
 
 /**
- * Render a select field
+ * Render a select field - Mobile responsive
  */
 function SelectField({
   fieldName,
@@ -67,19 +67,19 @@ function SelectField({
   const displayValue = value?.toString() || config.default?.toString() || "";
 
   return (
-    <div className="w-28 shrink-0">
+    <div className="w-24 md:w-28 shrink-0">
       <Select value={displayValue} onValueChange={onValueChange}>
-        <SelectTrigger className="h-10 rounded-lg border-[var(--color-border-container)] bg-[var(--color-bg-primary)] text-[var(--color-text-1)] px-3 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:text-[var(--color-text-1)]">
+        <SelectTrigger className="h-9 md:h-10 rounded-lg border-[var(--color-border-container)] bg-[var(--color-bg-primary)] text-[var(--color-text-1)] px-2 md:px-3 text-xs md:text-sm dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:text-[var(--color-text-1)]">
           <SelectValue />
         </SelectTrigger>
-        <SelectContent className="rounded-lg">
+        <SelectContent className="rounded-lg max-h-[40vh]">
           {options.map((option: OptionInput, index: number) => {
             const normalized = normalizeOption(option);
             return (
               <SelectItem
                 key={`${normalized.value}-${index}`}
                 value={normalized.value}
-                className="rounded-lg"
+                className="rounded-lg text-sm"
               >
                 {normalized.label}
               </SelectItem>
@@ -92,7 +92,7 @@ function SelectField({
 }
 
 /**
- * Render a number of images field (special handling for num_images/quantity)
+ * Render a number of images field (special handling for num_images/quantity) - Mobile responsive
  */
 function NumImagesField({
   fieldName,
@@ -114,19 +114,19 @@ function NumImagesField({
     ).map((num) => ({ value: num.toString(), label: `${num} ${num === 1 ? "Image" : "Images"}` }));
 
   return (
-    <div className="w-24 shrink-0">
+    <div className="w-20 md:w-24 shrink-0">
       <Select value={displayValue} onValueChange={onValueChange}>
-        <SelectTrigger className="h-10 rounded-lg border-[var(--color-border-container)] bg-[var(--color-bg-primary)] text-[var(--color-text-1)] px-3 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:text-[var(--color-text-1)]">
+        <SelectTrigger className="h-9 md:h-10 rounded-lg border-[var(--color-border-container)] bg-[var(--color-bg-primary)] text-[var(--color-text-1)] px-2 md:px-3 text-xs md:text-sm dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:text-[var(--color-text-1)]">
           <SelectValue />
         </SelectTrigger>
-        <SelectContent className="rounded-lg">
+        <SelectContent className="rounded-lg max-h-[40vh]">
           {options.map((option: OptionInput, index: number) => {
             const normalized = normalizeOption(option);
             return (
               <SelectItem
                 key={`${normalized.value ?? index}`}
                 value={normalized.value}
-                className="rounded-lg"
+                className="rounded-lg text-sm"
               >
                 {normalized.label}
               </SelectItem>
@@ -274,7 +274,7 @@ export default function PrimaryFieldsRenderer() {
   }
 
   return (
-    <div className="flex items-center gap-3 flex-wrap">
+    <div className="flex items-center gap-2 md:gap-3 flex-nowrap md:flex-wrap">
       {fieldsToRender.map((fieldName) => {
         const combinedConfig = buildFieldConfig(fieldName, settings);
         return <FieldRenderer key={fieldName} fieldName={fieldName} config={combinedConfig} />;

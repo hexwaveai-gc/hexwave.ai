@@ -7,6 +7,10 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { Model, getModelById } from "../lib/modelRegistry";
+import {
+  createAddToRecentUpdater,
+  createToggleFavoriteUpdater,
+} from "@/lib/store/storeUtils";
 
 /**
  * Image generation result
@@ -506,23 +510,11 @@ export const useImageGenerationStore = create<ImageGenerationStore>()(
       // ============================================================
       
       addToRecent: (modelId) => {
-        set((state) => {
-          // Remove if already exists
-          const filtered = state.recentModels.filter((id) => id !== modelId);
-          // Add to front, keep max 10
-          const newRecent = [modelId, ...filtered].slice(0, 10);
-          return { recentModels: newRecent };
-        });
+        set((state) => createAddToRecentUpdater(modelId, state.recentModels));
       },
       
       toggleFavorite: (modelId) => {
-        set((state) => {
-          const isFavorite = state.favoriteModels.includes(modelId);
-          const newFavorites = isFavorite
-            ? state.favoriteModels.filter((id) => id !== modelId)
-            : [...state.favoriteModels, modelId];
-          return { favoriteModels: newFavorites };
-        });
+        set((state) => createToggleFavoriteUpdater(modelId, state.favoriteModels));
       },
     }),
     {

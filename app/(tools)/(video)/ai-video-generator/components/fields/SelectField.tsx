@@ -78,10 +78,10 @@ export const SelectField = memo(function SelectField({
   }
   
   return (
-    <div className="space-y-3">
+    <div className="space-y-2 md:space-y-3">
       <Label 
         htmlFor={fieldName}
-        className="text-sm font-medium text-gray-900 dark:text-(--color-text-1)"
+        className="text-xs md:text-sm font-medium text-gray-900 dark:text-(--color-text-1)"
       >
         {displayLabel}
       </Label>
@@ -93,7 +93,7 @@ export const SelectField = memo(function SelectField({
       >
         <SelectTrigger 
           id={fieldName}
-          className={`h-10 rounded-lg px-3 ${
+          className={`h-10 md:h-10 rounded-lg px-3 text-sm ${
             error
               ? "border-red-500 focus:border-red-500"
               : "border-gray-200 dark:border-(--color-border-container)"
@@ -104,12 +104,12 @@ export const SelectField = memo(function SelectField({
         >
           <SelectValue />
         </SelectTrigger>
-        <SelectContent className="rounded-lg">
+        <SelectContent className="rounded-lg max-h-[40vh]">
           {options.map((option) => (
             <SelectItem
               key={option.value}
               value={option.value}
-              className="rounded-lg"
+              className="rounded-lg text-sm"
             >
               {option.label}
             </SelectItem>

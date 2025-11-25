@@ -99,16 +99,16 @@ export default function RestyleInputs() {
   return (
     <div className="flex h-full flex-col">
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto px-[var(--spacing-page-padding)] py-[var(--spacing-element-gap)]">
-        <div className="space-y-6">
+      <div className="flex-1 overflow-y-auto px-3 md:px-[var(--spacing-page-padding)] py-4 md:py-[var(--spacing-element-gap)]">
+        <div className="space-y-4 md:space-y-6">
           {/* Original Image Upload */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium text-gray-900 dark:text-[var(--color-text-1)]">
+          <div className="space-y-2 md:space-y-3">
+            <Label className="text-xs md:text-sm font-medium text-gray-900 dark:text-[var(--color-text-1)]">
               Original Image <span className="text-red-500">*</span>
             </Label>
 
             {!validOriginalImage ? (
-              <div className="rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 p-8 text-center transition-colors hover:border-gray-300 hover:bg-gray-100 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:hover:border-[var(--color-border-component)] dark:hover:bg-[var(--color-bg-secondary)]">
+              <div className="rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 p-6 md:p-8 text-center transition-colors hover:border-gray-300 hover:bg-gray-100 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:hover:border-[var(--color-border-component)] dark:hover:bg-[var(--color-bg-secondary)]">
                 <Input
                   type="file"
                   accept="image/*"
@@ -120,11 +120,11 @@ export default function RestyleInputs() {
                   htmlFor="original-image-upload"
                   className="flex cursor-pointer flex-col items-center"
                 >
-                  <Upload className="mb-2 h-10 w-10 text-gray-400" />
-                  <span className="text-sm font-medium text-gray-700 dark:text-[var(--color-text-2)]">
+                  <Upload className="mb-2 h-8 w-8 md:h-10 md:w-10 text-gray-400" />
+                  <span className="text-xs md:text-sm font-medium text-gray-700 dark:text-[var(--color-text-2)]">
                   Upload Image
                 </span>
-                <span className="mt-1 text-xs text-gray-500 dark:text-[var(--color-text-3)]">
+                <span className="mt-1 text-[10px] md:text-xs text-gray-500 dark:text-[var(--color-text-3)]">
                     PNG, JPG, WebP up to 10MB
                   </span>
                 </label>
@@ -134,60 +134,58 @@ export default function RestyleInputs() {
                 <img
                   src={imageUrl}
                   alt="Original"
-                  className="max-h-[300px] w-full object-contain bg-gray-50 dark:bg-[var(--color-bg-page)]"
+                  className="max-h-[200px] md:max-h-[300px] w-full object-contain bg-gray-50 dark:bg-[var(--color-bg-page)]"
                 />
+                {/* Remove button - always visible on mobile */}
                 <button
                   onClick={handleRemoveImage}
-                  className="absolute right-3 top-3 rounded-full bg-black/50 p-2 text-white opacity-0 backdrop-blur-sm transition-opacity hover:bg-black/70 group-hover:opacity-100"
+                  className="absolute right-2 top-2 md:right-3 md:top-3 rounded-full bg-black/50 p-1.5 md:p-2 text-white opacity-100 md:opacity-0 backdrop-blur-sm transition-opacity hover:bg-black/70 md:group-hover:opacity-100"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3.5 w-3.5 md:h-4 md:w-4" />
                 </button>
               </div>
             ) : null}
           </div>
 
           {/* Style Prompt */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium text-gray-900 dark:text-[var(--color-text-1)]">
+          <div className="space-y-2 md:space-y-3">
+            <Label className="text-xs md:text-sm font-medium text-gray-900 dark:text-[var(--color-text-1)]">
               Style Prompt
             </Label>
             <Textarea
               value={stylePrompt}
               onChange={(e) => updateField("style_prompt", e.target.value)}
               placeholder="Describe the style you want to apply..."
-              className="min-h-[180px] w-full resize-none rounded-lg border-gray-200 bg-gray-50 p-4 text-base focus:border-blue-500 focus:ring-0 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:text-[var(--color-text-1)] dark:placeholder:text-[var(--color-text-3)]"
+              className="min-h-[140px] md:min-h-[180px] w-full resize-none rounded-lg border-gray-200 bg-gray-50 p-3 md:p-4 text-sm md:text-base focus:border-blue-500 focus:ring-0 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:text-[var(--color-text-1)] dark:placeholder:text-[var(--color-text-3)]"
             />
           </div>
         </div>
       </div>
 
-      {/* Sticky Footer - Always at bottom */}
-      <div className="mt-auto bg-white px-[var(--spacing-page-padding)] py-[var(--spacing-footer-padding)] dark:bg-[var(--color-bg-primary)]">
+      {/* Sticky Footer - Always at bottom, compact on mobile */}
+      <div className="mt-auto bg-white px-3 md:px-[var(--spacing-page-padding)] py-3 md:py-[var(--spacing-footer-padding)] dark:bg-[var(--color-bg-primary)] border-t border-[var(--color-border-container)] md:border-t-0">
         {/* Model Selection */}
-        <div className="mb-4">
-          <Label className="mb-2 block text-sm font-medium text-gray-900 dark:text-[var(--color-text-1)]">
+        <div className="mb-3 md:mb-4">
+          <Label className="mb-1.5 md:mb-2 block text-xs md:text-sm font-medium text-gray-900 dark:text-[var(--color-text-1)]">
             Model
           </Label>
           <ModelSelectorDialog />
         </div>
 
-        {/* Controls Row */}
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Left Side - Controls */}
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            {/* Primary Fields - Dynamically rendered based on model settings */}
+        {/* Controls Row - Stack on mobile */}
+        <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-3">
+          {/* Primary Fields - Scroll horizontally on mobile */}
+          <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0 overflow-x-auto scrollbar-none pb-1 md:pb-0">
             <PrimaryFieldsRenderer />
-
-            {/* Advanced Settings */}
             <AdvancedSettingsDialog excludeFields={excludedFields} />
           </div>
 
-          {/* Right Side - Generate Button */}
+          {/* Generate Button - Full width on mobile */}
           <Button
             onClick={handleGenerate}
             disabled={!isFormValid || !selectedModelId}
             variant="generate"
-            className="h-10 min-w-[140px] shrink-0 rounded-lg px-6 sm:px-8"
+            className="h-11 md:h-10 w-full md:w-auto md:min-w-[140px] shrink-0 rounded-lg px-6"
           >
             Generate
           </Button>

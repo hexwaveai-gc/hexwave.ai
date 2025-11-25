@@ -8,6 +8,11 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { ModelType } from "../types/index.types";
 import { getDefaultFieldValues } from "../utils/costCalculator";
+import {
+  createAddToRecentUpdater,
+  createToggleFavoriteUpdater,
+  formatFieldName,
+} from "@/lib/store/storeUtils";
 
 /**
  * Video generation result
@@ -150,12 +155,12 @@ export const useGenerationStore = create<GenerationStore>()(
       // ============================================================
       
       setActiveTab: (tab) => {
+        // Only update the tab - let the page component handle model selection
+        // This prevents double-render where we first show "no model" then "model selected"
+        // The useEffect in page.tsx auto-selects the first model for the new tab
         set({ 
           activeTab: tab,
-          // Reset selection when changing tabs
-          selectedModelId: null,
-          selectedModel: null,
-          fieldValues: {},
+          // Clear errors but preserve other state for smoother transitions
           fieldErrors: {},
         });
       },
@@ -361,23 +366,11 @@ export const useGenerationStore = create<GenerationStore>()(
       // ============================================================
       
       addToRecent: (modelId) => {
-        set((state) => {
-          // Remove if already exists
-          const filtered = state.recentModels.filter((id) => id !== modelId);
-          // Add to front, keep max 10
-          const newRecent = [modelId, ...filtered].slice(0, 10);
-          return { recentModels: newRecent };
-        });
+        set((state) => createAddToRecentUpdater(modelId, state.recentModels));
       },
       
       toggleFavorite: (modelId) => {
-        set((state) => {
-          const isFavorite = state.favoriteModels.includes(modelId);
-          const newFavorites = isFavorite
-            ? state.favoriteModels.filter((id) => id !== modelId)
-            : [...state.favoriteModels, modelId];
-          return { favoriteModels: newFavorites };
-        });
+        set((state) => createToggleFavoriteUpdater(modelId, state.favoriteModels));
       },
     }),
     {
@@ -447,16 +440,5 @@ function validateFieldValue(
   return null;
 }
 
-/**
- * Format field name to human-readable text
- */
-function formatFieldName(fieldName: string): string {
-  return fieldName
-    .replace(/([A-Z])/g, " $1")
-    .replace(/_/g, " ")
-    .split(" ")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ")
-    .trim();
-}
+// formatFieldName is now imported from @/lib/store/storeUtils
 
