@@ -24,6 +24,9 @@ export { queryKeys, useQuery, useMutation, useQueryClient } from "@/lib/query";
 // Task hooks (example implementation)
 export * from "./use-tasks";
 
+// Process status hooks (TanStack Query + Ably real-time)
+export * from "./use-process";
+
 // =============================================================================
 // Example Query Options (using queryOptions pattern)
 // =============================================================================

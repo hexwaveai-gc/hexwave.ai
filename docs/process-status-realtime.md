@@ -57,7 +57,7 @@ const processId = await generateUniqueId({
   userId,
   toolName: "image-generator",
   category: "image",
-  // any other data you need to track
+  // any other data you need to track,
 });
 
 // Return processId to frontend
@@ -108,22 +108,28 @@ This automatically:
 1. Updates MongoDB document
 2. Publishes to Ably channel `process:{processId}`
 
-### 4. Frontend Subscription
+### 4. Frontend Subscription (TanStack Query + Ably)
 
-**File:** `hooks/useProcessStatus.ts`
+**File:** `hooks/queries/use-process.ts`
+
+The `useProcessStatusQuery` hook combines TanStack Query with Ably real-time subscriptions:
+
+- **TanStack Query** handles initial data fetching, caching, and state recovery
+- **Ably** handles real-time push updates when processes complete
 
 ```tsx
-import { useProcessStatus } from "@/hooks/useProcessStatus";
+import { useProcessStatusQuery } from "@/hooks/queries/use-process";
 
 function MyComponent({ processId }) {
   const { 
     status,      // "idle" | "processing" | "completed" | "failed"
-    data,        // Result data from backend
+    data,        // Result data from backend (cached by TanStack Query)
     error,       // Error message if failed
     isLoading    // true while processing
-  } = useProcessStatus(processId, {
+  } = useProcessStatusQuery(processId, {
     onComplete: (data) => {
       toast.success("Done!");
+      // data is automatically cached by TanStack Query
     },
     onError: (error) => {
       toast.error(error);
@@ -135,6 +141,12 @@ function MyComponent({ processId }) {
   if (status === "completed") return <Result data={data} />;
 }
 ```
+
+**Benefits of TanStack Query integration:**
+- Automatic caching of completed processes
+- State recovery on page refresh
+- Optional fallback polling if Ably connection fails
+- Automatic cache sync when Ably updates arrive
 
 ## Complete Example: Image Generator
 
@@ -202,12 +214,20 @@ export async function POST(req: NextRequest) {
 ```tsx
 "use client";
 import { useState } from "react";
-import { useProcessStatus } from "@/hooks/useProcessStatus";
+import { useProcessStatusQuery } from "@/hooks/queries/use-process";
 
 export function ImageGenerator() {
   const [processId, setProcessId] = useState<string | null>(null);
   
-  const { status, data, error, isLoading } = useProcessStatus(processId);
+  const { status, data, error, isLoading } = useProcessStatusQuery(processId, {
+    onComplete: (data) => {
+      // Process completed - data is now cached by TanStack Query
+      console.log("Generation complete:", data);
+    },
+    onError: (error) => {
+      console.error("Generation failed:", error);
+    }
+  });
 
   const handleGenerate = async () => {
     const res = await fetch("/api/generate-image", {
@@ -216,6 +236,7 @@ export function ImageGenerator() {
     });
     const { processId } = await res.json();
     setProcessId(processId);
+    // Hook automatically subscribes to Ably channel for real-time updates
   };
 
   return (
@@ -224,7 +245,7 @@ export function ImageGenerator() {
       
       {isLoading && <p>Generating...</p>}
       {error && <p>Error: {error}</p>}
-      {status === "completed" && (
+      {status === "completed" && data?.generations && (
         <img src={data.generations[0]} alt="Generated" />
       )}
     </div>
@@ -246,6 +267,82 @@ Messages published to `process:{processId}` channel:
 }
 ```
 
+## TanStack Query Integration
+
+The `useProcessStatusQuery` hook combines TanStack Query caching with Ably real-time subscriptions.
+
+### Available Hooks
+
+**File:** `hooks/queries/use-process.ts`
+
+```typescript
+import {
+  useProcessStatusQuery,  // Main hook: TanStack Query + Ably
+  useStartProcess,        // Mutation to start a process
+  useSimulateWebhook,     // (Demo) Simulate webhook callback
+  useInvalidateProcess,   // Force refetch process status
+  useClearProcessCache,   // Remove process from cache
+} from "@/hooks/queries/use-process";
+```
+
+### Hook Options
+
+```typescript
+useProcessStatusQuery(processId, {
+  // Enable Ably real-time subscription (default: true)
+  enableRealtime: true,
+  
+  // Enable polling as fallback (default: false)
+  enablePolling: false,
+  
+  // Polling interval in ms (default: 5000)
+  pollingInterval: 5000,
+  
+  // Callbacks
+  onStatusChange: (status, data) => { },
+  onComplete: (data) => { },
+  onError: (error) => { },
+});
+```
+
+### Return Values
+
+```typescript
+const {
+  // Process state
+  status,          // "idle" | "processing" | "completed" | "failed"
+  data,            // Result data (cached)
+  error,           // Error message
+  processId,       // Current process ID
+  isLoading,       // true while processing
+
+  // TanStack Query state
+  isInitialLoading,// true during first fetch
+  isFetching,      // true during any fetch
+  isStale,         // true if data is stale
+
+  // Actions
+  refetch,         // Force refetch from API
+} = useProcessStatusQuery(processId);
+```
+
+### Query Keys
+
+```typescript
+import { processKeys } from "@/lib/query";
+
+// Available keys for cache operations
+processKeys.all                    // ["process"]
+processKeys.detail(processId)      // ["process", processId]
+processKeys.list(filters)          // ["process", "list", filters]
+processKeys.userProcesses(userId)  // ["process", "user", userId, limit]
+
+// Example: Invalidate a specific process
+queryClient.invalidateQueries({ 
+  queryKey: processKeys.detail(processId) 
+});
+```
+
 ## Environment Setup
 
 Add to `.env.local`:
@@ -262,9 +359,12 @@ Get your API key from [Ably Dashboard](https://ably.com/accounts).
 hexwave.ai/
 ├── app/
 │   ├── api/
-│   │   └── ably/
-│   │       └── token/
-│   │           └── route.ts      # Token auth endpoint
+│   │   ├── ably/
+│   │   │   └── token/
+│   │   │       └── route.ts      # Token auth endpoint
+│   │   └── process/
+│   │       └── [processId]/
+│   │           └── route.ts      # GET process status endpoint
 │   ├── controllers/
 │   │   ├── processRequest.ts     # generateUniqueId, getProcessRequest
 │   │   └── updateProcessData.ts  # updateProcessData (+ Ably publish)
@@ -272,12 +372,18 @@ hexwave.ai/
 │       └── processRequest/
 │           └── processRequestmodel.ts
 ├── hooks/
-│   └── useProcessStatus.ts       # React hook for subscriptions
-└── lib/
-    └── ably/
-        ├── server.ts             # REST client, publishProcessStatus
-        ├── client.ts             # Realtime client for frontend
-        └── index.ts              # Exports
+│   ├── queries/
+│   │   ├── index.ts              # Query hooks exports
+│   │   └── use-process.ts        # TanStack Query + Ably hook
+│   └── useProcessStatus.ts       # Legacy: Ably-only hook
+├── lib/
+│   ├── ably/
+│   │   ├── server.ts             # REST client, publishProcessStatus
+│   │   ├── client.ts             # Realtime client for frontend
+│   │   └── index.ts              # Exports
+│   └── query/
+│       ├── query-keys.ts         # TanStack Query keys (includes processKeys)
+│       └── index.ts              # Query exports
 ```
 
 ## Security
@@ -302,4 +408,14 @@ hexwave.ai/
 | 401 on token endpoint | User not authenticated with Clerk |
 | Process stuck on "processing" | Webhook not updating status |
 | Hook not subscribing | Verify `processId` is not null |
+| Stale data after page refresh | Process status fetched from `/api/process/[processId]` on mount |
+| Cache not updating | Ably updates automatically sync with TanStack Query cache |
+
+## Demo Page
+
+Visit `/examples/ably` to see a working demo of the complete webhook flow with:
+- Interactive flow diagram
+- Process status monitor
+- Webhook simulation controls
+- Code examples
 

@@ -124,6 +124,34 @@ export const exploreKeys = {
 };
 
 // =============================================================================
+// Process Status Query Keys (for real-time process tracking)
+// =============================================================================
+
+export type ProcessStatusType = "processing" | "completed" | "failed";
+
+export interface ProcessFilters {
+  status?: ProcessStatusType;
+  userId?: string;
+  toolName?: string;
+  limit?: number;
+}
+
+export const processKeys = {
+  /** Base key for all process queries */
+  all: ["process"] as const,
+
+  /** List of processes with filters */
+  list: (filters?: ProcessFilters) => ["process", "list", filters ?? {}] as const,
+
+  /** Single process by ID */
+  detail: (processId: string) => ["process", processId] as const,
+
+  /** User's recent processes */
+  userProcesses: (userId: string, limit?: number) =>
+    ["process", "user", userId, limit ?? 10] as const,
+};
+
+// =============================================================================
 // Unified Query Keys Object
 // =============================================================================
 
@@ -145,6 +173,7 @@ export const queryKeys = {
   videos: videoKeys,
   models: modelKeys,
   explore: exploreKeys,
+  process: processKeys,
 } as const;
 
 // =============================================================================
@@ -156,5 +185,6 @@ export type ImageKeys = typeof imageKeys;
 export type VideoKeys = typeof videoKeys;
 export type ModelKeys = typeof modelKeys;
 export type ExploreKeys = typeof exploreKeys;
+export type ProcessKeys = typeof processKeys;
 export type QueryKeys = typeof queryKeys;
 
