@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     const { 
       toolName = "demo-tool", 
       category = "image" as ToolCategory, 
-      creditsToDeduct = 1, // Demo uses 1 credit
+      creditsToDeduct = 100, // Demo uses 1 credit
       data = {} 
     } = body;
 

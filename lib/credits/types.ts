@@ -25,7 +25,7 @@ export type CreditTransactionStatus = "SUCCESS" | "PENDING" | "FAILED";
 /**
  * Tool categories for credit transactions
  */
-export type ToolCategory = "image" | "video";
+export type ToolCategory = "image" | "video" | "audio" | "text" | "demo" | "other";
 
 // =============================================================================
 // Credit Transaction Model

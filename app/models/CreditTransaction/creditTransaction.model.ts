@@ -46,7 +46,7 @@ const CreditTransactionSchema = new Schema<ICreditTransactionDocument>(
     },
     category: {
       type: String,
-      enum: ["image", "video", null],
+      enum: ["image", "video", "audio", "text", "demo", "other", null],
       default: null,
     },
     toolName: {
