@@ -36,7 +36,11 @@ export function ExpandableMediaExample() {
           accept="image"
           value={imageUrl}
           onChange={(val) => {
-            if (typeof val === "string" || val === null) {
+            if (Array.isArray(val)) {
+              // Multi-file mode - take first file or null if empty
+              setImageUrl(val.length > 0 ? val[0] : null);
+            } else {
+              // Single file mode
               setImageUrl(val);
             }
           }}
@@ -57,7 +61,11 @@ export function ExpandableMediaExample() {
           accept="video"
           value={videoUrl}
           onChange={(val) => {
-            if (typeof val === "string" || val === null) {
+            if (Array.isArray(val)) {
+              // Multi-file mode - take first file or null if empty
+              setVideoUrl(val.length > 0 ? val[0] : null);
+            } else {
+              // Single file mode
               setVideoUrl(val);
             }
           }}
