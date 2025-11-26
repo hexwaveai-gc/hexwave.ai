@@ -21,7 +21,6 @@ const userSchema = new Mongoose.Schema(
             unique: true,
             lowercase: true,
             trim: true,
-            index: true,
             validate: {
                 validator: function(v: string) {
                     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
@@ -32,7 +31,7 @@ const userSchema = new Mongoose.Schema(
         customerId: { 
             type: String, 
             default: null,
-            index: true,
+        
         },
         subscription: {
             type: new Mongoose.Schema({
@@ -40,8 +39,6 @@ const userSchema = new Mongoose.Schema(
                 id: { 
                     type: String, 
                     required: false,
-                    index: true,
-                    sparse: true,
                 },
                 customerId: { 
                     type: String, 
@@ -50,7 +47,6 @@ const userSchema = new Mongoose.Schema(
                 product_id: { 
                     type: String, 
                     required: false,
-                    index: true,
                 },
                 price_id: { 
                     type: String, 
@@ -73,19 +69,16 @@ const userSchema = new Mongoose.Schema(
                         "expired",
                     ],
                     required: false,
-                    index: true,
                 },
                 
                 // Billing Period
                 current_period_start: { 
                     type: Number, 
                     required: false,
-                    index: true,
                 },
                 current_period_ends: { 
                     type: Number, 
                     required: false,
-                    index: true,
                 },
                 
                 // Subscription Details
@@ -165,10 +158,8 @@ const userSchema = new Mongoose.Schema(
 );
 
 // Indexes for performance-critical queries
-// - email is used for user lookup (unique index)
-userSchema.index({ email: 1 }, { unique: true });
 
-// - subscription queries for active users and billing
+userSchema.index({ "subscription.id": 1 }, { sparse: true });
 userSchema.index({ "subscription.status": 1 });
 userSchema.index({ "subscription.product_id": 1 });
 userSchema.index({ "subscription.current_period_ends": 1 });
