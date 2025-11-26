@@ -118,21 +118,21 @@ export default function AiVideoGeneratorPage() {
   }, [setActiveTab]);
 
   return (
-    <div className="h-screen bg-[#0a0a0a] flex overflow-hidden">
+    <div className="min-h-screen bg-[#0a0a0a] text-white flex">
       <Sidebar />
-      <main className="flex-1 ml-0 md:ml-20 h-full pb-16 md:pb-0">
+      <main className="flex-1 ml-0 md:ml-20 h-screen overflow-hidden bg-[#0a0a0a] pb-16 md:pb-0">
         <GeneratorLayout
           inputPanel={
             <div className="flex h-full flex-col">
               {/* Header - compact on mobile */}
-              <div className="border-b border-gray-200 px-3 md:px-(--spacing-page-padding) pt-3 md:pt-(--spacing-page-padding) pb-2 md:pb-(--spacing-header-bottom) dark:border-(--color-border-container)">
-                <h1 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-(--color-text-1)">
+              <div className="border-b border-(--color-border-container) px-3 md:px-(--spacing-page-padding) pt-3 md:pt-(--spacing-page-padding) pb-2 md:pb-(--spacing-header-bottom)">
+                <h1 className="text-lg md:text-2xl font-bold text-(--color-text-1)">
                   AI Video Generator
                 </h1>
               </div>
 
               {/* Tabs Content - Scrollable with DynamicFieldRenderer */}
-              <div className="flex-1 overflow-hidden min-h-0">
+              <div className="flex-1 overflow-hidden">
                 <GeneratorTabs
                   tabs={tabs}
                   value={currentTabId}
@@ -200,11 +200,7 @@ export default function AiVideoGeneratorPage() {
               </div>
             </ResultsPanel>
           }
-          layoutId="video-generator"
-          defaultLeftSize={35}
-          defaultRightSize={65}
-          minLeftSize={25}
-          minRightSize={50}
+          layoutId="generator-layout"
         />
       </main>
     </div>

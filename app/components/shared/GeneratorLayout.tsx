@@ -62,6 +62,7 @@ export default function GeneratorLayout({
       <div className="hidden h-full md:block">
         <ResizablePanelGroup 
           direction="horizontal"
+          autoSaveId={layoutId}
         >
           {/* Left Panel - Inputs */}
           <ResizablePanel
