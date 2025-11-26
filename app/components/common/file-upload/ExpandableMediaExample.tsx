@@ -35,7 +35,11 @@ export function ExpandableMediaExample() {
         <FileUploader
           accept="image"
           value={imageUrl}
-          onChange={setImageUrl}
+          onChange={(val) => {
+            if (typeof val === "string" || val === null) {
+              setImageUrl(val);
+            }
+          }}
           previewHeight="h-48"
         />
       </section>
@@ -52,7 +56,11 @@ export function ExpandableMediaExample() {
         <FileUploader
           accept="video"
           value={videoUrl}
-          onChange={setVideoUrl}
+          onChange={(val) => {
+            if (typeof val === "string" || val === null) {
+              setVideoUrl(val);
+            }
+          }}
           previewHeight="h-48"
           variant="dropzone"
         />
