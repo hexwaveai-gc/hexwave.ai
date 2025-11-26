@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
   images: {
@@ -48,7 +49,10 @@ const nextConfig: NextConfig = {
   },
   // Turbopack config for Next.js 16+
   // Turbopack handles Node.js built-ins automatically, but we add this to silence the warning
-  turbopack: {},
+  // Setting root explicitly to prevent Turbopack from traversing to parent directories
+  turbopack: {
+    root: path.resolve(__dirname),
+  },
 };
 
 export default nextConfig;

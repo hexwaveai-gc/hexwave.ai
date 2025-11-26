@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import { LoopsClient } from "loops";
+import { ApiResponse } from "@/utils/api-response/response";
 
 // Lazy initialization - only create client when API key is available
 const getLoopsClient = () => {
@@ -16,19 +16,13 @@ export async function POST(request: Request) {
     const { email, name } = body;
 
     if (!email) {
-      return NextResponse.json(
-        { error: "Email is required" },
-        { status: 400 }
-      );
+        return ApiResponse.badRequest("Email is required", { email: email });
     }
 
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: "Invalid email address" },
-        { status: 400 }
-      );
+      return ApiResponse.badRequest("Invalid email address", { email: email });
     }
 
     // Add contact to Loops waitlist
@@ -58,20 +52,12 @@ export async function POST(request: Request) {
       // Continue execution - we still want to return success to the user
     }
 
-    return NextResponse.json(
-      {
-        success: true,
-        message: "Successfully joined waitlist",
-        email: email,
-      },
-      { status: 200 }
-    );
+    return ApiResponse.ok({
+      message: "Successfully joined waitlist"
+    });
   } catch (error) {
     console.error("Waitlist API error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return ApiResponse.serverError("Internal server error");
   }
 }
 

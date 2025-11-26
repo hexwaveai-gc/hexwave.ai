@@ -34,6 +34,7 @@ interface ResultsPanelProps {
 /**
  * Results panel for displaying generated content
  * Handles loading, empty, and populated states
+ * Mobile: Compact filter layout, scrollable tabs
  */
 export default function ResultsPanel({
   isLoading = false,
@@ -49,41 +50,49 @@ export default function ResultsPanel({
 
   return (
     <div className={cn("flex h-full w-full flex-col", className)}>
-      {/* Filter Section - aligned with left header separator */}
-      <div className="border-b border-[var(--color-border-container)] px-[var(--spacing-page-padding)] pt-[var(--spacing-page-padding)] pb-[var(--spacing-header-bottom)]">
-        <div className="flex items-center gap-4">
-          <Tabs value={selectedTab} onValueChange={setSelectedTab} className="flex-1">
-            <TabsList className="h-9">
-              <TabsTrigger value="all" className="px-4">All</TabsTrigger>
-              <TabsTrigger value="images" className="px-4">Images</TabsTrigger>
-              <TabsTrigger value="videos" className="px-4">Videos</TabsTrigger>
-              <TabsTrigger value="audio" className="px-4">Audio</TabsTrigger>
-            </TabsList>
+      {/* Filter Section - mobile-optimized compact layout */}
+      <div className="border-b border-[var(--color-border-container)] px-3 md:px-[var(--spacing-page-padding)] pt-3 md:pt-[var(--spacing-page-padding)] pb-3 md:pb-[var(--spacing-header-bottom)]">
+        <div className="flex flex-col gap-3 md:gap-4 md:flex-row md:items-center">
+          {/* Tabs - scrollable on mobile */}
+          <Tabs value={selectedTab} onValueChange={setSelectedTab} className="flex-1 w-full">
+            <div className="overflow-x-auto scrollbar-none -mx-1 px-1">
+              <TabsList className="h-8 md:h-9 w-max md:w-auto justify-start">
+                <TabsTrigger value="all" className="px-3 md:px-4 text-xs md:text-sm">All</TabsTrigger>
+                <TabsTrigger value="images" className="px-3 md:px-4 text-xs md:text-sm">Images</TabsTrigger>
+                <TabsTrigger value="videos" className="px-3 md:px-4 text-xs md:text-sm">Videos</TabsTrigger>
+                <TabsTrigger value="audio" className="px-3 md:px-4 text-xs md:text-sm">Audio</TabsTrigger>
+              </TabsList>
+            </div>
           </Tabs>
           
-          {/* Favorites Checkbox */}
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="favorites"
-              checked={showFavorites}
-              onCheckedChange={(checked) => setShowFavorites(checked === true)}
-            />
-            <label
-              htmlFor="favorites"
-              className="text-sm font-medium text-[var(--color-text-2)] cursor-pointer select-none"
+          {/* Controls row - compact on mobile */}
+          <div className="flex items-center justify-between gap-3 md:gap-4 md:justify-end">
+            {/* Favorites Checkbox */}
+            <div className="flex items-center gap-1.5 md:gap-2">
+              <Checkbox
+                id="favorites"
+                checked={showFavorites}
+                onCheckedChange={(checked) => setShowFavorites(checked === true)}
+                className="h-4 w-4"
+              />
+              <label
+                htmlFor="favorites"
+                className="text-xs md:text-sm font-medium text-[var(--color-text-2)] cursor-pointer select-none"
+              >
+                Favorites
+              </label>
+            </div>
+            
+            {/* Assets Button - icon only on mobile */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 md:h-9 px-2 md:px-3 rounded-lg border-[var(--color-border-container)] bg-[var(--color-bg-primary)] text-[var(--color-text-1)] hover:bg-[var(--color-bg-secondary)]"
             >
-              Favorites
-            </label>
+              <Folder className="h-4 w-4 md:mr-2" />
+              <span className="hidden md:inline">Assets</span>
+            </Button>
           </div>
-          
-          {/* Assets Button */}
-          <Button
-            variant="outline"
-            className="h-9 rounded-lg border-[var(--color-border-container)] bg-[var(--color-bg-primary)] text-[var(--color-text-1)] hover:bg-[var(--color-bg-secondary)]"
-          >
-            <Folder className="h-4 w-4 mr-2" />
-            Assets
-          </Button>
         </div>
       </div>
 
@@ -130,10 +139,10 @@ export default function ResultsPanel({
           {!isLoading && !isEmpty && (
             <>
               <TabsContent value="all" className="h-full mt-0">
-                <div className="h-full w-full px-[var(--spacing-page-padding)] pt-[var(--spacing-page-padding)] pb-[var(--spacing-page-padding)]">{children}</div>
+                <div className="h-full w-full px-3 md:px-[var(--spacing-page-padding)] pt-3 md:pt-[var(--spacing-page-padding)] pb-3 md:pb-[var(--spacing-page-padding)]">{children}</div>
               </TabsContent>
               <TabsContent value="images" className="h-full mt-0">
-                <div className="h-full w-full px-[var(--spacing-page-padding)] pt-[var(--spacing-page-padding)] pb-[var(--spacing-page-padding)]">{children}</div>
+                <div className="h-full w-full px-3 md:px-[var(--spacing-page-padding)] pt-3 md:pt-[var(--spacing-page-padding)] pb-3 md:pb-[var(--spacing-page-padding)]">{children}</div>
               </TabsContent>
               <TabsContent value="videos" className="h-full mt-0">
                 <div className="flex h-full w-full items-center justify-center">

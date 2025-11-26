@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Sidebar from "@/app/components/common/Sidebar";
+import { Sidebar } from "@/app/components/common/sidebar";
 import PromoBanners from "@/app/components/explore/PromoBanners"; 
 import ExploreTabs from "@/app/components/explore/ExploreTabs";
 import FilterTabs from "@/app/components/explore/FilterTabs";

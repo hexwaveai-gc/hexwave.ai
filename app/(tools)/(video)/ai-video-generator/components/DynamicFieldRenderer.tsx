@@ -183,18 +183,18 @@ export const DynamicFieldRenderer = memo(function DynamicFieldRenderer() {
   const sections = groupFieldsIntoSections(visibleFields);
   
   return (
-    <div className="space-y-8 px-(--spacing-page-padding) py-(--spacing-element-gap)">
+    <div className="w-full space-y-6 md:space-y-8 px-3 md:px-(--spacing-page-padding) py-4 md:py-(--spacing-element-gap)">
       {sections.map((section) => (
-        <div key={section.title} className="space-y-4">
+        <div key={section.title} className="space-y-3 md:space-y-4">
           {/* Section Header - Hide for Prompt section to avoid redundancy with field label */}
           {section.title !== "Prompt" && (
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-(--color-text-2) uppercase tracking-wide">
+            <h3 className="text-xs md:text-sm font-semibold text-gray-700 dark:text-(--color-text-2) uppercase tracking-wide">
               {section.title}
             </h3>
           )}
           
           {/* Section Fields */}
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
             {section.fields.map((fieldName) => (
               <FieldRenderer key={fieldName} fieldName={fieldName} />
             ))}

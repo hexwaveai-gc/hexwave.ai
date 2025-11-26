@@ -56,16 +56,16 @@ export const ToggleField = memo(function ToggleField({
   );
   
   return (
-    <div className="flex items-center justify-between rounded-lg border border-gray-200 p-4 dark:border-(--color-border-container) bg-gray-50 dark:bg-(--color-bg-primary)">
-      <div className="space-y-0.5 flex-1">
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 p-3 md:p-4 dark:border-(--color-border-container) bg-gray-50 dark:bg-(--color-bg-primary)">
+      <div className="space-y-0.5 flex-1 min-w-0">
         <Label
           htmlFor={fieldName}
-          className="text-sm font-medium text-gray-900 dark:text-(--color-text-1) cursor-pointer"
+          className="text-xs md:text-sm font-medium text-gray-900 dark:text-(--color-text-1) cursor-pointer"
         >
           {displayLabel}
         </Label>
         {displayHelpText && (
-          <p className="text-xs text-gray-500 dark:text-(--color-text-3)">
+          <p className="text-[10px] md:text-xs text-gray-500 dark:text-(--color-text-3) line-clamp-2">
             {displayHelpText}
           </p>
         )}
@@ -77,6 +77,7 @@ export const ToggleField = memo(function ToggleField({
         disabled={isDisabled}
         aria-label={displayLabel}
         aria-describedby={displayHelpText ? `${fieldName}-help` : undefined}
+        className="shrink-0"
       />
     </div>
   );

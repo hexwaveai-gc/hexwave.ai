@@ -10,7 +10,7 @@
  * - Images, Videos, PDFs, and all file types via the `accept` prop
  */
 
-import { memo, useCallback } from "react";
+import { memo, useCallback, ReactNode } from "react";
 import { Label } from "@/app/components/ui/label";
 import { 
   FileUploader, 
@@ -18,7 +18,7 @@ import {
   type FileUploaderProps 
 } from "@/app/components/common/file-upload";
 import { useGenerationStore } from "../../store/useGenerationStore";
-import { useFieldError, useFieldValue } from "../../store/selectors";
+import { useFieldValue } from "../../store/selectors";
 
 interface FileUploadFieldProps {
   /** Field name in the store */
@@ -43,6 +43,8 @@ interface FileUploadFieldProps {
   previewHeight?: string;
   /** Grid columns for multi-file preview */
   previewColumns?: 2 | 3 | 4;
+  /** Footer content (e.g. History link) */
+  footer?: ReactNode;
 }
 
 /**
@@ -73,9 +75,9 @@ export const FileUploadField = memo(function FileUploadField({
   allowedContent,
   previewHeight,
   previewColumns,
+  footer,
 }: FileUploadFieldProps) {
   const value = useFieldValue(fieldName) as string | string[] | null;
-  const error = useFieldError(fieldName);
   const updateField = useGenerationStore((s) => s.updateField);
 
   // Handle file change (upload or remove)
@@ -89,8 +91,8 @@ export const FileUploadField = memo(function FileUploadField({
   const displayLabel = label || formatFieldLabel(fieldName);
 
   return (
-    <div className="space-y-3">
-      <Label className="text-sm font-medium text-gray-900 dark:text-(--color-text-1)">
+    <div className="space-y-2 md:space-y-3">
+      <Label className="text-xs md:text-sm font-medium text-gray-900 dark:text-(--color-text-1)">
         {displayLabel}
       </Label>
 
@@ -100,23 +102,18 @@ export const FileUploadField = memo(function FileUploadField({
         variant={variant}
         value={value}
         onChange={handleChange}
-        hasError={!!error}
         buttonLabel={buttonLabel}
         dropzoneLabel={dropzoneLabel}
         allowedContent={allowedContent}
         previewHeight={previewHeight}
         previewColumns={previewColumns}
+        showVideoControls={false}
+        footer={footer}
       />
 
-      {helpText && !error && (
-        <p className="text-xs text-gray-500 dark:text-(--color-text-3)">
+      {helpText && (
+        <p className="text-[10px] md:text-xs text-gray-500 dark:text-(--color-text-3)">
           {helpText}
-        </p>
-      )}
-
-      {error && (
-        <p className="text-xs text-red-500" role="alert">
-          {error}
         </p>
       )}
     </div>
@@ -124,17 +121,22 @@ export const FileUploadField = memo(function FileUploadField({
 });
 
 // Convenience components for specific file types
+// Updated to use "dropzone" variant by default for media fields
 
 export const ImageUploadField = memo(function ImageUploadField(
   props: Omit<FileUploadFieldProps, "accept">
 ) {
-  return <FileUploadField {...props} accept="image" />;
+  // Default to dropzone variant if not specified
+  const variant = props.variant || "dropzone";
+  return <FileUploadField {...props} variant={variant} accept="image" />;
 });
 
 export const VideoUploadField = memo(function VideoUploadField(
   props: Omit<FileUploadFieldProps, "accept">
 ) {
-  return <FileUploadField {...props} accept="video" />;
+  // Default to dropzone variant if not specified
+  const variant = props.variant || "dropzone";
+  return <FileUploadField {...props} variant={variant} accept="video" />;
 });
 
 export const PdfUploadField = memo(function PdfUploadField(
@@ -148,13 +150,15 @@ export const PdfUploadField = memo(function PdfUploadField(
 export const MultiImageUploadField = memo(function MultiImageUploadField(
   props: Omit<FileUploadFieldProps, "accept" | "maxFiles"> & { maxFiles?: number }
 ) {
-  return <FileUploadField {...props} accept="image" maxFiles={props.maxFiles || 4} />;
+  const variant = props.variant || "dropzone";
+  return <FileUploadField {...props} variant={variant} accept="image" maxFiles={props.maxFiles || 4} />;
 });
 
 export const MultiVideoUploadField = memo(function MultiVideoUploadField(
   props: Omit<FileUploadFieldProps, "accept" | "maxFiles"> & { maxFiles?: number }
 ) {
-  return <FileUploadField {...props} accept="video" maxFiles={props.maxFiles || 3} />;
+  const variant = props.variant || "dropzone";
+  return <FileUploadField {...props} variant={variant} accept="video" maxFiles={props.maxFiles || 3} />;
 });
 
 export const MultiPdfUploadField = memo(function MultiPdfUploadField(

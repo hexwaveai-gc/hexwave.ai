@@ -97,20 +97,21 @@ export default function ImageReferenceInputs() {
   return (
     <div className="flex h-full flex-col">
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto px-[var(--spacing-page-padding)] py-[var(--spacing-element-gap)]">
-        <div className="space-y-6">
+      <div className="flex-1 overflow-y-auto px-3 md:px-[var(--spacing-page-padding)] py-4 md:py-[var(--spacing-element-gap)]">
+        <div className="space-y-4 md:space-y-6">
           {/* Image Upload Section */}
-          <div className="space-y-3">
+          <div className="space-y-2 md:space-y-3">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium text-gray-900 dark:text-[var(--color-text-1)]">
+              <Label className="text-xs md:text-sm font-medium text-gray-900 dark:text-[var(--color-text-1)]">
                 Reference Images
               </Label>
-              <span className="text-xs text-gray-500">
+              <span className="text-[10px] md:text-xs text-gray-500">
                 {validReferenceImages.length}/{maxFiles}
               </span>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            {/* Grid: 2 cols on mobile, 3 cols on tablet+ */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3">
               {validReferenceImages.map((file, index) => {
                 const imageUrl = imageUrls[index];
                 if (!imageUrl) return null;
@@ -125,9 +126,10 @@ export default function ImageReferenceInputs() {
                       alt={`Reference ${index + 1}`}
                       className="h-full w-full object-cover"
                     />
+                    {/* Remove button - always visible on mobile */}
                     <button
                       onClick={() => handleRemoveImage(index)}
-                      className="absolute right-1 top-1 rounded-full bg-black/50 p-1 text-white opacity-0 backdrop-blur-sm transition-opacity hover:bg-black/70 group-hover:opacity-100"
+                      className="absolute right-1 top-1 rounded-full bg-black/50 p-1.5 md:p-1 text-white opacity-100 md:opacity-0 backdrop-blur-sm transition-opacity hover:bg-black/70 md:group-hover:opacity-100"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -150,7 +152,7 @@ export default function ImageReferenceInputs() {
                     htmlFor="ref-image-upload"
                     className="flex h-full w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 text-gray-400 transition-colors hover:border-gray-300 hover:bg-gray-100 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:text-[var(--color-text-3)] dark:hover:border-[var(--color-border-component)] dark:hover:bg-[var(--color-bg-secondary)]"
                   >
-                    <Plus className="h-6 w-6" />
+                    <Plus className="h-5 w-5 md:h-6 md:w-6" />
                     <span className="mt-1 text-[10px] font-medium">Add</span>
                   </label>
                 </div>
@@ -159,47 +161,44 @@ export default function ImageReferenceInputs() {
           </div>
 
           {/* Prompt Section */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium text-gray-900 dark:text-[var(--color-text-1)]">
+          <div className="space-y-2 md:space-y-3">
+            <Label className="text-xs md:text-sm font-medium text-gray-900 dark:text-[var(--color-text-1)]">
               Prompt
             </Label>
             <Textarea
               value={prompt}
               onChange={(e) => updateField("prompt", e.target.value)}
               placeholder="Describe how you want to use the reference images..."
-              className="min-h-[180px] w-full resize-none rounded-lg border-gray-200 bg-gray-50 p-4 text-base focus:border-blue-500 focus:ring-0 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:text-[var(--color-text-1)] dark:placeholder:text-[var(--color-text-3)]"
+              className="min-h-[140px] md:min-h-[180px] w-full resize-none rounded-lg border-gray-200 bg-gray-50 p-3 md:p-4 text-sm md:text-base focus:border-blue-500 focus:ring-0 dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)] dark:text-[var(--color-text-1)] dark:placeholder:text-[var(--color-text-3)]"
             />
           </div>
         </div>
       </div>
 
-      {/* Sticky Footer - Always at bottom */}
-      <div className="mt-auto bg-white px-[var(--spacing-page-padding)] py-[var(--spacing-footer-padding)] dark:bg-[var(--color-bg-primary)]">
+      {/* Sticky Footer - Always at bottom, compact on mobile */}
+      <div className="mt-auto bg-white px-3 md:px-[var(--spacing-page-padding)] py-3 md:py-[var(--spacing-footer-padding)] dark:bg-[var(--color-bg-primary)] border-t border-[var(--color-border-container)] md:border-t-0">
         {/* Model Selection */}
-        <div className="mb-4">
-          <Label className="mb-2 block text-sm font-medium text-gray-900 dark:text-[var(--color-text-1)]">
+        <div className="mb-3 md:mb-4">
+          <Label className="mb-1.5 md:mb-2 block text-xs md:text-sm font-medium text-gray-900 dark:text-[var(--color-text-1)]">
             Model
           </Label>
           <ModelSelectorDialog />
         </div>
 
-        {/* Controls Row */}
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Left Side - Controls */}
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            {/* Primary Fields - Dynamically rendered based on model settings */}
+        {/* Controls Row - Stack on mobile */}
+        <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-3">
+          {/* Primary Fields - Scroll horizontally on mobile */}
+          <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0 overflow-x-auto scrollbar-none pb-1 md:pb-0">
             <PrimaryFieldsRenderer />
-
-            {/* Advanced Settings */}
             <AdvancedSettingsDialog excludeFields={excludedFields} />
           </div>
 
-          {/* Right Side - Generate Button */}
+          {/* Generate Button - Full width on mobile */}
           <Button
             onClick={handleGenerate}
             disabled={!isFormValid || !selectedModelId}
             variant="generate"
-            className="h-10 min-w-[140px] shrink-0 rounded-lg px-6 sm:px-8"
+            className="h-11 md:h-10 w-full md:w-auto md:min-w-[140px] shrink-0 rounded-lg px-6"
           >
             Generate
           </Button>

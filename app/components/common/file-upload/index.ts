@@ -35,3 +35,27 @@ export {
   type FilePreviewProps, 
   type FileType 
 } from "./FilePreview";
+
+export {
+  ExpandableMedia,
+  type ExpandableMediaProps,
+  type MediaType
+} from "./ExpandableMedia";
+
+// Types (for advanced usage)
+export type { UploadResponse, UploadedFile, FileTypeConfig } from "./types";
+
+// Config (for advanced customization)
+export { FILE_TYPE_CONFIG, createSharedAppearance } from "./config";
+
+// Hook (for custom implementations)
+export { useFileUploader } from "./hooks";
+
+// Sub-components (for building custom upload UIs)
+export {
+  UploadProgressBar,
+  DropzoneIcon,
+  MultiFilePreview,
+  ButtonUploader,
+  DropzoneUploader,
+} from "./components";
