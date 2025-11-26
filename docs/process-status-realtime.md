@@ -45,7 +45,7 @@ When a user triggers a long-running operation:
 
 ## Key Components
 
-### 1. Process ID Generation
+### 1. Process ID Generation (with Credit Deduction)
 
 **File:** `app/controllers/processRequest.ts`
 
@@ -53,21 +53,30 @@ When a user triggers a long-running operation:
 import { generateUniqueId } from "@/app/controllers/processRequest";
 
 // In your API route
-const processId = await generateUniqueId({
-  userId,
-  toolName: "image-generator",
-  category: "image",
-  // any other data you need to track,
+const result = await generateUniqueId({
+  userId,                    // Required: Clerk user ID
+  creditsToDeduct: 10,       // Required: Credits for this operation
+  category: "image",         // Required: "image" | "video"
+  toolName: "flux-pro",      // Required: Model identifier
+  data: { prompt },          // Optional: Additional metadata
 });
 
+if (!result.success) {
+  // Handle error: INSUFFICIENT_CREDITS, USER_NOT_FOUND, TRANSACTION_FAILED
+  return NextResponse.json({ error: result.message }, { status: 402 });
+}
+
 // Return processId to frontend
-return NextResponse.json({ processId });
+return NextResponse.json({ processId: result.processId });
 ```
 
-This creates a MongoDB document with:
-- `processId` - UUID
-- `status` - "processing"
-- `data.req` - Your initial data
+This atomically (in a single transaction):
+1. Checks user has sufficient credits
+2. Deducts credits from user balance
+3. Creates process record with `creditsUsed`
+4. Logs transaction to `credit_transactions` collection
+
+> **Note:** See `docs/credits-and-process-system.md` for complete credit system documentation.
 
 ### 2. Process Data Model
 
@@ -76,7 +85,11 @@ This creates a MongoDB document with:
 ```typescript
 {
   processId: string;      // UUID
+  userId: string;         // Clerk user ID
   status: "processing" | "completed" | "failed";
+  creditsUsed: number;    // Credits deducted for this process
+  category: "image" | "video";
+  toolName: string;       // Model identifier (e.g., "flux-pro")
   data: {
     req: { ... },         // Initial request data
     generations?: [...],  // Results (images, videos, etc.)
@@ -94,19 +107,25 @@ This creates a MongoDB document with:
 ```typescript
 import { updateProcessData } from "@/app/controllers/updateProcessData";
 
-// In your webhook handler
+// On success
 await updateProcessData(
   processId,
-  { 
-    generations: ["https://..."],  // Result data
-  },
-  "completed"  // or "failed"
+  { generations: ["https://..."] },
+  "completed"
+);
+
+// On failure (credits are automatically refunded)
+await updateProcessData(
+  processId,
+  { error: "API timeout" },
+  "failed"
 );
 ```
 
 This automatically:
 1. Updates MongoDB document
 2. Publishes to Ably channel `process:{processId}`
+3. **If status is "failed":** Refunds `creditsUsed` to user (with idempotency check)
 
 ### 4. Frontend Subscription (TanStack Query + Ably)
 
@@ -158,26 +177,36 @@ import { generateUniqueId } from "@/app/controllers/processRequest";
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
-  const { prompt } = await req.json();
+  const { prompt, model } = await req.json();
 
-  // 1. Create process ID
-  const processId = await generateUniqueId({
+  // 1. Create process with atomic credit deduction
+  const result = await generateUniqueId({
     userId,
-    prompt,
-    toolName: "image-generator",
+    creditsToDeduct: getModelCredits(model), // e.g., 10 credits
+    category: "image",
+    toolName: model,
+    data: { prompt },
   });
+
+  // Handle insufficient credits or other errors
+  if (!result.success) {
+    return NextResponse.json(
+      { error: result.error, message: result.message },
+      { status: result.error === "INSUFFICIENT_CREDITS" ? 402 : 500 }
+    );
+  }
 
   // 2. Call external API with webhook
   await fetch("https://external-api.com/generate", {
     method: "POST",
     body: JSON.stringify({
       prompt,
-      webhook_url: `${process.env.NEXT_PUBLIC_URL}/api/webhook/image?processId=${processId}`,
+      webhook_url: `${process.env.NEXT_PUBLIC_URL}/api/webhook/image?processId=${result.processId}`,
     }),
   });
 
   // 3. Return processId immediately
-  return NextResponse.json({ processId });
+  return NextResponse.json({ processId: result.processId });
 }
 ```
 
@@ -410,6 +439,11 @@ hexwave.ai/
 | Hook not subscribing | Verify `processId` is not null |
 | Stale data after page refresh | Process status fetched from `/api/process/[processId]` on mount |
 | Cache not updating | Ably updates automatically sync with TanStack Query cache |
+
+## Related Documentation
+
+- **[Credit System](./credits-and-process-system.md)** - Complete credit deduction, refund, and transaction history documentation
+- **[TanStack Query](./tanstack-query.md)** - Query hooks, caching, and state management
 
 ## Demo Page
 

@@ -107,6 +107,11 @@ queryKeys.models.detail(id)           // ['models', id]
 queryKeys.explore.all                 // ['explore']
 queryKeys.explore.featured()          // ['explore', 'featured']
 queryKeys.explore.list(filters)       // ['explore', 'list', filters]
+
+// Credits
+queryKeys.credits.all                 // ['credits']
+queryKeys.credits.balance(userId)     // ['credits', 'balance', userId]
+queryKeys.credits.transactions(userId, filters) // ['credits', 'transactions', userId, filters]
 ```
 
 ### Adding New Keys
@@ -582,6 +587,7 @@ export const queryKeys = {
   videos: videoKeys,
   models: modelKeys,
   explore: exploreKeys,
+  credits: creditKeys,    // Built-in for credit system
   projects: projectKeys,  // ← Add here
 } as const;
 
@@ -682,6 +688,33 @@ export function usePrefetchProject() {
 ```tsx
 // ... existing exports
 export * from "./use-projects";
+```
+
+### Credit Hooks (Built-in)
+
+The project includes credit hooks for balance and transaction history:
+
+```tsx
+import { 
+  useUserCredits,        // Fetch user's credit balance
+  useTransactionHistory, // Fetch transaction history with pagination
+  useCreditsCheck,       // Simple hasEnough(amount) helper
+  useInvalidateCredits,  // Invalidate cache after credit changes
+} from "@/hooks/queries";
+
+// Display balance
+const { data, isLoading } = useUserCredits(userId);
+console.log(data?.availableBalance);
+
+// Check before expensive operation
+const { hasEnough, balance } = useCreditsCheck(userId);
+if (!hasEnough(requiredCredits)) {
+  showUpgradeModal();
+}
+
+// Invalidate after process starts/completes
+const invalidateCredits = useInvalidateCredits();
+invalidateCredits(userId);
 ```
 
 **Step 3: Use in components**
@@ -1243,6 +1276,8 @@ Open React Query DevTools (bottom-right in dev) to:
 | `lib/query/query-keys.ts` | Query key factory |
 | `constants/query.ts` | Configuration constants |
 | `hooks/queries/index.ts` | Custom query hooks |
+| `hooks/queries/use-credits.ts` | Credit balance & transaction hooks |
+| `hooks/queries/use-process.ts` | Process status + Ably hooks |
 
 ---
 
