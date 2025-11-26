@@ -713,6 +713,10 @@ packages:
     resolution: {integrity: sha512-kocjix+/sSggfJhwXqClZ3i9Y/MI0fp7b+g7kCRm6psy2dsf8uApTRclwG18h8Avm7C9+fnt+O36PspJ/OzoWg==}
     engines: {node: '>=14'}
 
+  '@paddle/paddle-node-sdk@3.4.0':
+    resolution: {integrity: sha512-oBgUo9o2PbVP5GUpLOzWtq9gYQqLzIVZ/gav7PqzrlC/9qRcNagOQ63kD050f3ts8+iSvONqiclMAWGF1aOGEA==}
+    engines: {node: '>=20'}
+
   '@radix-ui/number@1.1.1':
     resolution: {integrity: sha512-MkKCwxlXTgz6CFoJx3pCwn07GKp36+aZyu/u2Ln2VrA5DcdyCZkASEDBTd8x5whTQQL5CiYf4prXKLcgQdv29g==}
 
@@ -4035,6 +4039,8 @@ snapshots:
   '@nolyfill/is-core-module@1.0.39': {}
 
   '@opentelemetry/semantic-conventions@1.38.0': {}
+
+  '@paddle/paddle-node-sdk@3.4.0': {}
 
   '@radix-ui/number@1.1.1': {}
 
