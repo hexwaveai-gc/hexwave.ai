@@ -93,9 +93,9 @@ export default function TextToImageInputs() {
   return (
     <div className="flex h-full flex-col">
       {/* Scrollable Content - Prompt with fixed compact height */}
-      <div className="flex-1 overflow-y-auto px-[var(--spacing-page-padding)] py-[var(--spacing-element-gap)]">
-        <div className="flex flex-col space-y-3">
-          <Label className="text-sm font-medium text-[var(--color-text-1)]">
+      <div className="flex-1 overflow-y-auto px-3 md:px-[var(--spacing-page-padding)] py-4 md:py-[var(--spacing-element-gap)]">
+        <div className="flex flex-col space-y-2 md:space-y-3">
+          <Label className="text-xs md:text-sm font-medium text-[var(--color-text-1)]">
             Prompt
           </Label>
           
@@ -104,21 +104,21 @@ export default function TextToImageInputs() {
             <Textarea
               value={prompt}
               onChange={(e) => updateField("prompt", e.target.value)}
-              placeholder="Please describe your creative ideas for the image, or have DeepSeek generate the prompt or view Help Center for a quick start."
-              className="min-h-[180px] w-full max-w-full resize-none border-0 bg-transparent p-4 text-base text-[var(--color-text-1)] placeholder:text-[var(--color-text-3)] focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none"
+              placeholder="Please describe your creative ideas for the image..."
+              className="min-h-[140px] md:min-h-[180px] w-full max-w-full resize-none border-0 bg-transparent p-3 md:p-4 text-sm md:text-base text-[var(--color-text-1)] placeholder:text-[var(--color-text-3)] focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none"
             />
 
-            {/* Hints Section - Inside the border */}
-            <div className="flex items-center gap-3 px-4 pb-4 pt-2">
-              <Label className="text-sm font-medium text-[var(--color-text-1)] whitespace-nowrap">
+            {/* Hints Section - Inside the border, scrollable on mobile */}
+            <div className="flex items-center gap-2 md:gap-3 px-3 md:px-4 pb-3 md:pb-4 pt-1 md:pt-2 overflow-x-auto scrollbar-none">
+              <Label className="text-xs md:text-sm font-medium text-[var(--color-text-1)] whitespace-nowrap shrink-0">
                 Hints:
               </Label>
-              <div className="flex items-center gap-2 flex-1">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
                 {currentHints.map((hint, index) => (
                   <button
                     key={index}
                     onClick={() => handleHintClick(hint.prompt)}
-                    className="px-4 py-2 rounded-lg text-sm font-medium text-[var(--color-text-2)] bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-1)] transition-colors border border-transparent hover:border-[var(--color-border-container)]"
+                    className="px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-medium text-[var(--color-text-2)] bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-1)] transition-colors border border-transparent hover:border-[var(--color-border-container)] whitespace-nowrap shrink-0"
                     type="button"
                   >
                     {hint.label}
@@ -126,7 +126,7 @@ export default function TextToImageInputs() {
                 ))}
                 <button
                   onClick={handleRefreshHints}
-                  className="ml-auto p-2 rounded-lg text-[var(--color-text-2)] hover:text-[var(--color-text-1)] hover:bg-[var(--color-bg-secondary)] transition-colors"
+                  className="ml-auto p-1.5 md:p-2 rounded-lg text-[var(--color-text-2)] hover:text-[var(--color-text-1)] hover:bg-[var(--color-bg-secondary)] transition-colors shrink-0"
                   type="button"
                   aria-label="Refresh hints"
                   disabled={isRefreshing}
@@ -139,33 +139,30 @@ export default function TextToImageInputs() {
         </div>
       </div>
 
-      {/* Sticky Footer - Always at bottom */}
-      <div className="mt-auto bg-[var(--color-bg-primary)] px-[var(--spacing-page-padding)] py-[var(--spacing-footer-padding)]">
+      {/* Sticky Footer - Always at bottom, compact on mobile */}
+      <div className="mt-auto bg-[var(--color-bg-primary)] px-3 md:px-[var(--spacing-page-padding)] py-3 md:py-[var(--spacing-footer-padding)] border-t border-[var(--color-border-container)] md:border-t-0">
         {/* Model Selection */}
-        <div className="mb-4">
-          <Label className="mb-2 block text-sm font-medium text-[var(--color-text-1)]">
+        <div className="mb-3 md:mb-4">
+          <Label className="mb-1.5 md:mb-2 block text-xs md:text-sm font-medium text-[var(--color-text-1)]">
             Model
           </Label>
           <ModelSelectorDialog />
         </div>
 
-        {/* Controls Row */}
-        <div className="flex items-center justify-between gap-3">
-          {/* Left Side - Controls */}
-          <div className="flex items-center gap-3">
-            {/* Primary Fields - Dynamically rendered based on model settings */}
+        {/* Controls Row - Stack on mobile */}
+        <div className="flex flex-col md:flex-row md:flex-wrap md:items-center gap-3">
+          {/* Primary Fields - Scroll horizontally on mobile */}
+          <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0 overflow-x-auto scrollbar-none pb-1 md:pb-0">
             <PrimaryFieldsRenderer />
-
-            {/* Advanced Settings */}
             <AdvancedSettingsDialog excludeFields={excludedFields} />
           </div>
 
-          {/* Right Side - Generate Button */}
+          {/* Generate Button - Full width on mobile */}
           <Button
             onClick={handleGenerate}
             disabled={!isFormValid || !selectedModelId}
             variant="generate"
-            className="h-10 min-w-[140px] rounded-lg px-8"
+            className="h-11 md:h-10 w-full md:w-auto md:min-w-[140px] shrink-0 rounded-lg px-6"
           >
             Generate
           </Button>

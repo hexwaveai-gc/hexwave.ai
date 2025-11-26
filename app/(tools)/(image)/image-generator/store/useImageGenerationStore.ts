@@ -7,6 +7,10 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { Model, getModelById } from "../lib/modelRegistry";
+import {
+  createAddToRecentUpdater,
+  createToggleFavoriteUpdater,
+} from "@/lib/store/storeUtils";
 
 /**
  * Image generation result
@@ -226,6 +230,12 @@ function validateFieldValue(
   
   return null;
 }
+
+/**
+ * Default model ID to use when no model is selected
+ * Using "runwaygen4" as it's featured and commonly used
+ */
+const DEFAULT_MODEL_ID = "runwaygen4";
 
 /**
  * Create the Zustand store with persistence
@@ -500,23 +510,11 @@ export const useImageGenerationStore = create<ImageGenerationStore>()(
       // ============================================================
       
       addToRecent: (modelId) => {
-        set((state) => {
-          // Remove if already exists
-          const filtered = state.recentModels.filter((id) => id !== modelId);
-          // Add to front, keep max 10
-          const newRecent = [modelId, ...filtered].slice(0, 10);
-          return { recentModels: newRecent };
-        });
+        set((state) => createAddToRecentUpdater(modelId, state.recentModels));
       },
       
       toggleFavorite: (modelId) => {
-        set((state) => {
-          const isFavorite = state.favoriteModels.includes(modelId);
-          const newFavorites = isFavorite
-            ? state.favoriteModels.filter((id) => id !== modelId)
-            : [...state.favoriteModels, modelId];
-          return { favoriteModels: newFavorites };
-        });
+        set((state) => createToggleFavoriteUpdater(modelId, state.favoriteModels));
       },
     }),
     {
@@ -530,7 +528,39 @@ export const useImageGenerationStore = create<ImageGenerationStore>()(
         activeTab: state.activeTab,
         hintsIndex: state.hintsIndex,
       }),
+      // Initialize default model if none is persisted
+      onRehydrateStorage: () => (state) => {
+        if (state && !state.selectedModelId) {
+          // Initialize with default model
+          const model = getModelById(DEFAULT_MODEL_ID);
+          if (model) {
+            const defaults = getDefaultFieldValues(model);
+            state.selectedModelId = DEFAULT_MODEL_ID;
+            state.selectedModel = model;
+            // Only set defaults if fieldValues is empty (first time user)
+            if (!state.fieldValues || Object.keys(state.fieldValues).length === 0) {
+              state.fieldValues = defaults;
+            }
+          }
+        } else if (state && state.selectedModelId && !state.selectedModel) {
+          // If modelId is persisted but model object is missing, restore it
+          const model = getModelById(state.selectedModelId);
+          if (model) {
+            state.selectedModel = model;
+          } else {
+            // Fallback to default if persisted model no longer exists
+            const defaultModel = getModelById(DEFAULT_MODEL_ID);
+            if (defaultModel) {
+              const defaults = getDefaultFieldValues(defaultModel);
+              state.selectedModelId = DEFAULT_MODEL_ID;
+              state.selectedModel = defaultModel;
+              state.fieldValues = defaults;
+            }
+          }
+        }
+      },
     }
   )
 );
+
 

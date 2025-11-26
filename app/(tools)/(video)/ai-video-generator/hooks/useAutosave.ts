@@ -1,14 +1,16 @@
 /**
- * Autosave Hook
- * Automatically saves form state to localStorage
- * Restores state on page load
+ * Autosave Hook for Video Generator
+ * 
+ * Re-exports the shared autosave utilities configured for video generation.
+ * Maintains backward compatibility with existing imports.
+ * 
+ * Reasoning: Delegates to shared implementation to eliminate code duplication
+ * while preserving the existing API for this module.
  */
 
-import { useEffect } from "react";
+import { useCallback } from "react";
+import { videoAutosave } from "@/app/hooks/useAutosave";
 import { useGenerationStore } from "../store/useGenerationStore";
-
-const AUTOSAVE_KEY = "video-gen-draft";
-const AUTOSAVE_DELAY = 2000; // 2 seconds after last change
 
 /**
  * Hook to enable autosave functionality
@@ -17,72 +19,30 @@ const AUTOSAVE_DELAY = 2000; // 2 seconds after last change
 export function useAutosave() {
   const fieldValues = useGenerationStore((s) => s.fieldValues);
   const selectedModelId = useGenerationStore((s) => s.selectedModelId);
+  const activeTab = useGenerationStore((s) => s.activeTab);
   const loadDraft = useGenerationStore((s) => s.loadDraft);
-  
-  // Save to localStorage after delay
-  useEffect(() => {
-    if (!selectedModelId) {
-      return;
-    }
-    
-    const timer = setTimeout(() => {
-      try {
-        const draft = {
-          fieldValues,
-          selectedModelId,
-          timestamp: Date.now(),
-        };
-        localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(draft));
-        console.log("Draft saved");
-      } catch (error) {
-        console.error("Failed to save draft:", error);
-      }
-    }, AUTOSAVE_DELAY);
-    
-    return () => clearTimeout(timer);
-  }, [fieldValues, selectedModelId]);
-  
-  // Load from localStorage on mount
-  useEffect(() => {
-    try {
-      const savedDraft = localStorage.getItem(AUTOSAVE_KEY);
-      if (savedDraft) {
-        const draft = JSON.parse(savedDraft);
-        
-        // Check if draft is not too old (24 hours)
-        const isRecent = Date.now() - draft.timestamp < 24 * 60 * 60 * 1000;
-        
-        if (isRecent && draft.fieldValues) {
-          loadDraft(draft.fieldValues);
-          console.log("Draft restored");
-        }
-      }
-    } catch (error) {
-      console.error("Failed to load draft:", error);
-    }
-  }, [loadDraft]);
+
+  // Memoize loadDraft wrapper to prevent infinite loops in useEffect
+  const loadDraftCallback = useCallback(
+    (values: Record<string, unknown>) => {
+      loadDraft(values as Record<string, any>);
+    },
+    [loadDraft]
+  );
+
+  // Use the shared autosave hook
+  videoAutosave.useAutosave(
+    { fieldValues, selectedModelId, activeTab },
+    loadDraftCallback
+  );
 }
 
 /**
  * Clear saved draft
  */
-export function clearAutosavedDraft() {
-  try {
-    localStorage.removeItem(AUTOSAVE_KEY);
-  } catch (error) {
-    console.error("Failed to clear draft:", error);
-  }
-}
+export const clearAutosavedDraft = videoAutosave.clearDraft;
 
 /**
  * Check if draft exists
  */
-export function hasAutosavedDraft(): boolean {
-  try {
-    const draft = localStorage.getItem(AUTOSAVE_KEY);
-    return !!draft;
-  } catch {
-    return false;
-  }
-}
-
+export const hasAutosavedDraft = videoAutosave.hasDraft;

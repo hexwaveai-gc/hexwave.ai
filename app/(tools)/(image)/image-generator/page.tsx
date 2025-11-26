@@ -1,7 +1,7 @@
 "use client";
 
 import { ImageIcon, RefreshCw, Palette, Maximize2, Download, X } from "lucide-react";
-import Sidebar from "@/app/components/common/Sidebar";
+import { Sidebar } from "@/app/components/common/sidebar";
 import GeneratorLayout from "@/app/components/shared/GeneratorLayout";
 import GeneratorTabs from "@/app/components/shared/GeneratorTabs";
 import ResultsPanel from "@/app/components/shared/ResultsPanel";
@@ -57,13 +57,14 @@ export default function ImageGeneratorPage() {
       {/* Sidebar - Same as explore page */}
       <Sidebar />
 
-      {/* Main Content Area */}
-      <main className="flex-1 ml-20 h-screen overflow-hidden bg-[#0a0a0a]">
+      {/* Main Content Area - ml-0 on mobile, ml-20 on desktop */}
+      <main className="flex-1 ml-0 md:ml-20 h-screen overflow-hidden bg-[#0a0a0a] pb-16 md:pb-0">
         <GeneratorLayout
           inputPanel={
             <div className="flex h-full flex-col">
-              <div className="border-b border-[var(--color-border-container)] px-[var(--spacing-page-padding)] pt-[var(--spacing-page-padding)] pb-[var(--spacing-header-bottom)]">
-                <h1 className="text-2xl font-bold text-[var(--color-text-1)]">
+              {/* Header - compact on mobile */}
+              <div className="border-b border-[var(--color-border-container)] px-3 md:px-[var(--spacing-page-padding)] pt-3 md:pt-[var(--spacing-page-padding)] pb-2 md:pb-[var(--spacing-header-bottom)]">
+                <h1 className="text-lg md:text-2xl font-bold text-[var(--color-text-1)]">
                   AI Image Generator
                 </h1>
               </div>
@@ -92,7 +93,8 @@ export default function ImageGeneratorPage() {
               loadingMessage="Creating your masterpiece..."
               emptyMessage="Configure your settings and generate to see results here"
             >
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {/* Responsive grid: 1 col on mobile, 2 cols on tablet+ */}
+              <div className="grid grid-cols-1 gap-3 md:gap-4 md:grid-cols-2">
                 {generatedImages.map((imageUrl, index) => (
                   <div
                     key={index}
@@ -103,18 +105,18 @@ export default function ImageGeneratorPage() {
                       alt={`Generated ${index + 1}`}
                       className="h-auto w-full object-cover"
                     />
-                    {/* Hover Overlay */}
-                    <div className="absolute inset-0 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                    {/* Overlay - always visible on mobile, hover on desktop */}
+                    <div className="absolute inset-0 bg-black/50 opacity-100 md:opacity-0 transition-opacity md:group-hover:opacity-100">
                       {/* Maximize Icon - Center */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           setMaximizedImage(imageUrl);
                         }}
-                        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg bg-[var(--color-bg-primary)] p-3 text-[var(--color-text-1)] transition-transform hover:scale-110 shadow-lg"
+                        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg bg-[var(--color-bg-primary)] p-2.5 md:p-3 text-[var(--color-text-1)] transition-transform hover:scale-110 active:scale-95 shadow-lg"
                         aria-label="Maximize image"
                       >
-                        <Maximize2 className="h-5 w-5" />
+                        <Maximize2 className="h-4 w-4 md:h-5 md:w-5" />
                       </button>
                       
                       {/* Download Icon - Bottom Right */}
@@ -129,10 +131,10 @@ export default function ImageGeneratorPage() {
                           link.click();
                           document.body.removeChild(link);
                         }}
-                        className="absolute bottom-3 right-3 rounded-lg bg-[var(--color-bg-primary)] p-3 text-[var(--color-text-1)] transition-transform hover:scale-110 shadow-lg"
+                        className="absolute bottom-2 right-2 md:bottom-3 md:right-3 rounded-lg bg-[var(--color-bg-primary)] p-2.5 md:p-3 text-[var(--color-text-1)] transition-transform hover:scale-110 active:scale-95 shadow-lg"
                         aria-label="Download image"
                       >
-                        <Download className="h-5 w-5" />
+                        <Download className="h-4 w-4 md:h-5 md:w-5" />
                       </button>
                     </div>
                   </div>

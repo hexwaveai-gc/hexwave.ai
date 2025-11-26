@@ -61,17 +61,17 @@ export const PromptTextarea = memo(function PromptTextarea({
   }, [value]);
   
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
+    <div className="space-y-2 md:space-y-3">
+      <div className="flex items-center justify-between gap-2">
         <Label 
           htmlFor={fieldName}
-          className="text-sm font-medium text-gray-900 dark:text-(--color-text-1)"
+          className="text-xs md:text-sm font-medium text-gray-900 dark:text-(--color-text-1)"
         >
           {label || (fieldName === "prompt" ? "Prompt" : "Negative Prompt")}
           {fieldName === "prompt" && <span className="text-red-500 ml-1">*</span>}
         </Label>
         <span
-          className={`text-xs ${
+          className={`text-[10px] md:text-xs shrink-0 ${
             isOverLimit
               ? "text-red-500 font-medium"
               : isNearLimit
@@ -89,7 +89,7 @@ export const PromptTextarea = memo(function PromptTextarea({
         value={value as string}
         onChange={handleChange}
         placeholder={placeholder || `Describe ${fieldName === "prompt" ? "the video you want to generate" : "what you don't want"}...`}
-        className={`min-h-[120px] w-full resize-none rounded-lg p-4 text-base focus:ring-0 ${
+        className={`min-h-[100px] md:min-h-[120px] w-full resize-none rounded-lg p-3 md:p-4 text-sm md:text-base focus:ring-0 ${
           error || isOverLimit
             ? "border-red-500 focus:border-red-500"
             : "border-gray-200 focus:border-blue-500 dark:border-(--color-border-container)"

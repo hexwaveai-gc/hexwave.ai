@@ -57,8 +57,8 @@ export default function WaitlistPage() {
 
       const result = await response.json();
 
-      if (!response.ok) {
-        throw new Error(result.error || "Something went wrong");
+      if (!response.ok || !result.success) {
+        throw new Error(result.error?.message || result.error || "Something went wrong");
       }
 
       setIsSuccess(true);
@@ -111,8 +111,8 @@ export default function WaitlistPage() {
 
       const result = await response.json();
 
-      if (!response.ok) {
-        throw new Error(result.error || "Something went wrong");
+      if (!response.ok || !result.success) {
+        throw new Error(result.error?.message || result.error || "Something went wrong");
       }
 
       setIsSuccess(true);

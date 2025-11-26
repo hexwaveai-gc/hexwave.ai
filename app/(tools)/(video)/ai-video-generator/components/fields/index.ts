@@ -6,13 +6,31 @@
 import { PromptTextarea } from "./PromptTextarea";
 import { SelectField } from "./SelectField";
 import { ToggleField } from "./ToggleField";
-import { ImageUploadField } from "./ImageUploadField";
+import { 
+  FileUploadField, 
+  ImageUploadField, 
+  VideoUploadField, 
+  PdfUploadField,
+  MultiImageUploadField,
+  MultiVideoUploadField,
+  MultiPdfUploadField,
+} from "./FileUploadField";
 
 // Re-export components
 export { PromptTextarea } from "./PromptTextarea";
 export { SelectField } from "./SelectField";
 export { ToggleField } from "./ToggleField";
-export { ImageUploadField } from "./ImageUploadField";
+
+// File upload components - single and multi
+export { 
+  FileUploadField, 
+  ImageUploadField, 
+  VideoUploadField, 
+  PdfUploadField,
+  MultiImageUploadField,
+  MultiVideoUploadField,
+  MultiPdfUploadField,
+} from "./FileUploadField";
 
 /**
  * Field component registry
@@ -22,16 +40,21 @@ export const FIELD_COMPONENTS = {
   PromptTextarea,
   SelectField,
   ToggleField,
+  // Single file upload components
+  FileUploadField,
   ImageUploadField,
+  VideoUploadField,
+  PdfUploadField,
+  // Multi-file upload components
+  MultiImageUploadField,
+  MultiVideoUploadField,
+  MultiPdfUploadField,
   // Aliases for common use cases
   TextInput: PromptTextarea,
-  NumberField: SelectField, // Simple number inputs can use select for now
-  SliderField: SelectField, // Sliders can use select for now
+  NumberField: SelectField,
+  SliderField: SelectField,
   MovementAmplitudeSlider: SelectField,
-  VideoUploadField: ImageUploadField, // Same component, different accept type
   TailImageUrlField: ImageUploadField,
-  MultiImageUploadField: ImageUploadField,
-  SceneImagesUploadField: ImageUploadField,
-  ViduTemplateSelector: SelectField, // Template selector uses select
+  SceneImagesUploadField: MultiImageUploadField,
+  ViduTemplateSelector: SelectField,
 };
-
