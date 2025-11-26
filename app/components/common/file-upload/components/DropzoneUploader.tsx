@@ -87,8 +87,8 @@ export function DropzoneUploader({
           button: "hidden",
         }}
         content={{
-          uploadIcon: () =>
-            isUploading ? (
+          uploadIcon: ({ isUploading: dropzoneUploading = false }) =>
+            isUploading || dropzoneUploading ? (
               <div className="flex flex-col items-center gap-4">
                 <HexwaveLoader size="sm" />
                 <UploadProgressBar progress={uploadProgress} />
@@ -96,13 +96,25 @@ export function DropzoneUploader({
             ) : (
               <DropzoneIcon Icon={IconComponent} />
             ),
-          label: () =>
-            isUploading ? null : (
-              <span className="text-sm font-medium text-gray-700 dark:text-(--color-text-2)">{resolvedDropzoneLabel}</span>
+          label: ({ isUploading: dropzoneUploading = false }) =>
+            isUploading || dropzoneUploading ? (
+              <span aria-hidden="true" className="sr-only">
+                {resolvedDropzoneLabel}
+              </span>
+            ) : (
+              <span className="text-sm font-medium text-gray-700 dark:text-(--color-text-2)">
+                {resolvedDropzoneLabel}
+              </span>
             ),
-          allowedContent: () =>
-            isUploading ? null : (
-              <span className="mt-1.5 block text-xs text-gray-500 dark:text-(--color-text-3)">{resolvedAllowedContent}</span>
+          allowedContent: ({ isUploading: dropzoneUploading = false }) =>
+            isUploading || dropzoneUploading ? (
+              <span aria-hidden="true" className="sr-only">
+                {resolvedAllowedContent}
+              </span>
+            ) : (
+              <span className="mt-1.5 block text-xs text-gray-500 dark:text-(--color-text-3)">
+                {resolvedAllowedContent}
+              </span>
             ),
         }}
       />
