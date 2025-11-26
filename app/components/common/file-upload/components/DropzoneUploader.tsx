@@ -8,6 +8,7 @@ import { DropzoneIcon } from "./DropzoneIcon";
 import { UploadProgressBar } from "./UploadProgressBar";
 import type { FileRouteEndpoint } from "@/app/api/uploadthing/core";
 import type { UploadResponse } from "../types";
+import { ReactNode } from "react";
 
 interface DropzoneUploaderProps {
   endpoint: FileRouteEndpoint;
@@ -26,6 +27,7 @@ interface DropzoneUploaderProps {
   onUploadComplete: (res: UploadResponse[]) => void;
   onUploadError: (error: Error) => void;
   onUploadProgress: (progress: number) => void;
+  footer?: ReactNode;
 }
 
 /**
@@ -46,63 +48,66 @@ export function DropzoneUploader({
   onUploadComplete,
   onUploadError,
   onUploadProgress,
+  footer,
 }: DropzoneUploaderProps) {
   return (
-    <UploadDropzone
-      endpoint={endpoint}
-      disabled={disabled}
-      onUploadBegin={onUploadBegin}
-      onClientUploadComplete={onUploadComplete}
-      onUploadError={onUploadError}
-      onUploadProgress={onUploadProgress}
-      config={{ mode: "auto" }}
-      appearance={{
-        container: cn(
-          "relative w-full rounded-[18px] border transition-all duration-300 cursor-pointer",
-          // Add more padding during upload for the loader
-          isUploading ? "p-8 flex items-center justify-center min-h-[200px]" : "p-6",
-          isUploading
-            ? "border-[var(--color-theme-2)]/50 bg-[var(--color-theme-2)]/5 dark:bg-[var(--color-theme-2)]/10"
-            : cn(
-                "border-gray-200 bg-gray-50/50",
-                "hover:bg-gray-50/80",
-                "dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)]/50",
-                "dark:hover:bg-[var(--color-bg-primary)]/80"
-              ),
-          className
-        ),
-        uploadIcon: "hidden",
-        label: cn(
-          "text-sm font-medium",
-          isUploading
-            ? "text-[var(--color-theme-2)]"
-            : "text-gray-900 dark:text-[var(--color-text-1)] hover:text-[var(--color-theme-2)]"
-        ),
-        allowedContent:
-          "text-[10px] text-gray-500/60 dark:text-[var(--color-text-3)]/60",
-        // Completely hide button during upload
-        button: isUploading ? "!hidden" : sharedAppearance.button,
-      }}
-      content={{
-        uploadIcon: () =>
-          isUploading ? (
-            <div className="flex flex-col items-center gap-4">
-              <HexwaveLoader size="sm" />
-              <UploadProgressBar progress={uploadProgress} />
-            </div>
-          ) : (
-            <DropzoneIcon Icon={IconComponent} />
+    <div className={cn("relative flex flex-col gap-2", className)}>
+      <UploadDropzone
+        endpoint={endpoint}
+        disabled={disabled}
+        onUploadBegin={onUploadBegin}
+        onClientUploadComplete={onUploadComplete}
+        onUploadError={onUploadError}
+        onUploadProgress={onUploadProgress}
+        config={{ mode: "auto" }}
+        appearance={{
+          container: cn(
+            "relative w-full rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden",
+            // Dark card styling
+            "bg-[#111] border-[#222]",
+            "hover:bg-[#161616] hover:border-[#333]",
+            // Loading state
+            isUploading ? "p-8 flex items-center justify-center min-h-[200px]" : "p-6",
+            // Active drag/uploading state
+            isUploading && "border-[var(--color-theme-2)]/50 bg-[var(--color-theme-2)]/5"
           ),
-        label: () =>
-          isUploading ? null : (
-            <span className="text-sm font-medium">{resolvedDropzoneLabel}</span>
+          uploadIcon: "hidden",
+          label: cn(
+            "text-sm font-medium mt-4",
+            isUploading
+              ? "text-[var(--color-theme-2)]"
+              : "text-gray-200"
           ),
-        allowedContent: () =>
-          isUploading ? null : (
-            <span className="mt-2 block">{resolvedAllowedContent}</span>
-          ),
-      }}
-    />
+          allowedContent:
+            "text-[11px] text-gray-500 mt-1",
+          // Completely hide default button to make whole area clickable
+          button: "hidden",
+        }}
+        content={{
+          uploadIcon: () =>
+            isUploading ? (
+              <div className="flex flex-col items-center gap-4">
+                <HexwaveLoader size="sm" />
+                <UploadProgressBar progress={uploadProgress} />
+              </div>
+            ) : (
+              <DropzoneIcon Icon={IconComponent} />
+            ),
+          label: () =>
+            isUploading ? null : (
+              <span className="text-sm font-medium text-white/90">{resolvedDropzoneLabel}</span>
+            ),
+          allowedContent: () =>
+            isUploading ? null : (
+              <span className="mt-1.5 block text-xs text-gray-500">{resolvedAllowedContent}</span>
+            ),
+        }}
+      />
+      {footer && (
+        <div className="mt-1">
+          {footer}
+        </div>
+      )}
+    </div>
   );
 }
-

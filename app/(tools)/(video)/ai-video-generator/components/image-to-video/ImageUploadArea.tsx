@@ -49,6 +49,32 @@ export function ImageUploadArea({
       onChange={handleChange}
       onUploadComplete={onUploadComplete}
       previewHeight="h-48"
+      footer={
+        <div className="flex items-center justify-center gap-4 text-xs mt-1">
+          <button 
+            type="button"
+            className="text-gray-500 hover:text-white underline decoration-dotted underline-offset-4 transition-colors"
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent triggering upload
+              // TODO: Implement History modal
+              console.log("History clicked");
+            }}
+          >
+            History
+          </button>
+          <button 
+            type="button"
+            className="text-gray-500 hover:text-white underline decoration-dotted underline-offset-4 transition-colors"
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent triggering upload
+              // TODO: Implement Stock Library modal
+              console.log("Stock Library clicked");
+            }}
+          >
+            Stock Library
+          </button>
+        </div>
+      }
     />
   );
 }

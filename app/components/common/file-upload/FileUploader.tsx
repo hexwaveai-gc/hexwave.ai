@@ -7,7 +7,7 @@
  * @see README.md for documentation
  */
 
-import { memo } from "react";
+import { memo, ReactNode } from "react";
 import { FilePreview } from "./FilePreview";
 import { useFileUploader } from "./hooks";
 import { 
@@ -90,7 +90,8 @@ export const FileUploader = memo(function FileUploader({
   readOnlyPreview = false,
   showVideoControls = true,
   previewColumns = 3,
-}: FileUploaderProps) {
+  footer,
+}: FileUploaderProps & { footer?: ReactNode }) {
   const {
     // State
     isUploading,
@@ -213,6 +214,7 @@ export const FileUploader = memo(function FileUploader({
       onUploadComplete={handleUploadComplete}
       onUploadError={handleUploadError}
       onUploadProgress={setUploadProgress}
+      footer={footer}
     />
   );
 });
