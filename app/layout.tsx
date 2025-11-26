@@ -3,7 +3,9 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { IconSprite } from "./components/ui/icon-sprite"; 
-import { UpgradePlanProvider } from "./providers/UpgradePlanProvider"; 
+import { UpgradePlanProvider } from "./providers/UpgradePlanProvider";
+import { UserProvider } from "./providers/UserProvider";
+import { QueryProvider } from "@/lib/query/provider"; 
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -105,11 +107,15 @@ export default function RootLayout({
       <html lang="en" className="dark" suppressHydrationWarning>
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        > 
-          <UpgradePlanProvider>
-            <IconSprite />
-            {children}
-          </UpgradePlanProvider> 
+        >
+          <QueryProvider>
+            <UserProvider>
+              <UpgradePlanProvider>
+                <IconSprite />
+                {children}
+              </UpgradePlanProvider>
+            </UserProvider>
+          </QueryProvider>
         </body>
       </html>
     </ClerkProvider>
