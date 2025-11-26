@@ -124,6 +124,32 @@ export const exploreKeys = {
 };
 
 // =============================================================================
+// Credit Transaction Query Keys
+// =============================================================================
+
+export type CreditTransactionType = "DEDUCTION" | "REFUND" | "CREDIT_ADDED";
+
+export interface CreditTransactionFilters {
+  type?: CreditTransactionType;
+  page?: number;
+  limit?: number;
+  startDate?: string;
+  endDate?: string;
+}
+
+export const creditKeys = {
+  /** Base key for all credit queries */
+  all: ["credits"] as const,
+
+  /** User's credit balance */
+  balance: (userId: string) => ["credits", "balance", userId] as const,
+
+  /** User's transaction history */
+  transactions: (userId: string, filters?: CreditTransactionFilters) =>
+    ["credits", "transactions", userId, filters ?? {}] as const,
+};
+
+// =============================================================================
 // Process Status Query Keys (for real-time process tracking)
 // =============================================================================
 
@@ -174,6 +200,7 @@ export const queryKeys = {
   models: modelKeys,
   explore: exploreKeys,
   process: processKeys,
+  credits: creditKeys,
 } as const;
 
 // =============================================================================
@@ -186,5 +213,6 @@ export type VideoKeys = typeof videoKeys;
 export type ModelKeys = typeof modelKeys;
 export type ExploreKeys = typeof exploreKeys;
 export type ProcessKeys = typeof processKeys;
+export type CreditKeys = typeof creditKeys;
 export type QueryKeys = typeof queryKeys;
 

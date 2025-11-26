@@ -3,6 +3,7 @@
 import { useUser } from '@clerk/nextjs'
 import { useUpgradePlan } from '@/app/providers/UpgradePlanProvider'
 import { useCallback } from 'react'
+import { useUserCredits } from '@/hooks/queries/use-credits'
 
 interface CheckCreditsOptions {
   requiredCredits: number
@@ -21,6 +22,8 @@ interface UseCheckCreditsReturn {
 /**
  * Hook to check user credits and optionally show upgrade modal
  * 
+ * Uses TanStack Query to fetch credits from MongoDB (via API).
+ * 
  * @example
  * ```tsx
  * const { checkCredits, userCredits, hasEnoughCredits } = useCheckCredits()
@@ -33,23 +36,24 @@ interface UseCheckCreditsReturn {
  * ```
  */
 export function useCheckCredits(): UseCheckCreditsReturn {
-  const { user, isLoaded } = useUser()
+  const { user, isLoaded: isUserLoaded } = useUser()
   const { openModal } = useUpgradePlan()
 
-  // Get user credits from Clerk metadata or fetch from API
-  // For now, we'll use availableBalance from user metadata
-  // You may need to fetch this from your API if stored in MongoDB
-  const userCredits = (user?.publicMetadata?.availableBalance as number) ?? 0
+  // Fetch credits from MongoDB via TanStack Query
+  const { data: creditsData, isLoading: isCreditsLoading } = useUserCredits(user?.id)
+
+  const isLoading = !isUserLoaded || isCreditsLoading
+  const userCredits = creditsData?.availableBalance ?? 0
 
   /**
    * Check if user has enough credits
    */
   const hasEnoughCredits = useCallback((required: number): boolean => {
-    if (!isLoaded || !user) {
+    if (isLoading || !user) {
       return false
     }
     return userCredits >= required
-  }, [user, isLoaded, userCredits])
+  }, [user, isLoading, userCredits])
 
   /**
    * Check credits and optionally show modal if insufficient
@@ -58,7 +62,7 @@ export function useCheckCredits(): UseCheckCreditsReturn {
   const checkCredits = useCallback((options: CheckCreditsOptions): boolean => {
     const { requiredCredits, onInsufficient, onSufficient, showModal = true } = options
 
-    if (!isLoaded || !user) {
+    if (!isUserLoaded || !user) {
       // User not logged in - show modal or redirect to sign in
       if (showModal) {
         openModal()
@@ -80,12 +84,12 @@ export function useCheckCredits(): UseCheckCreditsReturn {
       onInsufficient?.()
       return false
     }
-  }, [user, isLoaded, userCredits, openModal])
+  }, [user, isUserLoaded, userCredits, openModal])
 
   return {
     checkCredits,
     userCredits,
     hasEnoughCredits,
-    isLoading: !isLoaded,
+    isLoading,
   }
 }

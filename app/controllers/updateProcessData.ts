@@ -4,6 +4,8 @@ import { dbConnect } from "@/lib/db";
 import ProcessRequest from "@/app/models/processRequest/processRequestmodel";
 import { publishProcessStatus } from "@/lib/ably";
 import { logInfo, logError } from "@/lib/logger";
+import { refundCredits } from "@/lib/credits";
+import type { ToolCategory } from "@/lib/credits/types";
 
 // Retry helper function with exponential backoff
 async function withRetry<T>(
@@ -36,6 +38,58 @@ async function withRetry<T>(
   }
 
   throw lastError;
+}
+
+/**
+ * Handle credit refund for failed processes
+ * Non-blocking - errors are logged but don't fail the main operation
+ */
+async function handleCreditRefund(process: {
+  processId: string;
+  userId: string;
+  creditsUsed: number;
+  category: ToolCategory | null;
+  toolName: string | null;
+}): Promise<void> {
+  try {
+    const { processId, userId, creditsUsed, category, toolName } = process;
+
+    if (!userId || creditsUsed <= 0) {
+      logInfo("Skipping refund - no credits to refund", { processId, userId, creditsUsed });
+      return;
+    }
+
+    const result = await refundCredits({
+      userId,
+      amount: creditsUsed,
+      processId,
+      category: category || "image",
+      toolName: toolName || "unknown",
+    });
+
+    if (result.success) {
+      logInfo("Credits refunded for failed process", {
+        processId,
+        userId,
+        amount: creditsUsed,
+        transactionId: result.transactionId,
+      });
+    } else {
+      // Refund failed but might be because it was already refunded (idempotency)
+      logError("Failed to refund credits", new Error(result.error || "Unknown"), {
+        processId,
+        userId,
+        creditsUsed,
+      });
+    }
+  } catch (error) {
+    // Log but don't throw - refund failure should not break the main flow
+    // The refund can be retried manually or via a background job
+    logError("Exception during credit refund", error, {
+      processId: process.processId,
+      userId: process.userId,
+    });
+  }
 }
 
 /**
@@ -134,6 +188,11 @@ export async function updateProcessData(
           processData.data as Record<string, unknown>,
           status === "failed" ? (data?.error as string) : undefined
         );
+      }
+
+      // Refund credits if process failed
+      if (status === "failed" && existingProcess?.creditsUsed > 0) {
+        await handleCreditRefund(existingProcess);
       }
 
       return {
@@ -268,6 +327,11 @@ export async function updateProcessDataWithImageCount(
             result?.data as Record<string, unknown>,
             status === "failed" ? error : undefined
           );
+        }
+
+        // Refund credits if process failed
+        if (status === "failed" && currentProcess?.creditsUsed > 0) {
+          await handleCreditRefund(currentProcess);
         }
       });
 

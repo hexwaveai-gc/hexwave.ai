@@ -27,6 +27,9 @@ export * from "./use-tasks";
 // Process status hooks (TanStack Query + Ably real-time)
 export * from "./use-process";
 
+// Credit hooks (balance and transaction history)
+export * from "./use-credits";
+
 // =============================================================================
 // Example Query Options (using queryOptions pattern)
 // =============================================================================
