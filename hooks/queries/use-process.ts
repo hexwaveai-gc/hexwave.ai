@@ -21,7 +21,7 @@ import {
 } from "@tanstack/react-query";
 import type Ably from "ably";
 import { getProcessChannel } from "@/lib/ably/client";
-import type { ProcessStatusMessage } from "@/lib/ably/server";
+import type { ProcessStatusMessage } from "@/lib/ably/types";
 import { processKeys } from "@/lib/query";
 import { STALE_TIME_INFINITE } from "@/constants/query";
 

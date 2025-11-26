@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type Ably from "ably";
 import { getProcessChannel } from "@/lib/ably/client";
-import type { ProcessStatusMessage } from "@/lib/ably/server";
+import type { ProcessStatusMessage } from "@/lib/ably/types";
 
 // Process status types
 export type ProcessStatus = "idle" | "processing" | "completed" | "failed";

@@ -1,4 +1,5 @@
 import Ably from "ably";
+import type { ProcessStatusMessage } from "./types";
 
 // Singleton REST client for server-side operations
 let ablyRestClient: Ably.Rest | null = null;
@@ -19,15 +20,6 @@ export function getAblyRestClient(): Ably.Rest {
   }
 
   return ablyRestClient;
-}
-
-// Message types for process status updates
-export interface ProcessStatusMessage {
-  status: "processing" | "completed" | "failed";
-  processId: string;
-  data?: Record<string, unknown>;
-  error?: string;
-  timestamp: number;
 }
 
 /**
