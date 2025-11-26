@@ -62,10 +62,13 @@ export function DropzoneUploader({
         config={{ mode: "auto" }}
         appearance={{
           container: cn(
-            "relative w-full rounded-xl border transition-all duration-300 cursor-pointer overflow-hidden",
-            // Dark card styling
-            "bg-[#111] border-[#222]",
-            "hover:bg-[#161616] hover:border-[#333]",
+            "relative w-full rounded-xl border-2 border-dashed transition-all duration-300 cursor-pointer overflow-hidden",
+            // Light mode styling
+            "border-gray-200 bg-gray-50",
+            "hover:border-gray-300 hover:bg-gray-100",
+            // Dark mode styling - matching image-generator
+            "dark:border-[var(--color-border-container)] dark:bg-[var(--color-bg-primary)]",
+            "dark:hover:border-[var(--color-border-component)] dark:hover:bg-[var(--color-bg-secondary)]",
             // Loading state
             isUploading ? "p-8 flex items-center justify-center min-h-[200px]" : "p-6",
             // Active drag/uploading state
@@ -76,10 +79,10 @@ export function DropzoneUploader({
             "text-sm font-medium mt-4",
             isUploading
               ? "text-[var(--color-theme-2)]"
-              : "text-gray-200"
+              : "text-gray-700 dark:text-[var(--color-text-2)]"
           ),
           allowedContent:
-            "text-[11px] text-gray-500 mt-1",
+            "text-[11px] text-gray-500 dark:text-[var(--color-text-3)] mt-1",
           // Completely hide default button to make whole area clickable
           button: "hidden",
         }}
@@ -95,11 +98,11 @@ export function DropzoneUploader({
             ),
           label: () =>
             isUploading ? null : (
-              <span className="text-sm font-medium text-white/90">{resolvedDropzoneLabel}</span>
+              <span className="text-sm font-medium text-gray-700 dark:text-(--color-text-2)">{resolvedDropzoneLabel}</span>
             ),
           allowedContent: () =>
             isUploading ? null : (
-              <span className="mt-1.5 block text-xs text-gray-500">{resolvedAllowedContent}</span>
+              <span className="mt-1.5 block text-xs text-gray-500 dark:text-(--color-text-3)">{resolvedAllowedContent}</span>
             ),
         }}
       />
