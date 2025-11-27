@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { generateUniqueId } from "@/app/controllers/processRequest";
-import type { ToolCategory } from "@/lib/credits/types";
+import type { ToolCategory } from "@/lib/types/process";
 
 /**
  * POST /api/examples/ably/start

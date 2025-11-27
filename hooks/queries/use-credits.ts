@@ -1,15 +1,24 @@
 /**
  * Credit Hooks
- * 
+ *
  * TanStack Query hooks for fetching user credits and transaction history.
- * These hooks integrate with the credit system for displaying balance
+ * These hooks integrate with the CreditLedger system for displaying balance
  * and transaction history in the UI.
+ *
+ * Note: For most use cases, prefer using `useUser` from `@/hooks/use-user`
+ * which fetches credits as part of the user data and syncs to Zustand.
  */
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query";
 import { STALE_TIME_DEFAULT, STALE_TIME_LONG } from "@/constants/query";
 import type { CreditTransactionFilters } from "@/lib/query/query-keys";
+import type {
+  CreditTransactionType,
+  CreditTransactionStatus,
+  CreditSource,
+  IUsageDetails,
+} from "@/app/models/CreditLedger/credit-ledger.model";
 
 // =============================================================================
 // Types
@@ -17,24 +26,34 @@ import type { CreditTransactionFilters } from "@/lib/query/query-keys";
 
 export interface UserCreditsData {
   userId: string;
-  availableBalance: number;
+  credits: number;
+  balanceVerified?: boolean;
 }
 
-export interface CreditTransaction {
+/**
+ * Credit ledger entry (matches CreditLedger model)
+ */
+export interface CreditLedgerEntry {
   _id: string;
-  userId: string;
-  processId: string | null;
-  type: "DEDUCTION" | "REFUND" | "CREDIT_ADDED";
-  amount: number;
-  category: "image" | "video" | null;
-  toolName: string | null;
+  user_id: string;
+  transaction_ref: string;
+  type: CreditTransactionType;
+  amount: number; // Positive for credits, negative for debits
+  balance_before: number;
+  balance_after: number;
+  status: CreditTransactionStatus;
+  source: CreditSource;
   description: string;
-  status: "SUCCESS" | "PENDING" | "FAILED";
+  transaction_id?: string;
+  subscription_id?: string;
+  usage_details?: IUsageDetails;
+  related_transaction_ref?: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface TransactionHistoryResponse {
-  transactions: CreditTransaction[];
+  transactions: CreditLedgerEntry[];
   total: number;
   page: number;
   limit: number;
@@ -58,7 +77,7 @@ async function fetchTransactionHistory(
   filters?: CreditTransactionFilters
 ): Promise<TransactionHistoryResponse> {
   const params = new URLSearchParams({ userId });
-  
+
   if (filters?.type) params.set("type", filters.type);
   if (filters?.page) params.set("page", String(filters.page));
   if (filters?.limit) params.set("limit", String(filters.limit));
@@ -78,12 +97,12 @@ async function fetchTransactionHistory(
 
 /**
  * Hook to fetch user's credit balance
- * 
+ *
  * @example
  * ```tsx
  * const { data, isLoading } = useUserCredits(userId);
  * if (data) {
- *   console.log(`Balance: ${data.availableBalance}`);
+ *   console.log(`Balance: ${data.credits}`);
  * }
  * ```
  */
@@ -97,8 +116,8 @@ export function useUserCredits(userId: string | null | undefined) {
 }
 
 /**
- * Hook to fetch user's transaction history
- * 
+ * Hook to fetch user's transaction history from CreditLedger
+ *
  * @example
  * ```tsx
  * const { data } = useTransactionHistory(userId, { limit: 20, page: 1 });
@@ -119,7 +138,7 @@ export function useTransactionHistory(
 /**
  * Hook to check if user has enough credits
  * Returns a simple boolean check function
- * 
+ *
  * @example
  * ```tsx
  * const { hasEnough, balance, isLoading } = useCreditsCheck(userId);
@@ -132,8 +151,8 @@ export function useCreditsCheck(userId: string | null | undefined) {
   const { data, isLoading, error } = useUserCredits(userId);
 
   return {
-    balance: data?.availableBalance ?? 0,
-    hasEnough: (amount: number) => (data?.availableBalance ?? 0) >= amount,
+    balance: data?.credits ?? 0,
+    hasEnough: (amount: number) => (data?.credits ?? 0) >= amount,
     isLoading,
     error,
   };
@@ -142,11 +161,11 @@ export function useCreditsCheck(userId: string | null | undefined) {
 /**
  * Hook to invalidate credits cache
  * Call this after any operation that changes user's credits
- * 
+ *
  * @example
  * ```tsx
  * const invalidateCredits = useInvalidateCredits();
- * 
+ *
  * // After starting a process
  * await startProcess();
  * invalidateCredits(userId);
@@ -164,6 +183,9 @@ export function useInvalidateCredits() {
     queryClient.invalidateQueries({
       queryKey: ["credits", "transactions", userId],
     });
+    // Also invalidate user queries since credits are part of user data
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.user.me(),
+    });
   };
 }
-

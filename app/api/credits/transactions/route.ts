@@ -1,24 +1,23 @@
 /**
  * GET /api/credits/transactions
- * 
- * Fetches user's credit transaction history.
+ *
+ * Fetches user's credit transaction history from CreditLedger.
  * Supports filtering and pagination.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { dbConnect } from "@/lib/db";
-import CreditTransaction from "@/app/models/CreditTransaction/creditTransaction.model";
+import CreditLedger, {
+  type CreditTransactionType,
+} from "@/app/models/CreditLedger/credit-ledger.model";
 
 export async function GET(request: NextRequest) {
   try {
     const { userId: authUserId } = await auth();
 
     if (!authUserId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const searchParams = request.nextUrl.searchParams;
@@ -33,16 +32,19 @@ export async function GET(request: NextRequest) {
     }
 
     // Parse query parameters
-    const type = searchParams.get("type") as "DEDUCTION" | "REFUND" | "CREDIT_ADDED" | null;
+    const type = searchParams.get("type") as CreditTransactionType | null;
     const page = parseInt(searchParams.get("page") || "1", 10);
-    const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10), 100);
+    const limit = Math.min(
+      parseInt(searchParams.get("limit") || "20", 10),
+      100
+    );
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
     await dbConnect();
 
     // Build query
-    const query: Record<string, unknown> = { userId };
+    const query: Record<string, unknown> = { user_id: userId };
 
     if (type) {
       query.type = type;
@@ -60,12 +62,12 @@ export async function GET(request: NextRequest) {
 
     // Execute queries in parallel
     const [transactions, total] = await Promise.all([
-      CreditTransaction.find(query)
+      CreditLedger.find(query)
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      CreditTransaction.countDocuments(query),
+      CreditLedger.countDocuments(query),
     ]);
 
     return NextResponse.json({
@@ -83,4 +85,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

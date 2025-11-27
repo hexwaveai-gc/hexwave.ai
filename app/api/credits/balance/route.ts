@@ -1,6 +1,6 @@
 /**
  * GET /api/credits/balance
- * 
+ *
  * Fetches user's current credit balance.
  * Requires userId as query parameter.
  */
@@ -15,10 +15,7 @@ export async function GET(request: NextRequest) {
     const { userId: authUserId } = await auth();
 
     if (!authUserId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Get userId from query params or use authenticated user
@@ -36,19 +33,17 @@ export async function GET(request: NextRequest) {
     await dbConnect();
 
     const user = await User.findById(userId)
-      .select("availableBalance")
+      .select("credits balance_verified_at")
       .lean();
 
     if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     return NextResponse.json({
       userId,
-      availableBalance: user.availableBalance || 0,
+      credits: user.credits || 0,
+      balanceVerified: !!user.balance_verified_at,
     });
   } catch (error) {
     console.error("[Credits Balance] Error:", error);
@@ -58,4 +53,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

@@ -1,6 +1,6 @@
 /**
  * Process Request Controller
- * 
+ *
  * Handles process creation with atomic credit deduction.
  * All tool usage (image/video generation) goes through generateUniqueId(),
  * which ensures credits are available and deducted before processing starts.
@@ -10,28 +10,54 @@ import { v4 as uuidv4 } from "uuid";
 import { dbConnect } from "@/lib/db";
 import User from "@/app/models/User/user.model";
 import ProcessRequest from "@/app/models/processRequest/processRequestmodel";
-import CreditTransaction from "@/app/models/CreditTransaction/creditTransaction.model";
+import CreditLedger from "@/app/models/CreditLedger/credit-ledger.model";
 import { logInfo, logError } from "@/lib/logger";
-import { generateTransactionDescription } from "@/lib/credits";
 import type {
   GenerateProcessOptions,
   GenerateProcessResult,
-} from "@/lib/credits/types";
+} from "@/lib/types/process";
+
+/**
+ * Generate a transaction reference for ledger entries
+ */
+function generateTransactionRef(): string {
+  const timestamp = Date.now().toString(36);
+  const random = uuidv4().split("-")[0];
+  return `txn_${timestamp}_${random}`;
+}
+
+/**
+ * Generate a human-readable description for a credit transaction
+ */
+function generateTransactionDescription(
+  category: string | null,
+  toolName: string | null
+): string {
+  const toolLabel = toolName || "Unknown tool";
+  const categoryLabel =
+    category === "image"
+      ? "Image"
+      : category === "video"
+        ? "Video"
+        : "Content";
+
+  return `${categoryLabel} generation with ${toolLabel}`;
+}
 
 /**
  * Generate a unique process ID with atomic credit deduction
- * 
+ *
  * This function performs the following atomically within a MongoDB transaction:
  * 1. Validates user exists and has sufficient credits
  * 2. Deducts credits from user's balance
  * 3. Creates the process record with credit info
- * 4. Creates a credit transaction record
- * 
+ * 4. Creates a credit ledger entry
+ *
  * If any step fails, all changes are rolled back.
- * 
+ *
  * @param options - Process creation options including credit info
  * @returns Result object with processId on success, or error details on failure
- * 
+ *
  * @example
  * const result = await generateUniqueId({
  *   userId: "user_123",
@@ -40,7 +66,7 @@ import type {
  *   toolName: "flux-pro",
  *   data: { prompt: "A beautiful sunset" }
  * });
- * 
+ *
  * if (result.success) {
  *   console.log("Process ID:", result.processId);
  * } else {
@@ -70,6 +96,7 @@ export async function generateUniqueId(
   }
 
   const processId = uuidv4();
+  const transactionRef = generateTransactionRef();
 
   try {
     await dbConnect();
@@ -86,7 +113,7 @@ export async function generateUniqueId(
       await session.withTransaction(async () => {
         // Step 1: Find user and check balance
         const user = await User.findById(userId)
-          .select("availableBalance")
+          .select("credits")
           .session(session);
 
         if (!user) {
@@ -98,23 +125,30 @@ export async function generateUniqueId(
           throw new Error("USER_NOT_FOUND");
         }
 
-        const availableBalance = user.availableBalance || 0;
+        const currentBalance = user.credits || 0;
 
         // Step 2: Check if user has sufficient credits
-        if (availableBalance < creditsToDeduct) {
+        if (currentBalance < creditsToDeduct) {
           result = {
             success: false,
             error: "INSUFFICIENT_CREDITS",
-            message: `Insufficient credits. Required: ${creditsToDeduct}, Available: ${availableBalance}`,
-            availableCredits: availableBalance,
+            message: `Insufficient credits. Required: ${creditsToDeduct}, Available: ${currentBalance}`,
+            availableCredits: currentBalance,
           };
           throw new Error("INSUFFICIENT_CREDITS");
         }
 
+        const newBalance = currentBalance - creditsToDeduct;
+
         // Step 3: Deduct credits from user balance
         await User.findByIdAndUpdate(
           userId,
-          { $inc: { availableBalance: -creditsToDeduct } },
+          {
+            $set: {
+              credits: newBalance,
+              balance_verified_at: new Date(),
+            },
+          },
           { session }
         );
 
@@ -136,24 +170,27 @@ export async function generateUniqueId(
           { session }
         );
 
-        // Step 5: Create credit transaction record
-        const transactionDescription = generateTransactionDescription(
-          "DEDUCTION",
-          category,
-          toolName
-        );
+        // Step 5: Create credit ledger entry
+        const description = generateTransactionDescription(category, toolName);
 
-        await CreditTransaction.create(
+        await CreditLedger.create(
           [
             {
-              userId,
-              processId,
-              type: "DEDUCTION",
-              amount: creditsToDeduct,
-              category,
-              toolName,
-              description: transactionDescription,
-              status: "SUCCESS",
+              user_id: userId,
+              transaction_ref: transactionRef,
+              type: "usage_deduction",
+              amount: -creditsToDeduct, // Negative for deductions
+              balance_before: currentBalance,
+              balance_after: newBalance,
+              status: "completed",
+              source: "api",
+              description,
+              usage_details: {
+                operation_type: `${category}_generation`,
+                model_id: toolName,
+                generation_id: processId,
+              },
+              idempotency_key: `process_${processId}`,
             },
           ],
           { session }
@@ -163,6 +200,7 @@ export async function generateUniqueId(
         result = {
           success: true,
           processId,
+          transactionRef,
         };
 
         logInfo("Process created with credit deduction", {
@@ -171,6 +209,9 @@ export async function generateUniqueId(
           creditsToDeduct,
           category,
           toolName,
+          transactionRef,
+          balanceBefore: currentBalance,
+          balanceAfter: newBalance,
         });
       });
     } catch (transactionError) {
@@ -185,11 +226,15 @@ export async function generateUniqueId(
         errorMessage !== "INSUFFICIENT_CREDITS" &&
         errorMessage !== "USER_NOT_FOUND"
       ) {
-        logError("Transaction failed during process creation", transactionError, {
-          processId,
-          userId,
-          creditsToDeduct,
-        });
+        logError(
+          "Transaction failed during process creation",
+          transactionError,
+          {
+            processId,
+            userId,
+            creditsToDeduct,
+          }
+        );
       }
     } finally {
       await session.endSession();
