@@ -12,7 +12,15 @@ import { useEffect, useCallback } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { queryKeys } from "@/lib/query/client";
 import { fetchUser, type UserMeResponse } from "@/lib/api";
-import { useUserStore } from "@/store";
+import { 
+  useUserStore, 
+  selectCredits, 
+  selectSubscription, 
+  selectUsageSummary,
+  selectHasActiveSubscription,
+  selectPlanName,
+  selectPlanTier,
+} from "@/store";
 
 // ============================================================================
 // Query Hooks
@@ -104,6 +112,9 @@ export function useRefetchUserData() {
 /**
  * Comprehensive user hook that provides data + helpers
  * 
+ * Uses individual selectors to prevent unnecessary re-renders.
+ * Only re-renders when the specific selected values change.
+ * 
  * @example
  * ```tsx
  * const { 
@@ -117,8 +128,19 @@ export function useRefetchUserData() {
  */
 export function useUser() {
   const query = useUserData();
-  const store = useUserStore();
   const invalidate = useInvalidateUserData();
+
+  // Use individual selectors to prevent re-renders on unrelated changes
+  const credits = useUserStore(selectCredits);
+  const subscription = useUserStore(selectSubscription);
+  const usageSummary = useUserStore(selectUsageSummary);
+  const hasActiveSubscription = useUserStore(selectHasActiveSubscription);
+  const planName = useUserStore(selectPlanName);
+  const planTier = useUserStore(selectPlanTier);
+
+  // Get stable function references from store
+  const hasEnoughCredits = useUserStore((state) => state.hasEnoughCredits);
+  const getSubscriptionDaysLeft = useUserStore((state) => state.getSubscriptionDaysLeft);
 
   return {
     // TanStack Query data
@@ -129,19 +151,19 @@ export function useUser() {
     error: query.error,
     
     // Store data (for convenience, synced from query)
-    credits: store.credits,
-    subscription: store.subscription,
-    usageSummary: store.usageSummary,
+    credits,
+    subscription,
+    usageSummary,
     
     // Actions
     refetch: query.refetch,
     invalidate,
     
-    // Helpers
-    hasActiveSubscription: store.hasActiveSubscription(),
-    hasEnoughCredits: store.hasEnoughCredits,
-    daysLeftInPeriod: store.getSubscriptionDaysLeft(),
-    planName: store.subscription?.plan_name || "Free",
-    planTier: store.subscription?.plan_tier || "free",
+    // Helpers (computed values from selectors)
+    hasActiveSubscription,
+    hasEnoughCredits,
+    daysLeftInPeriod: getSubscriptionDaysLeft(),
+    planName,
+    planTier,
   };
 }

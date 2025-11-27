@@ -216,7 +216,13 @@ export async function updateProcessData(
         { new: true, upsert: true }
       );
 
+      // Refund credits BEFORE Ably notification (so frontend can fetch updated balance)
+      if (status === "failed" && existingProcess?.creditsUsed > 0) {
+        await handleCreditRefund(existingProcess);
+      }
+
       // Publish to Ably for completed or failed status
+      // Note: This comes AFTER refund so frontend can get updated credits
       if (status === "completed" || status === "failed") {
         await notifyProcessStatus(
           processId,
@@ -224,11 +230,6 @@ export async function updateProcessData(
           processData.data as Record<string, unknown>,
           status === "failed" ? (data?.error as string) : undefined
         );
-      }
-
-      // Refund credits if process failed
-      if (status === "failed" && existingProcess?.creditsUsed > 0) {
-        await handleCreditRefund(existingProcess);
       }
 
       return {
@@ -359,7 +360,13 @@ export async function updateProcessDataWithImageCount(
           { new: true, session }
         );
 
+        // Refund credits BEFORE Ably notification (so frontend can fetch updated balance)
+        if (status === "failed" && currentProcess?.creditsUsed > 0) {
+          await handleCreditRefund(currentProcess);
+        }
+
         // Notify via Ably if process completed or failed
+        // Note: This comes AFTER refund so frontend can get updated credits
         if (newTotal >= totalExpectedImages || status === "failed") {
           const finalStatus = status === "failed" ? "failed" : "completed";
           await notifyProcessStatus(
@@ -368,11 +375,6 @@ export async function updateProcessDataWithImageCount(
             result?.data as Record<string, unknown>,
             status === "failed" ? error : undefined
           );
-        }
-
-        // Refund credits if process failed
-        if (status === "failed" && currentProcess?.creditsUsed > 0) {
-          await handleCreditRefund(currentProcess);
         }
       });
 
