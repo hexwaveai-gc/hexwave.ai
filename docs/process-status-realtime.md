@@ -5,12 +5,12 @@ This document explains how long-running processes (image generation, video proce
 ## Overview
 
 When a user triggers a long-running operation:
-1. Backend creates a `processId` and stores initial data in MongoDB
+1. Backend creates a `jobId` via `ProcessJobService.createJob()` with atomic credit deduction
 2. Backend sends request to external API (with webhook URL)
-3. Frontend subscribes to Ably channel for that `processId` (on-demand connection)
+3. Frontend subscribes to Ably channel for that `jobId` (on-demand connection)
 4. When external API completes, webhook updates database AND publishes to Ably
 5. Frontend receives instant update via Ably subscription
-6. Connection automatically closes when process completes
+6. Connection automatically closes when job completes
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
@@ -20,13 +20,14 @@ When a user triggers a long-running operation:
        │ POST /api/tool    │                   │
        │──────────────────>│                   │
        │                   │                   │
-       │                   │ generateUniqueId()│
-       │                   │ (stores in MongoDB)
+       │                   │ ProcessJobService │
+       │                   │ .createJob()      │
+       │                   │ (credit deduction + MongoDB)
        │                   │                   │
        │                   │ POST with webhook │
        │                   │──────────────────>│
        │                   │                   │
-       │  { processId }    │                   │
+       │  { jobId }        │                   │
        │<──────────────────│                   │
        │                   │                   │
        │ On-demand connect │                   │
@@ -37,14 +38,16 @@ When a user triggers a long-running operation:
        │                   │    Webhook POST   │
        │                   │<──────────────────│
        │                   │                   │
-       │                   │ updateProcessData()
-       │                   │ + publishToAbly() │
+       │                   │ ProcessJobService │
+       │                   │ .completeJob() or │
+       │                   │ .failJob()        │
+       │                   │ + auto Ably notify│
        │                   │                   │
        │  Real-time update │                   │
        │<- - - - - - - - - │ (via Ably)        │
        │                   │                   │
        │ Auto-disconnect   │                   │
-       │ (process done)    │                   │
+       │ (job done)        │                   │
 ```
 
 ## Architecture: On-Demand Connection
@@ -67,87 +70,111 @@ When a user triggers a long-running operation:
 
 ## Key Components
 
-### 1. Process ID Generation (with Credit Deduction)
+### 1. Job Creation (with Credit Deduction)
 
-**File:** `app/controllers/processRequest.ts`
+**File:** `lib/services/ProcessJobService/index.ts`
 
 ```typescript
-import { generateUniqueId } from "@/app/controllers/processRequest";
+import { ProcessJobService } from "@/lib/services/ProcessJobService";
 
 // In your API route
-const result = await generateUniqueId({
+const result = await ProcessJobService.createJob({
   userId,                    // Required: Clerk user ID
-  creditsToDeduct: 10,       // Required: Credits for this operation
-  category: "image",         // Required: "image" | "video"
-  toolName: "flux-pro",      // Required: Model identifier
-  data: { prompt },          // Optional: Additional metadata
+  credits: 10,               // Required: Credits for this operation
+  category: "image",         // Required: "image" | "video" | "audio" | "avatar"
+  toolId: "flux-pro",        // Required: Model identifier
+  toolName: "FLUX Pro",      // Optional: Human-readable name
+  params: { prompt },        // Required: Request parameters
 });
 
 if (!result.success) {
   // Handle error: INSUFFICIENT_CREDITS, USER_NOT_FOUND, TRANSACTION_FAILED
-  return NextResponse.json({ error: result.message }, { status: 402 });
+  return NextResponse.json(
+    { error: result.errorCode, message: result.error },
+    { status: result.errorCode === "INSUFFICIENT_CREDITS" ? 402 : 500 }
+  );
 }
 
-// Return processId to frontend
-return NextResponse.json({ processId: result.processId });
+// Return jobId to frontend
+return NextResponse.json({ jobId: result.jobId });
 ```
 
-This atomically (in a single transaction):
-1. Checks user has sufficient credits
+This atomically:
+1. Checks user has sufficient credits (via CreditService)
 2. Deducts credits from user balance
-3. Creates process record with `creditsUsed`
-4. Logs transaction to `credit_transactions` collection
+3. Creates job record with full audit trail
+4. Publishes initial status to Ably
 
 > **Note:** See `docs/credits-and-process-system.md` for complete credit system documentation.
 
-### 2. Process Data Model
+### 2. ProcessJob Data Model
 
-**File:** `app/models/processRequest/processRequestmodel.ts`
+**File:** `app/models/ProcessJob/process-job.model.ts`
 
 ```typescript
 {
-  processId: string;      // UUID
+  jobId: string;          // UUID
   userId: string;         // Clerk user ID
-  status: "processing" | "completed" | "failed";
-  creditsUsed: number;    // Credits deducted for this process
-  category: "image" | "video";
-  toolName: string;       // Model identifier (e.g., "flux-pro")
-  data: {
-    req: { ... },         // Initial request data
-    generations?: [...],  // Results (images, videos, etc.)
-    error?: string        // Error message if failed
+  status: "pending" | "processing" | "completed" | "failed" | "cancelled" | "timeout";
+  category: "image" | "video" | "audio" | "avatar" | "text" | "other";
+  toolId: string;         // Model identifier (e.g., "flux-pro")
+  toolName?: string;      // Human-readable name
+  request: {
+    params: {...},        // Request parameters
+    version?: string,
+    timestamp: Date,
   };
+  response?: {
+    data?: {...},         // Results
+    error?: string,
+    errorCode?: string,
+  };
+  credits: {
+    charged: number,      // Credits deducted
+    refunded: number,     // Credits refunded (if failed)
+    deductionRef?: string,
+    refundRef?: string,
+  };
+  progress?: {
+    total: number,
+    completed: number,
+    failed: number,
+    percentage: number,
+  };
+  statusHistory: [...],   // Audit trail
   createdAt: Date;
   updatedAt: Date;
 }
 ```
 
-### 3. Updating Process Status
+### 3. Updating Job Status
 
-**File:** `app/controllers/updateProcessData.ts`
+**File:** `lib/services/ProcessJobService/index.ts`
 
 ```typescript
-import { updateProcessData } from "@/app/controllers/updateProcessData";
+import { ProcessJobService } from "@/lib/services/ProcessJobService";
 
 // On success
-await updateProcessData(
-  processId,
-  { generations: ["https://..."] },
-  "completed"
-);
+await ProcessJobService.completeJob(jobId, {
+  generations: ["https://..."],
+  metadata: { model: "flux-pro" },
+});
 
 // On failure (credits are automatically refunded)
-await updateProcessData(
-  processId,
-  { error: "API timeout" },
-  "failed"
+await ProcessJobService.failJob(
+  jobId,
+  "API timeout",
+  "PROVIDER_TIMEOUT"
 );
+
+// Cancel by user
+await ProcessJobService.cancelJob(jobId, "User cancelled");
 ```
 
-This automatically:
-1. Updates MongoDB document
-2. Publishes to Ably channel `process:{processId}`
-3. **If status is "failed":** Refunds `creditsUsed` to user (with idempotency check)
+All methods automatically:
+1. Update MongoDB document with status history
+2. Publish to Ably channel `process:{jobId}`
+3. **If status is "failed/cancelled/timeout":** Automatically refund credits
 
 ### 4. Ably Singleton Manager
 
@@ -220,26 +247,27 @@ function MyComponent({ processId }) {
 
 ```typescript
 // app/api/generate-image/route.ts
-import { generateUniqueId } from "@/app/controllers/processRequest";
+import { ProcessJobService } from "@/lib/services/ProcessJobService";
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
   const { prompt, model } = await req.json();
 
-  // 1. Create process with atomic credit deduction
-  const result = await generateUniqueId({
+  // 1. Create job with atomic credit deduction
+  const result = await ProcessJobService.createJob({
     userId,
-    creditsToDeduct: getModelCredits(model), // e.g., 10 credits
+    credits: getModelCredits(model), // e.g., 10 credits
     category: "image",
-    toolName: model,
-    data: { prompt },
+    toolId: model,
+    toolName: getModelDisplayName(model),
+    params: { prompt },
   });
 
   // Handle insufficient credits or other errors
   if (!result.success) {
     return NextResponse.json(
-      { error: result.error, message: result.message },
-      { status: result.error === "INSUFFICIENT_CREDITS" ? 402 : 500 }
+      { error: result.errorCode, message: result.error },
+      { status: result.errorCode === "INSUFFICIENT_CREDITS" ? 402 : 500 }
     );
   }
 
@@ -248,12 +276,12 @@ export async function POST(req: NextRequest) {
     method: "POST",
     body: JSON.stringify({
       prompt,
-      webhook_url: `${process.env.NEXT_PUBLIC_URL}/api/webhook/image?processId=${result.processId}`,
+      webhook_url: `${process.env.NEXT_PUBLIC_URL}/api/webhook/image?jobId=${result.jobId}`,
     }),
   });
 
-  // 3. Return processId immediately
-  return NextResponse.json({ processId: result.processId });
+  // 3. Return jobId immediately
+  return NextResponse.json({ jobId: result.jobId });
 }
 ```
 
@@ -261,23 +289,23 @@ export async function POST(req: NextRequest) {
 
 ```typescript
 // app/api/webhook/image/route.ts
-import { updateProcessData } from "@/app/controllers/updateProcessData";
+import { ProcessJobService } from "@/lib/services/ProcessJobService";
 
 export async function POST(req: NextRequest) {
-  const { processId } = req.nextUrl.searchParams;
+  const jobId = req.nextUrl.searchParams.get("jobId");
   const body = await req.json();
 
   if (body.status === "success") {
-    await updateProcessData(
-      processId,
-      { generations: body.images },
-      "completed"
-    );
+    await ProcessJobService.completeJob(jobId, {
+      generations: body.images,
+    }, "webhook");
   } else {
-    await updateProcessData(
-      processId,
-      { error: body.error },
-      "failed"
+    // Credits automatically refunded
+    await ProcessJobService.failJob(
+      jobId,
+      body.error || "Provider error",
+      body.error_code,
+      "webhook"
     );
   }
 
@@ -456,13 +484,10 @@ hexwave.ai/
 │   │   │       └── route.ts      # Token auth endpoint
 │   │   └── process/
 │   │       └── [processId]/
-│   │           └── route.ts      # GET process status endpoint
-│   ├── controllers/
-│   │   ├── processRequest.ts     # generateUniqueId, getProcessRequest
-│   │   └── updateProcessData.ts  # updateProcessData (+ Ably publish)
+│   │           └── route.ts      # GET job status endpoint
 │   └── models/
-│       └── processRequest/
-│           └── processRequestmodel.ts
+│       └── ProcessJob/
+│           └── process-job.model.ts  # ProcessJob Mongoose model
 ├── hooks/
 │   └── queries/
 │       ├── index.ts              # Query hooks exports
@@ -474,6 +499,9 @@ hexwave.ai/
 │   │   ├── server.ts             # REST client, publishProcessStatus
 │   │   ├── types.ts              # ProcessStatusMessage type
 │   │   └── index.ts              # Exports
+│   ├── services/
+│   │   └── ProcessJobService/
+│   │       └── index.ts          # ProcessJobService (SINGLE source of truth)
 │   └── query/
 │       ├── query-keys.ts         # TanStack Query keys (includes processKeys)
 │       └── index.ts              # Query exports

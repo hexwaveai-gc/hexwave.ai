@@ -1,6 +1,6 @@
 # Credit System & Process Architecture
 
-> Atomic credit deduction, process tracking, and automatic refunds for tool usage.
+> Atomic credit deduction, job tracking, and automatic refunds for tool usage.
 
 ## Overview
 
@@ -8,25 +8,26 @@ Every tool usage (image/video generation) follows this flow:
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│                           PROCESS LIFECYCLE                                   │
+│                           JOB LIFECYCLE                                       │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│   User Request          generateUniqueId()              External API         │
-│   ───────────►   [Credit Check + Deduction]   ─────────►  Processing        │
+│   User Request      ProcessJobService.createJob()      External API         │
+│   ───────────►   [Credit Check + Deduction + Job]  ─────────►  Processing   │
 │                         │                                    │              │
 │                         ▼                                    │              │
 │               ┌─────────────────┐                           │              │
 │               │  MongoDB Docs   │                           │              │
-│               │  - ProcessReq   │◄──────────────────────────┘              │
+│               │  - ProcessJob   │◄──────────────────────────┘              │
 │               │  - CreditLedger │        Webhook                           │
 │               │  - User.credits │                                          │
 │               └─────────────────┘                                          │
 │                         │                                                   │
 │                         ▼                                                   │
 │               ┌─────────────────┐                                          │
-│               │   updateProcessData()                                      │
-│               │   - Update status                                          │
-│               │   - Refund if failed                                       │
+│               │   ProcessJobService                                        │
+│               │   .completeJob() / .failJob()                              │
+│               │   - Update status + history                                │
+│               │   - Auto-refund if failed                                  │
 │               │   - Notify via Ably                                        │
 │               └─────────────────┘                                          │
 │                                                                              │
@@ -39,53 +40,57 @@ Every tool usage (image/video generation) follows this flow:
 
 ### Atomic Credit Deduction
 
-When a user starts a generation, credits are deducted **before** processing begins. This happens atomically in a single MongoDB transaction:
+When a user starts a generation, credits are deducted **before** processing begins. This happens atomically via `ProcessJobService.createJob()`:
 
-1. Check user has sufficient credits (`user.credits`)
-2. Deduct credits from user balance
-3. Create process record with `creditsUsed`
-4. Create credit ledger entry with `balance_before`/`balance_after`
-
-If any step fails, everything rolls back.
+1. Check idempotency (return existing job if duplicate request)
+2. Validate user has sufficient credits via `CreditService`
+3. Deduct credits and create ledger entry
+4. Create job record with full audit trail
+5. If job creation fails, automatically refund credits
+6. Publish initial status to Ably
 
 ### Automatic Refunds
 
-When a process fails (via webhook or trigger.dev), credits are automatically refunded:
+When a job fails, is cancelled, or times out, credits are automatically refunded:
 
-1. `updateProcessData()` receives `status: "failed"`
-2. Looks up `creditsUsed` from process record
-3. Refunds credits to user via `CreditService.refundCredits()`
-4. Creates refund ledger entry
+1. `ProcessJobService.failJob()` / `cancelJob()` / `timeoutJob()` is called
+2. Checks if credits were charged and not already refunded
+3. Refunds credits via `CreditService.refundCredits()`
+4. Updates job record with refund reference
+5. Publishes status update via Ably with refund info
 
 ---
 
 ## API Reference
 
-### generateUniqueId()
+### ProcessJobService.createJob()
 
-Creates a process with atomic credit deduction.
+Creates a job with atomic credit deduction.
 
-**Location:** `app/controllers/processRequest.ts`
+**Location:** `lib/services/ProcessJobService/index.ts`
 
 ```typescript
-import { generateUniqueId } from "@/app/controllers/processRequest";
+import { ProcessJobService } from "@/lib/services/ProcessJobService";
 
-const result = await generateUniqueId({
+const result = await ProcessJobService.createJob({
   userId: "user_123",           // Required: Clerk user ID
-  creditsToDeduct: 10,          // Required: Credits for this operation
-  category: "image",            // Required: "image" | "video" | "demo"
-  toolName: "flux-pro",         // Required: Model/tool identifier
-  data: { prompt: "..." },      // Optional: Additional metadata
+  credits: 10,                  // Required: Credits for this operation
+  category: "image",            // Required: "image" | "video" | "audio" | "avatar"
+  toolId: "flux-pro",           // Required: Model/tool identifier
+  toolName: "FLUX Pro",         // Optional: Human-readable name
+  params: { prompt: "..." },    // Required: Request parameters
+  idempotencyKey: "unique_key", // Optional: Prevent duplicate jobs
+  expectedItems: 4,             // Optional: For progress tracking
 });
 
 if (result.success) {
-  // Process created, credits deducted
-  console.log(result.processId);
+  // Job created, credits deducted
+  console.log(result.jobId);
   console.log(result.transactionRef); // Ledger transaction reference
 } else {
   // Handle error
-  console.log(result.error);    // "INSUFFICIENT_CREDITS" | "USER_NOT_FOUND" | "TRANSACTION_FAILED"
-  console.log(result.message);  // Human-readable message
+  console.log(result.errorCode); // "INSUFFICIENT_CREDITS" | "USER_NOT_FOUND" | "DUPLICATE_JOB" | "TRANSACTION_FAILED"
+  console.log(result.error);     // Human-readable message
   console.log(result.availableCredits); // (for INSUFFICIENT_CREDITS)
 }
 ```
@@ -94,62 +99,122 @@ if (result.success) {
 
 | Collection | Document |
 |------------|----------|
-| `request_processing` | Process record with `processId`, `status: "processing"`, `creditsUsed` |
+| `process_jobs` | Job record with `jobId`, `status: "pending"`, `credits.charged`, `statusHistory` |
 | `credit_ledger` | Deduction entry with `balance_before`, `balance_after`, negative `amount` |
-| `users` | Updates `credits` field and `balance_verified_at` |
+| `users` | Updates `credits` field |
 
 ---
 
-### updateProcessData()
+### ProcessJobService Status Updates
 
-Updates process status and handles refunds.
-
-**Location:** `app/controllers/updateProcessData.ts`
+**Location:** `lib/services/ProcessJobService/index.ts`
 
 ```typescript
-import { updateProcessData } from "@/app/controllers/updateProcessData";
+import { ProcessJobService } from "@/lib/services/ProcessJobService";
+
+// Mark as processing (when external API accepts the job)
+await ProcessJobService.startProcessing(jobId, "external_job_id");
 
 // On success
-await updateProcessData(
-  processId,
-  { generations: ["https://..."] },
-  "completed"
-);
+await ProcessJobService.completeJob(jobId, {
+  generations: ["https://..."],
+  metadata: { model: "flux-pro" },
+}, "webhook");
 
 // On failure (triggers automatic refund)
-await updateProcessData(
-  processId,
-  { error: "API timeout" },
-  "failed"
+await ProcessJobService.failJob(
+  jobId,
+  "API timeout",
+  "PROVIDER_TIMEOUT",
+  "webhook"
 );
+
+// Cancel by user (triggers automatic refund)
+await ProcessJobService.cancelJob(jobId, "User cancelled");
+
+// Timeout (triggers automatic refund)
+await ProcessJobService.timeoutJob(jobId);
+
+// Update progress (for multi-step jobs)
+await ProcessJobService.updateProgress(jobId, {
+  completedItems: 2,
+  itemData: [{ url: "..." }, { url: "..." }],
+  currentStep: "Processing item 3 of 4",
+});
 ```
 
-**On failure, it automatically:**
-1. Updates process status to "failed"
-2. Refunds `creditsUsed` to user via `CreditService`
-3. Creates refund ledger entry
-4. Publishes status via Ably
+**All status methods automatically:**
+1. Update job status with full audit history
+2. Refund credits if status is `failed`, `cancelled`, or `timeout`
+3. Publish status update to Ably for real-time frontend updates
 
 ---
 
 ## Data Models
 
-### ProcessRequest
+### ProcessJob
 
 ```typescript
-// Collection: request_processing
+// Collection: process_jobs
 {
-  processId: string,        // UUID
+  jobId: string,            // UUID
   userId: string,           // Clerk user ID
-  status: "processing" | "completed" | "failed",
-  creditsUsed: number,      // Credits deducted for this process
-  category: "image" | "video" | "demo",
-  toolName: string,         // e.g., "flux-pro", "kling-ai"
-  data: {
-    req: { ... },           // Input parameters
-    generations?: [...],    // Output URLs
-    error?: string,         // Error message
+  status: "pending" | "processing" | "completed" | "failed" | "cancelled" | "timeout",
+  category: "image" | "video" | "audio" | "avatar" | "text" | "other",
+  toolId: string,           // e.g., "flux-pro", "kling-ai"
+  toolName?: string,        // Human-readable name
+  
+  request: {
+    params: { ... },        // Input parameters
+    version?: string,       // API version
+    timestamp: Date,
   },
+  
+  response?: {
+    data?: { ... },         // Output data
+    error?: string,
+    errorCode?: string,
+  },
+  
+  credits: {
+    charged: number,        // Credits deducted
+    refunded: number,       // Credits refunded (if failed)
+    deductionRef?: string,  // Ledger reference
+    refundRef?: string,     // Refund ledger reference
+    refundPending: boolean,
+  },
+  
+  progress?: {
+    total: number,
+    completed: number,
+    failed: number,
+    percentage: number,
+    currentStep?: string,
+  },
+  
+  webhook?: {
+    received: boolean,
+    receivedAt?: Date,
+    externalJobId?: string,
+    provider?: string,
+    attemptCount: number,
+    lastPayload?: object,
+  },
+  
+  statusHistory: [{
+    status: string,
+    timestamp: Date,
+    actor: "system" | "user" | "webhook" | "timeout",
+    reason?: string,
+    metadata?: object,
+  }],
+  
+  idempotencyKey?: string,
+  expiresAt?: Date,
+  metadata?: Map,
+  
+  startedAt?: Date,
+  completedAt?: Date,
   createdAt: Date,
   updatedAt: Date,
 }
@@ -372,11 +437,11 @@ if (!hasEnough(requiredCredits)) {
 
 ## Implementation Flow
 
-### 1. API Route (Starting a Process)
+### 1. API Route (Starting a Job)
 
 ```typescript
 // app/api/generate-image/route.ts
-import { generateUniqueId } from "@/app/controllers/processRequest";
+import { ProcessJobService } from "@/lib/services/ProcessJobService";
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth();
@@ -385,29 +450,30 @@ export async function POST(req: NextRequest) {
   // Get credits required for this model
   const creditsRequired = getModelCredits(model);
 
-  // Atomic: check balance + deduct + create process
-  const result = await generateUniqueId({
+  // Atomic: check balance + deduct + create job
+  const result = await ProcessJobService.createJob({
     userId,
-    creditsToDeduct: creditsRequired,
+    credits: creditsRequired,
     category: "image",
-    toolName: model,
-    data: { prompt },
+    toolId: model,
+    toolName: getModelDisplayName(model),
+    params: { prompt },
   });
 
   if (!result.success) {
     return NextResponse.json(
-      { error: result.error, message: result.message },
-      { status: result.error === "INSUFFICIENT_CREDITS" ? 402 : 500 }
+      { error: result.errorCode, message: result.error },
+      { status: result.errorCode === "INSUFFICIENT_CREDITS" ? 402 : 500 }
     );
   }
 
   // Call external API with webhook URL
   await externalApi.generate({
     prompt,
-    webhook: `${BASE_URL}/api/webhook/image?processId=${result.processId}`,
+    webhook: `${BASE_URL}/api/webhook/image?jobId=${result.jobId}`,
   });
 
-  return NextResponse.json({ processId: result.processId });
+  return NextResponse.json({ jobId: result.jobId });
 }
 ```
 
@@ -415,28 +481,58 @@ export async function POST(req: NextRequest) {
 
 ```typescript
 // app/api/webhook/image/route.ts
-import { updateProcessData } from "@/app/controllers/updateProcessData";
+import { ProcessJobService } from "@/lib/services/ProcessJobService";
 
 export async function POST(req: NextRequest) {
-  const processId = req.nextUrl.searchParams.get("processId");
+  const jobId = req.nextUrl.searchParams.get("jobId");
   const body = await req.json();
 
   if (body.status === "success") {
-    await updateProcessData(
-      processId,
-      { generations: body.images },
-      "completed"
-    );
+    await ProcessJobService.completeJob(jobId, {
+      generations: body.images,
+    }, "webhook");
   } else {
     // Credits automatically refunded
-    await updateProcessData(
-      processId,
-      { error: body.error },
-      "failed"
+    await ProcessJobService.failJob(
+      jobId,
+      body.error || "Provider error",
+      body.error_code,
+      "webhook"
     );
   }
 
   return NextResponse.json({ ok: true });
+}
+```
+
+### 3. Webhook Handler (Alternative - Idempotent)
+
+For external providers that send their own job IDs:
+
+```typescript
+// app/api/webhook/provider/route.ts
+import { ProcessJobService } from "@/lib/services/ProcessJobService";
+
+export async function POST(req: NextRequest) {
+  const body = await req.json();
+
+  // Handle webhook using external job ID (idempotent)
+  const result = await ProcessJobService.handleWebhook({
+    externalJobId: body.job_id,
+    provider: "provider-name",
+    status: body.status === "complete" ? "completed" : "failed",
+    data: body.result,
+    error: body.error_message,
+    errorCode: body.error_code,
+    payload: body, // Store raw payload for debugging
+  });
+
+  if (result.alreadyProcessed) {
+    // Webhook was already processed (idempotent)
+    return NextResponse.json({ ok: true, duplicate: true });
+  }
+
+  return NextResponse.json({ ok: true, jobId: result.jobId });
 }
 ```
 
@@ -500,24 +596,27 @@ For refunds, the `related_transaction_ref` links back to the original deduction,
 │   │   ├── credits/
 │   │   │   ├── balance/route.ts      # GET balance
 │   │   │   └── transactions/route.ts # GET history
+│   │   ├── process/
+│   │   │   └── [processId]/route.ts  # GET job status
 │   │   └── me/route.ts               # GET user data with credits
-│   ├── controllers/
-│   │   ├── processRequest.ts         # generateUniqueId()
-│   │   └── updateProcessData.ts      # updateProcessData() + refund
 │   └── models/
 │       ├── CreditLedger/
 │       │   └── credit-ledger.model.ts
-│       ├── processRequest/
-│       │   └── processRequestmodel.ts
+│       ├── ProcessJob/
+│       │   └── process-job.model.ts  # Job tracking model
 │       └── User/
 │           └── user.model.ts
 ├── hooks/
 │   ├── queries/
-│   │   └── use-credits.ts            # TanStack Query hooks
+│   │   ├── use-credits.ts            # Credit hooks
+│   │   └── use-process.ts            # Job status hooks
 │   └── use-user.ts                   # Main user hook
 ├── lib/
 │   ├── services/
-│   │   ├── CreditService.ts          # Credit operations
+│   │   ├── CreditService/
+│   │   │   └── index.ts              # Credit operations
+│   │   ├── ProcessJobService/
+│   │   │   └── index.ts              # Job operations (SINGLE source of truth)
 │   │   └── index.ts                  # Service exports
 │   └── types/
 │       └── process.ts                # Process types

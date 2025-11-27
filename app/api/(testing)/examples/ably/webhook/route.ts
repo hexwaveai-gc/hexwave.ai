@@ -1,5 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
-import { updateProcessData } from "@/app/controllers/updateProcessData";
+import { NextRequest } from "next/server";
+import { ProcessJobService } from "@/lib/services/ProcessJobService";
+import { ApiResponse } from "@/utils/api-response/response";
+import { logError, logInfo } from "@/lib/logger";
 
 /**
  * POST /api/examples/ably/webhook
@@ -11,25 +13,25 @@ import { updateProcessData } from "@/app/controllers/updateProcessData";
  * In production, this would be the actual webhook endpoint
  * that external APIs call when they finish processing.
  *
- * The updateProcessData function:
+ * ProcessJobService handles:
  * 1. Updates MongoDB with the result
  * 2. Publishes to Ably channel for real-time notification
+ * 3. Automatic credit refund on failure
  */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { processId, success = true, delay = 0 } = body;
+    const { jobId, success = true, delay = 0 } = body;
 
-    // Get processId from query params (as external webhooks typically do)
+    // Get jobId from query params (as external webhooks typically do)
     // or from body (for our demo purposes)
-    const finalProcessId =
-      req.nextUrl.searchParams.get("processId") || processId;
+    const finalJobId =
+      req.nextUrl.searchParams.get("jobId") || 
+      req.nextUrl.searchParams.get("processId") || // Backwards compat
+      jobId;
 
-    if (!finalProcessId) {
-      return NextResponse.json(
-        { error: "Process ID is required" },
-        { status: 400 }
-      );
+    if (!finalJobId) {
+      return ApiResponse.badRequest("Job ID is required");
     }
 
     // Simulate processing delay if specified
@@ -39,52 +41,68 @@ export async function POST(req: NextRequest) {
 
     if (success) {
       // Simulate successful completion with demo data
-      await updateProcessData(
-        finalProcessId,
-        {
-          generations: [
-            "https://picsum.photos/seed/demo1/512/512",
-            "https://picsum.photos/seed/demo2/512/512",
-            "https://picsum.photos/seed/demo3/512/512",
-          ],
-          metadata: {
-            processingTime: `${(Math.random() * 5 + 1).toFixed(2)}s`,
-            model: "demo-model-v1",
-            completedAt: new Date().toISOString(),
-          },
+      const result = await ProcessJobService.completeJob(finalJobId, {
+        generations: [
+          "https://picsum.photos/seed/demo1/512/512",
+          "https://picsum.photos/seed/demo2/512/512",
+          "https://picsum.photos/seed/demo3/512/512",
+        ],
+        metadata: {
+          processingTime: `${(Math.random() * 5 + 1).toFixed(2)}s`,
+          model: "demo-model-v1",
+          completedAt: new Date().toISOString(),
         },
-        "completed"
-      );
+      }, "webhook");
 
-      return NextResponse.json({
+      if (!result.success) {
+        return ApiResponse.error(
+          "UPDATE_FAILED",
+          result.error || "Failed to complete job",
+          500
+        );
+      }
+
+      logInfo("[Demo Webhook] Job completed successfully", { jobId: finalJobId });
+
+      return ApiResponse.ok({
         ok: true,
-        message: "Process completed successfully",
-        processId: finalProcessId,
+        message: "Job completed successfully",
+        jobId: finalJobId,
       });
     } else {
-      // Simulate failure
-      await updateProcessData(
-        finalProcessId,
-        {
-          error: "Simulated processing failure - external API returned an error",
-          failedAt: new Date().toISOString(),
-        },
-        "failed"
+      // Simulate failure - credits will be automatically refunded
+      const result = await ProcessJobService.failJob(
+        finalJobId,
+        "Simulated processing failure - external API returned an error",
+        "EXTERNAL_API_ERROR",
+        "webhook"
       );
 
-      return NextResponse.json({
+      if (!result.success) {
+        return ApiResponse.error(
+          "UPDATE_FAILED",
+          result.error || "Failed to update job",
+          500
+        );
+      }
+
+      logInfo("[Demo Webhook] Job failed (simulated)", { 
+        jobId: finalJobId,
+        refunded: result.refunded,
+        refundAmount: result.refundAmount,
+      });
+
+      return ApiResponse.ok({
         ok: true,
-        message: "Process failed (simulated)",
-        processId: finalProcessId,
+        message: "Job failed (simulated)",
+        jobId: finalJobId,
+        refunded: result.refunded,
+        refundAmount: result.refundAmount,
       });
     }
   } catch (error) {
-    console.error("[Demo Webhook] Error processing webhook:", error);
-
-    return NextResponse.json(
-      { error: "Failed to process webhook" },
-      { status: 500 }
-    );
+    logError("[Demo Webhook] Error processing webhook", error);
+    return ApiResponse.serverError("Failed to process webhook");
   }
 }
 

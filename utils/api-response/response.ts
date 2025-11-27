@@ -11,6 +11,7 @@ import { logError } from "@/lib/logger";
 export const STATUS = {
   OK: 200,
   CREATED: 201,
+  ACCEPTED: 202, // For async operations (job started, processing)
   BAD_REQUEST: 400,
   UNAUTHORIZED: 401,
   FORBIDDEN: 403,
@@ -175,6 +176,25 @@ export class ApiResponse {
   }
 
   /**
+   * Alias for ok() - Returns a 200 OK success response.
+   * Use for successful GET, PUT, PATCH, DELETE operations.
+   * 
+   * @template T - Type of data being returned
+   * @param {T} [data] - Response data
+   * @param {string} [message] - Optional success message
+   * @param {Record<string, any>} [meta] - Optional metadata
+   * @returns {NextResponse<SuccessResponse<T>>}
+   * 
+   * @example
+   * ```typescript
+   * return ApiResponse.success({ user }, "User fetched successfully");
+   * ```
+   */
+  static success<T>(data?: T, message?: string, meta?: Record<string, any>) {
+    return this.ok(data, message, meta);
+  }
+
+  /**
    * Returns a 201 Created success response.
    * Use for successful POST operations that create new resources.
    * 
@@ -186,7 +206,7 @@ export class ApiResponse {
    * @example
    * ```typescript
    * const user = await db.user.create({ data: body });
-   * return Api.created({ user }, "User created successfully");
+   * return ApiResponse.created({ user }, "User created successfully");
    * ```
    */
   static created<T>(data?: T, message?: string) {
@@ -197,6 +217,37 @@ export class ApiResponse {
         ...(message && { message }),
       } as SuccessResponse<T>,
       { status: STATUS.CREATED }
+    );
+  }
+
+  /**
+   * Returns a 202 Accepted response for async operations.
+   * Use when a job/process has been accepted and will be processed asynchronously.
+   * The client should poll or listen for real-time updates via Ably.
+   * 
+   * @template T - Type of response data (typically contains jobId)
+   * @param {T} data - Response data (should include jobId, status, etc.)
+   * @param {string} [message] - Optional message
+   * @returns {NextResponse<SuccessResponse<T>>}
+   * 
+   * @example
+   * ```typescript
+   * const result = await ProcessJobService.createJob({ ... });
+   * return ApiResponse.processing({
+   *   jobId: result.jobId,
+   *   status: "pending",
+   *   message: "Job queued for processing",
+   * });
+   * ```
+   */
+  static processing<T>(data: T, message?: string) {
+    return NextResponse.json(
+      {
+        success: true,
+        data,
+        ...(message && { message }),
+      } as SuccessResponse<T>,
+      { status: STATUS.ACCEPTED }
     );
   }
 
@@ -279,6 +330,29 @@ export class ApiResponse {
   }
 
   /**
+   * Returns a 403 Forbidden error.
+   * Use when user is authenticated but lacks permission.
+   * 
+   * @param {string} [message="Access denied"] - Custom error message
+   * @param {any} [details] - Optional details
+   * @returns {NextResponse<ErrorResponse>}
+   * 
+   * @example
+   * ```typescript
+   * if (user.role !== "admin") {
+   *   return ApiResponse.forbidden("Admin access required");
+   * }
+   * 
+   * if (resource.userId !== userId) {
+   *   return ApiResponse.forbidden("You don't own this resource");
+   * }
+   * ```
+   */
+  static forbidden(message = "Access denied", details?: any) {
+    return this.error("FORBIDDEN", message, STATUS.FORBIDDEN, details);
+  }
+
+  /**
    * Returns a 403 Forbidden error for insufficient credits.
    * **ONLY use this for credit-related errors.**
    * 
@@ -291,11 +365,11 @@ export class ApiResponse {
    * ```typescript
    * const cost = 100;
    * if (user.credits < cost) {
-   *   return Api.insufficientCredits(cost, user.credits);
+   *   return ApiResponse.insufficientCredits(cost, user.credits);
    * }
    * 
    * // With custom message
-   * return Api.insufficientCredits(
+   * return ApiResponse.insufficientCredits(
    *   100,
    *   50,
    *   "Not enough credits to generate video"

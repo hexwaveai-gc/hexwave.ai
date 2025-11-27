@@ -1,0 +1,542 @@
+# API Development Standards
+
+This rule defines mandatory patterns for implementing API endpoints in the Hexwave.ai application.
+
+---
+
+## Quick Reference
+
+```typescript
+// Standard authenticated route
+import { withAuth, type AuthContext } from "@/lib/api/auth-middleware";
+import ApiResponse from "@/utils/api-response/response";
+import { logInfo, logError } from "@/lib/logger";
+
+export const GET = withAuth(
+  async (req: NextRequest, authContext: AuthContext) => {
+    const { userId, user, credits, planTier, traceId } = authContext;
+    
+    try {
+      // Your logic here
+      return ApiResponse.success({ data }, "Success message");
+    } catch (error) {
+      logError("Operation failed", error);
+      return ApiResponse.serverError();
+    }
+  },
+  "authenticated" // or "authenticated_free_tier", "generation", "premium"
+);
+```
+
+---
+
+## 1. Authentication Middleware
+
+### Available Presets
+
+| Preset | Use Case | Auth | Rate Limit | Credits |
+|--------|----------|------|------------|---------|
+| `public` | Public endpoints | ❌ | Public tier | ❌ |
+| `authenticated` | Standard API routes | ✅ | API tier | ❌ |
+| `authenticated_free_tier` | Routes needing stricter free tier limits | ✅ | API/Free tier | ❌ |
+| `generation` | AI generation endpoints | ✅ | Generation tier | ✅ |
+| `premium` | Paid-only features | ✅ | API tier | ❌ |
+| `admin` | Enterprise/admin features | ✅ | API tier | ❌ |
+
+### Wrapper Functions
+
+```typescript
+// For standard routes
+import { withAuth } from "@/lib/api/auth-middleware";
+
+export const GET = withAuth(handler, "authenticated");
+export const POST = withAuth(handler, "authenticated_free_tier");
+
+// For AI generation routes (with credit requirements)
+import { withGenerationAuth } from "@/lib/api/auth-middleware";
+import { CREDIT_COSTS } from "@/constants/limits";
+
+export const POST = withGenerationAuth(
+  handler,
+  CREDIT_COSTS.IMAGE_GENERATION.STANDARD, // credits required
+  { category: "image", toolId: "flux-pro" } // free tier tracking
+);
+```
+
+### AuthContext Properties
+
+```typescript
+interface AuthContext {
+  userId: string;              // Clerk user ID
+  user: IUser | null;          // User document from MongoDB
+  credits: number;             // Current credit balance
+  planTier: PlanTier;          // "free" | "basic" | "pro" | "enterprise"
+  isFreeTier: boolean;         // Is user on free tier?
+  isActiveSubscription: boolean;
+  traceId: string;             // Request trace ID for logging
+  trialExpired?: boolean;      // For free tier
+  trialDaysRemaining?: number; // Days left in trial
+}
+```
+
+---
+
+## 2. ApiResponse Usage
+
+### Success Responses
+
+```typescript
+import ApiResponse from "@/utils/api-response/response";
+
+// 200 OK - Standard success
+return ApiResponse.ok({ user }, "User fetched");
+return ApiResponse.success({ data }); // Alias for ok()
+
+// 201 Created - New resource created
+return ApiResponse.created({ jobId }, "Job created");
+
+// 202 Accepted - Async operation started
+return ApiResponse.processing({
+  jobId: result.jobId,
+  status: "pending",
+}, "Job queued for processing");
+```
+
+### Error Responses
+
+```typescript
+// 400 Bad Request - Invalid input
+return ApiResponse.badRequest("Invalid email format");
+return ApiResponse.badRequest("Validation failed", { field: "email" });
+
+// 401 Unauthorized - Not authenticated
+return ApiResponse.unauthorized();
+return ApiResponse.unauthorized("Session expired");
+
+// 403 Forbidden - No permission
+return ApiResponse.forbidden("Admin access required");
+return ApiResponse.insufficientCredits(100, 50); // Credits specific
+
+// 404 Not Found - Resource doesn't exist
+return ApiResponse.notFound("User not found");
+
+// 422 Unprocessable - Validation error
+return ApiResponse.invalid("Age must be 18+", "age");
+
+// 429 Rate Limited
+return ApiResponse.rateLimit(60); // Retry after 60s
+
+// 500 Server Error
+return ApiResponse.serverError();
+return ApiResponse.serverError("External service unavailable");
+```
+
+---
+
+## 3. Logging
+
+### Import and Usage
+
+```typescript
+import { logInfo, logError, logWarn, logCredits, logGeneration } from "@/lib/logger";
+
+// Context is automatically included (traceId, userId, path, etc.)
+logInfo("User profile updated", { field: "avatar" });
+logError("Database connection failed", error, { query: "findUser" });
+logWarn("Deprecated API version used", { version: "v1" });
+
+// Credit operations
+logCredits("deduct", amount, { jobId, toolId });
+logCredits("refund", amount, { jobId, reason: "job_failed" });
+
+// Generation operations
+logGeneration("started", { tool: "flux-pro", category: "image" });
+logGeneration("completed", { tool: "flux-pro", duration: 5000 });
+logGeneration("failed", { tool: "flux-pro", error: "Provider timeout" });
+```
+
+---
+
+## 4. ProcessJobService (Async Operations)
+
+### Creating a Job
+
+```typescript
+import { ProcessJobService } from "@/lib/services/ProcessJobService";
+
+// Create job with automatic credit deduction
+const result = await ProcessJobService.createJob({
+  userId,
+  credits: 10,
+  category: "image", // "image" | "video" | "audio" | "avatar"
+  toolId: "flux-pro",
+  toolName: "FLUX Pro",
+  params: { prompt, width, height },
+  idempotencyKey: `user_${userId}_${Date.now()}`, // Optional
+});
+
+if (!result.success) {
+  if (result.errorCode === "INSUFFICIENT_CREDITS") {
+    return ApiResponse.insufficientCredits(10, result.availableCredits);
+  }
+  return ApiResponse.serverError(result.error);
+}
+
+// Return 202 for async processing
+return ApiResponse.processing({
+  jobId: result.jobId,
+  status: "pending",
+});
+```
+
+### Updating Job Status
+
+```typescript
+// Mark as processing
+await ProcessJobService.startProcessing(jobId, externalJobId);
+
+// Complete successfully
+await ProcessJobService.completeJob(jobId, {
+  images: ["https://..."],
+  metadata: { model: "flux-pro" },
+}, "webhook");
+
+// Fail (auto-refunds credits)
+await ProcessJobService.failJob(
+  jobId,
+  "Provider timeout",
+  "PROVIDER_TIMEOUT",
+  "webhook"
+);
+
+// Cancel (auto-refunds credits)
+await ProcessJobService.cancelJob(jobId, "User cancelled");
+```
+
+### Handling Webhooks
+
+```typescript
+// For external provider webhooks
+const result = await ProcessJobService.handleWebhook({
+  externalJobId: body.job_id,
+  provider: "replicate",
+  status: body.status === "succeeded" ? "completed" : "failed",
+  data: body.output,
+  error: body.error,
+  payload: body,
+});
+
+if (result.alreadyProcessed) {
+  return ApiResponse.ok({ duplicate: true });
+}
+
+return ApiResponse.ok({ jobId: result.jobId });
+```
+
+---
+
+## 5. Request Validation
+
+```typescript
+import { validateBody, validateQuery } from "@/utils/api-response/response";
+import { z } from "zod";
+
+// Body validation
+const createJobSchema = z.object({
+  prompt: z.string().min(1).max(1000),
+  model: z.enum(["flux-pro", "sdxl", "dalle3"]),
+  width: z.number().int().min(256).max(2048).default(1024),
+  height: z.number().int().min(256).max(2048).default(1024),
+});
+
+export const POST = withAuth(async (req, authContext) => {
+  try {
+    const body = await validateBody(req, createJobSchema);
+    // body is typed: { prompt: string; model: ...; width: number; height: number }
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return ApiResponse.badRequest(error.errors[0].message);
+    }
+    return ApiResponse.badRequest("Invalid request body");
+  }
+}, "authenticated");
+
+// Query validation
+const querySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  status: z.enum(["pending", "completed", "failed"]).optional(),
+});
+
+export const GET = withAuth(async (req, authContext) => {
+  const query = validateQuery(req, querySchema);
+  // query is typed: { page: number; limit: number; status?: ... }
+}, "authenticated");
+```
+
+---
+
+## 6. Complete Route Examples
+
+### Standard CRUD Route
+
+```typescript
+// app/api/profiles/route.ts
+import { NextRequest } from "next/server";
+import { withAuth, type AuthContext } from "@/lib/api/auth-middleware";
+import ApiResponse from "@/utils/api-response/response";
+import { logInfo, logError } from "@/lib/logger";
+import { z } from "zod";
+
+const updateProfileSchema = z.object({
+  displayName: z.string().min(2).max(50).optional(),
+  bio: z.string().max(500).optional(),
+});
+
+export const GET = withAuth(
+  async (req: NextRequest, { userId }: AuthContext) => {
+    try {
+      const profile = await ProfileService.getByUserId(userId);
+      
+      if (!profile) {
+        return ApiResponse.notFound("Profile not found");
+      }
+      
+      return ApiResponse.success({ profile });
+    } catch (error) {
+      logError("Failed to fetch profile", error);
+      return ApiResponse.serverError();
+    }
+  },
+  "authenticated_free_tier"
+);
+
+export const PUT = withAuth(
+  async (req: NextRequest, { userId }: AuthContext) => {
+    try {
+      const body = await validateBody(req, updateProfileSchema);
+      
+      const profile = await ProfileService.update(userId, body);
+      
+      logInfo("Profile updated", { fields: Object.keys(body) });
+      
+      return ApiResponse.success({ profile }, "Profile updated");
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return ApiResponse.badRequest(error.errors[0].message);
+      }
+      logError("Failed to update profile", error);
+      return ApiResponse.serverError();
+    }
+  },
+  "authenticated"
+);
+```
+
+### AI Generation Route
+
+```typescript
+// app/api/generate/image/route.ts
+import { NextRequest } from "next/server";
+import { withGenerationAuth, type AuthContext } from "@/lib/api/auth-middleware";
+import { ProcessJobService } from "@/lib/services/ProcessJobService";
+import ApiResponse from "@/utils/api-response/response";
+import { logGeneration, logError } from "@/lib/logger";
+import { CREDIT_COSTS } from "@/constants/limits";
+import { z } from "zod";
+
+const generateSchema = z.object({
+  prompt: z.string().min(1).max(1000),
+  model: z.enum(["flux-pro", "flux-schnell", "sdxl"]),
+  width: z.number().int().min(512).max(2048).default(1024),
+  height: z.number().int().min(512).max(2048).default(1024),
+  numImages: z.number().int().min(1).max(4).default(1),
+});
+
+export const POST = withGenerationAuth(
+  async (req: NextRequest, authContext: AuthContext) => {
+    const { userId, credits, isFreeTier, traceId } = authContext;
+    
+    try {
+      const body = await validateBody(req, generateSchema);
+      
+      logGeneration("started", {
+        tool: body.model,
+        category: "image",
+        isFreeTier,
+        params: { width: body.width, height: body.height },
+      });
+      
+      // Create job with credit deduction
+      const result = await ProcessJobService.createJob({
+        userId,
+        credits: CREDIT_COSTS.IMAGE_GENERATION.STANDARD,
+        category: "image",
+        toolId: body.model,
+        params: body,
+      });
+      
+      if (!result.success) {
+        logGeneration("failed", {
+          tool: body.model,
+          error: result.error,
+        });
+        
+        if (result.errorCode === "INSUFFICIENT_CREDITS") {
+          return ApiResponse.insufficientCredits(
+            CREDIT_COSTS.IMAGE_GENERATION.STANDARD,
+            result.availableCredits
+          );
+        }
+        return ApiResponse.serverError(result.error);
+      }
+      
+      // Call external API with webhook
+      await ExternalImageAPI.generate({
+        ...body,
+        webhookUrl: `${process.env.APP_URL}/api/webhooks/image?jobId=${result.jobId}`,
+      });
+      
+      // Return 202 Accepted for async processing
+      return ApiResponse.processing({
+        jobId: result.jobId,
+        status: "pending",
+        estimatedTime: "10-30 seconds",
+      });
+      
+    } catch (error) {
+      logError("Image generation failed", error);
+      
+      if (error instanceof z.ZodError) {
+        return ApiResponse.badRequest(error.errors[0].message);
+      }
+      
+      return ApiResponse.serverError();
+    }
+  },
+  CREDIT_COSTS.IMAGE_GENERATION.STANDARD,
+  { category: "image", toolId: "flux-pro" }
+);
+```
+
+### Webhook Handler Route
+
+```typescript
+// app/api/webhooks/image/route.ts
+import { NextRequest } from "next/server";
+import { ProcessJobService } from "@/lib/services/ProcessJobService";
+import ApiResponse from "@/utils/api-response/response";
+import { logInfo, logError } from "@/lib/logger";
+
+// Webhooks bypass auth middleware - they use their own verification
+export async function POST(req: NextRequest) {
+  try {
+    const jobId = req.nextUrl.searchParams.get("jobId");
+    const body = await req.json();
+    
+    // Verify webhook signature if provider supports it
+    // verifyWebhookSignature(req, body);
+    
+    if (!jobId) {
+      return ApiResponse.badRequest("Missing jobId");
+    }
+    
+    if (body.status === "succeeded") {
+      const result = await ProcessJobService.completeJob(
+        jobId,
+        { images: body.output },
+        "webhook"
+      );
+      
+      logInfo("Image generation completed via webhook", { jobId });
+      
+      return ApiResponse.ok({ success: true, jobId });
+    } else {
+      // failJob automatically refunds credits
+      const result = await ProcessJobService.failJob(
+        jobId,
+        body.error || "Generation failed",
+        body.error_code || "PROVIDER_ERROR",
+        "webhook"
+      );
+      
+      logInfo("Image generation failed via webhook", {
+        jobId,
+        error: body.error,
+        refunded: result.refunded,
+      });
+      
+      return ApiResponse.ok({
+        success: true,
+        jobId,
+        refunded: result.refunded,
+      });
+    }
+  } catch (error) {
+    logError("Webhook processing failed", error);
+    return ApiResponse.serverError();
+  }
+}
+```
+
+---
+
+## 7. Rate Limiting
+
+Rate limits are automatically applied by the middleware based on the preset:
+
+| Preset | Paid Users | Free Users |
+|--------|------------|------------|
+| `public` | 60 req/min | 60 req/min |
+| `authenticated` | 100 req/min | 100 req/min |
+| `authenticated_free_tier` | 100 req/min | 20 req/min |
+| `generation` | 20 req/min | 3 req/min |
+
+Free tier users also have daily generation limits:
+- Images: 5/day
+- Videos: 1/day  
+- Audio: 1/day
+
+---
+
+## 8. Anti-Patterns to Avoid
+
+```typescript
+// ❌ DON'T: Use console.log
+console.log("User created");
+// ✅ DO: Use logger
+logInfo("User created", { userId });
+
+// ❌ DON'T: Return raw NextResponse.json
+return NextResponse.json({ data }, { status: 200 });
+// ✅ DO: Use ApiResponse
+return ApiResponse.success({ data });
+
+// ❌ DON'T: Catch errors without logging
+try { ... } catch (e) { return ApiResponse.serverError(); }
+// ✅ DO: Log errors
+try { ... } catch (e) { logError("Operation failed", e); return ApiResponse.serverError(); }
+
+// ❌ DON'T: Manually check auth in routes
+const { userId } = await auth();
+if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+// ✅ DO: Use withAuth middleware
+export const GET = withAuth(handler, "authenticated");
+
+// ❌ DON'T: Deduct credits manually
+await User.updateOne({ _id: userId }, { $inc: { credits: -10 } });
+// ✅ DO: Use ProcessJobService
+await ProcessJobService.createJob({ userId, credits: 10, ... });
+```
+
+---
+
+## Checklist for New API Routes
+
+- [ ] Use appropriate middleware preset (`withAuth`, `withGenerationAuth`)
+- [ ] Use `ApiResponse` for all responses
+- [ ] Add request validation with Zod schemas
+- [ ] Log operations with `logInfo`, `logError`, `logWarn`
+- [ ] Use `ProcessJobService` for async/credit-based operations
+- [ ] Handle all error cases with appropriate status codes
+- [ ] Add route to documentation if public-facing

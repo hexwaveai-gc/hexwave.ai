@@ -20,6 +20,7 @@ import CreditLedger, {
 import { dbConnect } from "@/lib/db";
 import { getCreditsForPrice, getPlanNameFromPriceId } from "@/constants/paddle";
 import { getPaddleClient } from "@/lib/paddle/client";
+import { logInfo, logError, logCredits } from "@/lib/logger";
 
 // Result type for credit operations
 export interface CreditOperationResult {
@@ -133,7 +134,7 @@ class CreditServiceClass {
       if (idempotencyKey) {
         const existing = await CreditLedger.findOne({ idempotency_key: idempotencyKey });
         if (existing) {
-          console.log(`[CreditService] Duplicate transaction detected: ${idempotencyKey}`);
+          logInfo("Duplicate transaction detected", { idempotencyKey, userId });
           return {
             success: true,
             transaction_ref: existing.transaction_ref,
@@ -151,7 +152,7 @@ class CreditServiceClass {
           type: { $in: ["subscription_credit", "subscription_renewal", "addon_purchase"] }
         });
         if (existing) {
-          console.log(`[CreditService] Transaction already processed: ${transactionId}`);
+          logInfo("Transaction already processed", { transactionId, userId });
           return {
             success: true,
             transaction_ref: existing.transaction_ref,
@@ -210,7 +211,14 @@ class CreditServiceClass {
         },
       });
 
-      console.log(`[CreditService] Added ${amount} credits to user ${userId}. Balance: ${balanceBefore} -> ${balanceAfter}`);
+      logCredits("add", amount, {
+        userId,
+        type,
+        source,
+        transactionRef,
+        balanceBefore,
+        balanceAfter,
+      });
 
       return {
         success: true,
@@ -221,7 +229,7 @@ class CreditServiceClass {
       };
 
     } catch (error) {
-      console.error("[CreditService] Error adding credits:", error);
+      logError("Error adding credits", error, { userId, amount, type });
       return {
         success: false,
         balance_before: 0,
@@ -334,7 +342,13 @@ class CreditServiceClass {
         },
       });
 
-      console.log(`[CreditService] Deducted ${amount} credits from user ${userId}. Balance: ${balanceBefore} -> ${balanceAfter}`);
+      logCredits("deduct", amount, {
+        userId,
+        transactionRef,
+        balanceBefore,
+        balanceAfter,
+        operationType: usageDetails?.operation_type,
+      });
 
       return {
         success: true,
@@ -345,7 +359,7 @@ class CreditServiceClass {
       };
 
     } catch (error) {
-      console.error("[CreditService] Error deducting credits:", error);
+      logError("Error deducting credits", error, { userId, amount });
       return {
         success: false,
         balance_before: 0,
@@ -428,7 +442,13 @@ class CreditServiceClass {
         },
       });
 
-      console.log(`[CreditService] Refunded ${amount} credits to user ${userId}. Balance: ${balanceBefore} -> ${balanceAfter}`);
+      logCredits("refund", amount, {
+        userId,
+        transactionRef,
+        balanceBefore,
+        balanceAfter,
+        relatedTransactionRef,
+      });
 
       return {
         success: true,
@@ -439,7 +459,7 @@ class CreditServiceClass {
       };
 
     } catch (error) {
-      console.error("[CreditService] Error refunding credits:", error);
+      logError("Error refunding credits", error, { userId, amount });
       return {
         success: false,
         balance_before: 0,
@@ -629,7 +649,7 @@ class CreditServiceClass {
       };
 
     } catch (error) {
-      console.error("[CreditService] Error syncing from Paddle:", error);
+      logError("Error syncing from Paddle", error, { userId });
       return { synced: false, creditsAdded: 0, transactions: [] };
     }
   }
@@ -796,7 +816,7 @@ class CreditServiceClass {
       });
 
       if (!result.success) {
-        console.error(`[CreditService] Failed to add monthly credits for user ${userId}:`, result.error);
+        logError("Failed to add monthly credits", new Error(result.error || "Unknown"), { userId });
         return { processed: false, creditsAdded: 0 };
       }
 
@@ -811,7 +831,11 @@ class CreditServiceClass {
         },
       });
 
-      console.log(`[CreditService] Added ${monthlyCredits} monthly credits for annual subscriber ${userId}. Next: ${new Date(newNextCreditDate).toISOString()}`);
+      logInfo("Added monthly credits for annual subscriber", {
+        userId,
+        credits: monthlyCredits,
+        nextCreditDate: new Date(newNextCreditDate).toISOString(),
+      });
 
       return {
         processed: true,
@@ -820,7 +844,7 @@ class CreditServiceClass {
       };
 
     } catch (error) {
-      console.error("[CreditService] Error processing monthly credits:", error);
+      logError("Error processing monthly credits", error, { userId });
       return { processed: false, creditsAdded: 0 };
     }
   }
