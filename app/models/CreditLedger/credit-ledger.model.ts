@@ -193,8 +193,7 @@ creditLedgerSchema.index({ user_id: 1, type: 1, createdAt: -1 });
 // User transactions by status
 creditLedgerSchema.index({ user_id: 1, status: 1, createdAt: -1 });
 
-// Transaction lookup
-creditLedgerSchema.index({ transaction_id: 1 }, { sparse: true });
+// Note: transaction_id index already defined in schema field with sparse: true
 
 // For reconciliation queries
 creditLedgerSchema.index({ 
