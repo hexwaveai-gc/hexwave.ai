@@ -4,7 +4,7 @@
  * Returns paginated credit ledger entries with filtering and sorting.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { dbConnect } from "@/lib/db";
 import CreditLedger, { 
@@ -12,6 +12,8 @@ import CreditLedger, {
   type CreditTransactionStatus,
   type CreditSource 
 } from "@/app/models/CreditLedger/credit-ledger.model";
+import { ApiResponse } from "@/utils/api-response/response";
+import { logError } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -91,10 +93,7 @@ export async function GET(req: NextRequest) {
   try {
     const { userId } = await auth();
     if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return ApiResponse.unauthorized();
     }
 
     await dbConnect();
@@ -252,29 +251,23 @@ export async function GET(req: NextRequest) {
       },
     };
 
-    return NextResponse.json(response);
+    return ApiResponse.ok(response);
 
   } catch (error) {
-    console.error("[Usage] Error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    logError("Usage GET error", error);
+    return ApiResponse.serverError();
   }
 }
 
 /**
- * GET /api/usage/summary
+ * POST /api/usage/summary
  * Get usage summary for dashboard
  */
 export async function POST(req: NextRequest) {
   try {
     const { userId } = await auth();
     if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return ApiResponse.unauthorized();
     }
 
     await dbConnect();
@@ -352,7 +345,7 @@ export async function POST(req: NextRequest) {
       },
     ]);
 
-    return NextResponse.json({
+    return ApiResponse.ok({
       daily_usage: dailyUsage.map((d) => ({
         date: d._id,
         credited: d.credited,
@@ -372,11 +365,8 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error("[Usage Summary] Error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    logError("Usage POST error", error);
+    return ApiResponse.serverError();
   }
 }
 

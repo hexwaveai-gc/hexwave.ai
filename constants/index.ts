@@ -34,3 +34,11 @@ export {
   type Plan,
 } from "./plan";
 
+// Tools constants (AI tools catalog data)
+export * from "./tools";
+
+// Templates constants (AI templates catalog data)
+export * from "./templates";
+
+// Audio constants (voices and audio generation)
+export * from "./audio";

@@ -1,5 +1,6 @@
 import { LoopsClient } from "loops";
 import { ApiResponse } from "@/utils/api-response/response";
+import { logError, logWarn } from "@/lib/logger";
 
 // Lazy initialization - only create client when API key is available
 const getLoopsClient = () => {
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
     try {
       const loops = getLoopsClient();
       if (!loops) {
-        console.warn("LOOPS_API_KEY not configured, skipping Loops integration");
+        logWarn("LOOPS_API_KEY not configured, skipping Loops integration");
       } else {
         // Create or update contact in Loops
         // Loops API expects email and optional properties
@@ -46,9 +47,9 @@ export async function POST(request: Request) {
         //   listIds: ["your-waitlist-list-id"],
         // });
       }
-    } catch (loopsError: any) {
+    } catch (loopsError: unknown) {
       // Log error but don't fail the request if Loops fails
-      console.error("Loops API error:", loopsError);
+      logError("Loops API error", loopsError);
       // Continue execution - we still want to return success to the user
     }
 
@@ -56,8 +57,8 @@ export async function POST(request: Request) {
       message: "Successfully joined waitlist"
     });
   } catch (error) {
-    console.error("Waitlist API error:", error);
-    return ApiResponse.serverError("Internal server error");
+    logError("Waitlist API error", error);
+    return ApiResponse.serverError();
   }
 }
 

@@ -21,3 +21,16 @@ export { useUsage, useUsageSummary } from "./use-usage";
 
 // Profile hooks
 export { useProfile, useUpdateProfile, useCheckUsername } from "./use-profile";
+
+// Voice hooks
+export {
+  useVoices,
+  useVoicesByCategory,
+  useSearchVoices,
+  useVoice,
+  usePrefetchVoices,
+  useInvalidateVoices,
+  selectVoicesByCategory,
+  selectVoicesByGender,
+  selectUniqueAccents,
+} from "./use-voices";

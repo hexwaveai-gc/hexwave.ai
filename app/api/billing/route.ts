@@ -4,7 +4,7 @@
  * Returns subscription details, invoices, and manages subscription actions.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { dbConnect } from "@/lib/db";
 import User from "@/app/models/User/user.model";
@@ -13,8 +13,9 @@ import {
   getPlanNameFromPriceId, 
   getBillingCycle,
   PLAN_CREDITS,
-  PADDLE_PRICES,
 } from "@/constants/paddle";
+import { ApiResponse } from "@/utils/api-response/response";
+import { logError } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,24 +55,18 @@ interface BillingResponse {
  * GET /api/billing
  * Get billing details including subscription and transactions
  */
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const { userId } = await auth();
     if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return ApiResponse.unauthorized();
     }
 
     await dbConnect();
 
     const user = await User.findById(userId).lean();
     if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+      return ApiResponse.notFound("User not found");
     }
 
     const response: BillingResponse = {
@@ -81,7 +76,7 @@ export async function GET(req: NextRequest) {
 
     // If no subscription, return empty billing
     if (!user.subscription?.id || !user.customerId) {
-      return NextResponse.json(response);
+      return ApiResponse.ok(response);
     }
 
     const paddle = getPaddleClient();
@@ -116,7 +111,7 @@ export async function GET(req: NextRequest) {
         customer_id: user.customerId,
       };
     } catch (error) {
-      console.error("[Billing] Error fetching Paddle subscription:", error);
+      logError("Error fetching Paddle subscription", error, { userId });
       // Use local data if Paddle fails
       if (user.subscription) {
         response.subscription = {
@@ -164,7 +159,7 @@ export async function GET(req: NextRequest) {
 
       response.transactions = txList.slice(0, 20); // Limit to last 20
     } catch (error) {
-      console.error("[Billing] Error fetching transactions:", error);
+      logError("Error fetching transactions", error, { userId });
     }
 
     // Generate customer portal URL (Paddle Retain/Customer Portal)
@@ -173,14 +168,11 @@ export async function GET(req: NextRequest) {
       response.customer_portal_url = `${baseUrl}/api/billing/portal`;
     }
 
-    return NextResponse.json(response);
+    return ApiResponse.ok(response);
 
   } catch (error) {
-    console.error("[Billing] Error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    logError("Billing API error", error);
+    return ApiResponse.serverError();
   }
 }
 
@@ -192,20 +184,14 @@ export async function POST(req: NextRequest) {
   try {
     const { userId } = await auth();
     if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return ApiResponse.unauthorized();
     }
 
     await dbConnect();
 
     const user = await User.findById(userId);
     if (!user?.subscription?.id) {
-      return NextResponse.json(
-        { error: "No active subscription" },
-        { status: 400 }
-      );
+      return ApiResponse.badRequest("No active subscription");
     }
 
     const body = await req.json();
@@ -225,10 +211,10 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        return NextResponse.json({ 
-          success: true, 
-          message: "Subscription will be canceled at the end of the billing period" 
-        });
+        return ApiResponse.ok(
+          undefined,
+          "Subscription will be canceled at the end of the billing period"
+        );
       }
 
       case "cancel_immediately": {
@@ -243,10 +229,7 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        return NextResponse.json({ 
-          success: true, 
-          message: "Subscription canceled immediately" 
-        });
+        return ApiResponse.ok(undefined, "Subscription canceled immediately");
       }
 
       case "pause": {
@@ -258,10 +241,7 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        return NextResponse.json({ 
-          success: true, 
-          message: "Subscription paused" 
-        });
+        return ApiResponse.ok(undefined, "Subscription paused");
       }
 
       case "resume": {
@@ -275,10 +255,7 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        return NextResponse.json({ 
-          success: true, 
-          message: "Subscription resumed" 
-        });
+        return ApiResponse.ok(undefined, "Subscription resumed");
       }
 
       case "reactivate": {
@@ -293,25 +270,16 @@ export async function POST(req: NextRequest) {
           },
         });
 
-        return NextResponse.json({ 
-          success: true, 
-          message: "Subscription reactivated" 
-        });
+        return ApiResponse.ok(undefined, "Subscription reactivated");
       }
 
       default:
-        return NextResponse.json(
-          { error: "Invalid action" },
-          { status: 400 }
-        );
+        return ApiResponse.badRequest("Invalid action");
     }
 
   } catch (error) {
-    console.error("[Billing] Error:", error);
-    return NextResponse.json(
-      { error: "Failed to process request" },
-      { status: 500 }
-    );
+    logError("Billing POST error", error);
+    return ApiResponse.serverError("Failed to process request");
   }
 }
 

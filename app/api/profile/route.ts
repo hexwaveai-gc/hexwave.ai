@@ -4,10 +4,12 @@
  * Handles profile CRUD operations.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { dbConnect } from "@/lib/db";
 import UserProfile, { type IUserProfile } from "@/app/models/UserProfile/user-profile.model";
+import { ApiResponse } from "@/utils/api-response/response";
+import { logError } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,14 +33,11 @@ export async function GET(req: NextRequest) {
       }).lean();
 
       if (!profile) {
-        return NextResponse.json(
-          { error: "Profile not found" },
-          { status: 404 }
-        );
+        return ApiResponse.notFound("Profile not found");
       }
 
       // Return public profile data (exclude sensitive fields)
-      return NextResponse.json({
+      return ApiResponse.ok({
         username: profile.username,
         display_name: profile.display_name,
         bio: profile.bio,
@@ -53,10 +52,7 @@ export async function GET(req: NextRequest) {
     // Otherwise, get current user's profile
     const { userId } = await auth();
     if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return ApiResponse.unauthorized();
     }
 
     let profile = await UserProfile.findOne({ user_id: userId }).lean();
@@ -65,10 +61,7 @@ export async function GET(req: NextRequest) {
     if (!profile) {
       const clerkUser = await currentUser();
       if (!clerkUser) {
-        return NextResponse.json(
-          { error: "User not found" },
-          { status: 404 }
-        );
+        return ApiResponse.notFound("User not found");
       }
 
       const email = clerkUser.emailAddresses[0]?.emailAddress || "";
@@ -80,12 +73,12 @@ export async function GET(req: NextRequest) {
       );
 
       // Ensure unique username
-      const username = await ensureUniqueUsername(baseUsername);
+      const uniqueUsername = await ensureUniqueUsername(baseUsername);
 
       const newProfile = new UserProfile({
         user_id: userId,
-        username,
-        display_name: clerkUser.fullName || clerkUser.firstName || username,
+        username: uniqueUsername,
+        display_name: clerkUser.fullName || clerkUser.firstName || uniqueUsername,
         email,
         avatar_url: clerkUser.imageUrl,
         bio: "",
@@ -104,14 +97,11 @@ export async function GET(req: NextRequest) {
       profile = newProfile.toObject();
     }
 
-    return NextResponse.json(profile);
+    return ApiResponse.ok(profile);
 
   } catch (error) {
-    console.error("[API/profile] Error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    logError("Profile GET error", error);
+    return ApiResponse.serverError();
   }
 }
 
@@ -123,10 +113,7 @@ export async function PUT(req: NextRequest) {
   try {
     const { userId } = await auth();
     if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return ApiResponse.unauthorized();
     }
 
     await dbConnect();
@@ -152,9 +139,9 @@ export async function PUT(req: NextRequest) {
       
       // Validate username format
       if (!/^[a-z0-9_]{3,30}$/.test(cleanUsername)) {
-        return NextResponse.json(
-          { error: "Username must be 3-30 characters and only contain lowercase letters, numbers, and underscores" },
-          { status: 400 }
+        return ApiResponse.invalid(
+          "Username must be 3-30 characters and only contain lowercase letters, numbers, and underscores",
+          "username"
         );
       }
 
@@ -165,10 +152,7 @@ export async function PUT(req: NextRequest) {
       });
 
       if (existingProfile) {
-        return NextResponse.json(
-          { error: "Username is already taken" },
-          { status: 400 }
-        );
+        return ApiResponse.badRequest("Username is already taken");
       }
 
       updateData.username = cleanUsername;
@@ -220,20 +204,14 @@ export async function PUT(req: NextRequest) {
     ).lean();
 
     if (!updatedProfile) {
-      return NextResponse.json(
-        { error: "Profile not found" },
-        { status: 404 }
-      );
+      return ApiResponse.notFound("Profile not found");
     }
 
-    return NextResponse.json(updatedProfile);
+    return ApiResponse.ok(updatedProfile);
 
   } catch (error) {
-    console.error("[API/profile] Error updating profile:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    logError("Profile PUT error", error);
+    return ApiResponse.serverError();
   }
 }
 
@@ -301,10 +279,7 @@ export async function POST(req: NextRequest) {
   try {
     const { userId } = await auth();
     if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return ApiResponse.unauthorized();
     }
 
     await dbConnect();
@@ -316,7 +291,7 @@ export async function POST(req: NextRequest) {
       const cleanUsername = username?.toLowerCase().trim();
 
       if (!cleanUsername || !/^[a-z0-9_]{3,30}$/.test(cleanUsername)) {
-        return NextResponse.json({
+        return ApiResponse.ok({
           available: false,
           error: "Invalid username format",
         });
@@ -327,23 +302,17 @@ export async function POST(req: NextRequest) {
         user_id: { $ne: userId },
       });
 
-      return NextResponse.json({
+      return ApiResponse.ok({
         available: !existing,
         username: cleanUsername,
       });
     }
 
-    return NextResponse.json(
-      { error: "Invalid action" },
-      { status: 400 }
-    );
+    return ApiResponse.badRequest("Invalid action");
 
   } catch (error) {
-    console.error("[API/profile] Error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    logError("Profile POST error", error);
+    return ApiResponse.serverError();
   }
 }
 

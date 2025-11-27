@@ -54,6 +54,8 @@ export interface CreditPackage {
   bonusCredits: number;
   bonusPercent: number;
   priceId: string;
+  popular?: boolean;
+  bestValue?: boolean;
 }
 
 // ============================================================================
@@ -163,62 +165,47 @@ export const paddlePlans: PaddlePlan[] = [
 
 // ============================================================================
 // CREDIT PACKAGES
+// 4 packages: $10, $20, $50 (+10% bonus), $100 (+20% bonus)
 // ============================================================================
 
 export const creditPackages: CreditPackage[] = [
   {
     id: 1,
-    price: 5,
-    credits: 600,
-    baseCredits: 500,
-    bonusCredits: 100,
-    bonusPercent: 20,
+    price: 10,
+    credits: 1000,
+    baseCredits: 1000,
+    bonusCredits: 0,
+    bonusPercent: 0,
     priceId: PADDLE_PRICES.ADDON_CREDITS,
   },
   {
     id: 2,
-    price: 10,
-    credits: 1200,
-    baseCredits: 1000,
-    bonusCredits: 200,
-    bonusPercent: 20,
+    price: 20,
+    credits: 2000,
+    baseCredits: 2000,
+    bonusCredits: 0,
+    bonusPercent: 0,
     priceId: PADDLE_PRICES.ADDON_CREDITS,
   },
   {
     id: 3,
-    price: 25,
-    credits: 3250,
-    baseCredits: 2500,
-    bonusCredits: 750,
-    bonusPercent: 30,
+    price: 50,
+    credits: 5500,
+    baseCredits: 5000,
+    bonusCredits: 500,
+    bonusPercent: 10,
     priceId: PADDLE_PRICES.ADDON_CREDITS,
+    popular: true,
   },
   {
     id: 4,
-    price: 50,
-    credits: 7000,
-    baseCredits: 5000,
-    bonusCredits: 2000,
-    bonusPercent: 40,
-    priceId: PADDLE_PRICES.ADDON_CREDITS,
-  },
-  {
-    id: 5,
     price: 100,
-    credits: 15000,
+    credits: 12000,
     baseCredits: 10000,
-    bonusCredits: 5000,
-    bonusPercent: 50,
+    bonusCredits: 2000,
+    bonusPercent: 20,
     priceId: PADDLE_PRICES.ADDON_CREDITS,
-  },
-  {
-    id: 6,
-    price: 200,
-    credits: 32000,
-    baseCredits: 20000,
-    bonusCredits: 12000,
-    bonusPercent: 60,
-    priceId: PADDLE_PRICES.ADDON_CREDITS,
+    bestValue: true,
   },
 ];
 

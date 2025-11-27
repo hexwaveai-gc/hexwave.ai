@@ -69,6 +69,24 @@ export const authRateLimiter = createRateLimiter("AUTH");
  */
 export const publicRateLimiter = createRateLimiter("PUBLIC");
 
+/**
+ * Free tier API rate limiter (20 req/min)
+ * Use for API endpoints accessed by free tier users
+ */
+export const freeTierApiRateLimiter = createRateLimiter("FREE_TIER_API");
+
+/**
+ * Free tier rate limiter (10 req/min)
+ * Generic free tier limiter
+ */
+export const freeTierRateLimiter = createRateLimiter("FREE_TIER");
+
+/**
+ * Free tier generation rate limiter (3 req/min)
+ * Use for generation endpoints accessed by free tier users
+ */
+export const freeTierGenerationRateLimiter = createRateLimiter("FREE_TIER_GENERATION");
+
 // =============================================================================
 // Rate Limit Helper Functions
 // =============================================================================
@@ -140,6 +158,12 @@ function getLimiterByType(type: RateLimitType): Ratelimit {
       return authRateLimiter;
     case "PUBLIC":
       return publicRateLimiter;
+    case "FREE_TIER_API":
+      return freeTierApiRateLimiter;
+    case "FREE_TIER":
+      return freeTierRateLimiter;
+    case "FREE_TIER_GENERATION":
+      return freeTierGenerationRateLimiter;
     case "API":
     default:
       return apiRateLimiter;

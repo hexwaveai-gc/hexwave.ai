@@ -4,11 +4,12 @@
  * Generates a URL to update payment method via Paddle checkout overlay.
  */
 
-import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { dbConnect } from "@/lib/db";
 import User from "@/app/models/User/user.model";
 import { getPaddleClient } from "@/lib/paddle/client";
+import { ApiResponse } from "@/utils/api-response/response";
+import { logError } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,20 +22,14 @@ export async function GET() {
   try {
     const { userId } = await auth();
     if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return ApiResponse.unauthorized();
     }
 
     await dbConnect();
 
     const user = await User.findById(userId);
     if (!user?.subscription?.id) {
-      return NextResponse.json(
-        { error: "No active subscription" },
-        { status: 400 }
-      );
+      return ApiResponse.badRequest("No active subscription");
     }
 
     const paddle = getPaddleClient();
@@ -49,16 +44,14 @@ export async function GET() {
       const subData = subscription as any;
 
       if (subData.checkout?.url) {
-        return NextResponse.json({
-          success: true,
+        return ApiResponse.ok({
           url: subData.checkout.url,
           type: "checkout",
         });
       }
 
       // Fallback: Return subscription management info
-      return NextResponse.json({
-        success: true,
+      return ApiResponse.ok({
         subscription_id: user.subscription.id,
         customer_id: user.customerId,
         type: "info",
@@ -66,22 +59,20 @@ export async function GET() {
       });
 
     } catch (error) {
-      console.error("[Portal] Error getting payment method change transaction:", error);
+      logError("Error getting payment method change transaction", error, { userId });
       
       // Return subscription info for manual management
-      return NextResponse.json({
-        success: false,
-        error: "Could not generate portal URL",
-        subscription_id: user.subscription.id,
-      });
+      return ApiResponse.error(
+        "PORTAL_ERROR",
+        "Could not generate portal URL",
+        400,
+        { subscription_id: user.subscription.id }
+      );
     }
 
   } catch (error) {
-    console.error("[Portal] Error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    logError("Portal API error", error);
+    return ApiResponse.serverError();
   }
 }
 

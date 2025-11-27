@@ -3,11 +3,12 @@
  * 
  * Returns user data without sensitive fields.
  * Includes Paddle sync fallback for missing credits.
+ * 
+ * Protected by authMiddleware - handles auth, rate limiting automatically.
  */
 
-import { NextRequest, NextResponse } from "next/server";
-import { auth, currentUser } from "@clerk/nextjs/server";
-import { dbConnect } from "@/lib/db";
+import { NextRequest } from "next/server";
+import { currentUser } from "@clerk/nextjs/server";
 import User, { type IUser } from "@/app/models/User/user.model";
 import { CreditService } from "@/lib/services/CreditService";
 import { getPaddleClient } from "@/lib/paddle/client";
@@ -18,6 +19,9 @@ import {
   getBillingCycle 
 } from "@/constants/paddle";
 import CreditLedger from "@/app/models/CreditLedger/credit-ledger.model";
+import { withAuth, type AuthContext } from "@/lib/api/auth-middleware";
+import { logInfo, logError, logCredits } from "@/lib/logger";
+import { ApiResponse } from "@/utils/api-response/response";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,22 +35,23 @@ export const dynamic = "force-dynamic";
  * - usage summary (optional)
  * 
  * Also performs Paddle sync if needed
+ * 
+ * Protected by withAuth middleware with "authenticated_free_tier" preset:
+ * - Requires authentication
+ * - API rate limiting (100 req/min for paid, 20 req/min for free tier)
+ * - No credit check (read-only)
  */
-export async function GET(req: NextRequest) {
-  try {
-    const { userId } = await auth();
+export const GET = withAuth(
+  async (req: NextRequest, authContext: AuthContext) => {
+    const { userId, user: authUser } = authContext;
+
+    // Get user from database (may need fresh data for sync)
+    let user = await User.findById(userId).lean<IUser>();
     
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+    // If user doesn't exist but auth passed, create them
+    if (!user) {
+      user = authUser;
     }
-
-    await dbConnect();
-
-    // Get user from database
-    let user = await User.findById(userId).lean();
     
     // Get Clerk user for email (needed for Paddle sync)
     const clerkUser = await currentUser();
@@ -69,10 +74,7 @@ export async function GET(req: NextRequest) {
         await newUser.save();
         user = await User.findById(userId).lean();
       } else {
-        return NextResponse.json(
-          { error: "User not found" },
-          { status: 404 }
-        );
+        return ApiResponse.notFound("User not found");
       }
     }
 
@@ -80,7 +82,7 @@ export async function GET(req: NextRequest) {
     const shouldSync = await shouldSyncWithPaddle(userId, user);
     
     if (shouldSync && email) {
-      console.log(`[API/me] Initiating Paddle sync for user ${userId}`);
+      logInfo("Initiating Paddle sync", { userId, operation: "paddle_sync" });
       const syncResult = await syncPaddleData(userId, email, user);
       
       if (syncResult.updated) {
@@ -140,16 +142,10 @@ export async function GET(req: NextRequest) {
       response.usage_summary = usageSummary;
     }
 
-    return NextResponse.json(response);
-
-  } catch (error) {
-    console.error("[API/me] Error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-}
+    return ApiResponse.ok(response);
+  },
+  "authenticated_free_tier" // 100 req/min for paid users, 20 req/min for free tier
+);
 
 /**
  * Check if we should sync with Paddle
@@ -306,11 +302,20 @@ async function syncPaddleData(
 
               if (result.success) {
                 totalCreditsAdded += credits;
-                console.log(`[API/me] Synced ${credits} credits for user ${userId} from transaction ${transactionId}`);
+                logCredits("add", credits, {
+                  userId,
+                  transactionId,
+                  source: "paddle_sync",
+                  operation: "api_me_fallback",
+                });
               }
             }
           } catch (txError) {
-            console.error(`[API/me] Error fetching transaction ${transactionId}:`, txError);
+            logError("Error fetching transaction during Paddle sync", txError, {
+              userId,
+              transactionId,
+              operation: "paddle_sync",
+            });
           }
         }
       }
@@ -327,7 +332,10 @@ async function syncPaddleData(
     };
 
   } catch (error) {
-    console.error("[API/me] Error syncing with Paddle:", error);
+    logError("Error syncing with Paddle", error, {
+      userId,
+      operation: "paddle_sync",
+    });
     return { updated: false, creditsAdded: 0 };
   }
 }

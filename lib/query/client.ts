@@ -67,5 +67,13 @@ export const queryKeys = {
     list: (filters: Record<string, unknown>) => [...queryKeys.usage.all, "list", filters] as const,
     summary: (days: number) => [...queryKeys.usage.all, "summary", days] as const,
   },
+
+  // Audio queries
+  audio: {
+    all: ["audio"] as const,
+    voices: () => [...queryKeys.audio.all, "voices"] as const,
+    history: (filters?: Record<string, unknown>) => [...queryKeys.audio.all, "history", filters] as const,
+    generation: (id: string) => [...queryKeys.audio.all, "generation", id] as const,
+  },
 } as const;
 

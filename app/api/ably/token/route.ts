@@ -1,6 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { generateAblyTokenRequest } from "@/lib/ably";
+import { ApiResponse } from "@/utils/api-response/response";
+import { logError } from "@/lib/logger";
 
 /**
  * GET /api/ably/token
@@ -12,21 +14,14 @@ export async function GET(req: NextRequest) {
     const { userId } = await auth();
 
     if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized - Please sign in" },
-        { status: 401 }
-      );
+      return ApiResponse.unauthorized("Please sign in");
     }
 
     const tokenRequest = await generateAblyTokenRequest(userId);
 
-    return NextResponse.json(tokenRequest);
+    return ApiResponse.ok(tokenRequest);
   } catch (error) {
-    console.error("[Ably Token] Error generating token:", error);
-
-    return NextResponse.json(
-      { error: "Failed to generate Ably token" },
-      { status: 500 }
-    );
+    logError("Error generating Ably token", error);
+    return ApiResponse.serverError("Failed to generate Ably token");
   }
 }

@@ -2,6 +2,10 @@
  * API Layer - Centralized exports
  * 
  * Export all API functions from a single entry point.
+ * 
+ * NOTE: Auth middleware is NOT exported here because it uses Node.js-only
+ * modules (async_hooks for logging). Import it directly from:
+ *   import { withAuth, ... } from "@/lib/api/auth-middleware";
  */
 
 // Base client
@@ -47,4 +51,12 @@ export {
   type ProfilePreferences,
   type UsernameCheckResponse,
 } from "./profile";
+
+// Audio API
+export {
+  fetchVoices,
+  generateAudio,
+  fetchAudioHistory,
+  deleteAudioHistoryItem,
+} from "./audio";
 

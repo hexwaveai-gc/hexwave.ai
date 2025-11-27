@@ -5,7 +5,8 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { IconSprite } from "./components/ui/icon-sprite"; 
 import { UpgradePlanProvider } from "./providers/UpgradePlanProvider";
 import { UserProvider } from "./providers/UserProvider";
-import { QueryProvider } from "@/lib/query/provider"; 
+import { QueryProvider } from "@/lib/query/provider";
+import { AuthModalProvider } from "./providers/AuthModalProvider"; 
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -111,8 +112,10 @@ export default function RootLayout({
           <QueryProvider>
             <UserProvider>
               <UpgradePlanProvider>
-                <IconSprite />
-                {children}
+                <AuthModalProvider>
+                  <IconSprite />
+                  {children}
+                </AuthModalProvider>
               </UpgradePlanProvider>
             </UserProvider>
           </QueryProvider>

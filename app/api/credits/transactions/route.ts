@@ -5,20 +5,19 @@
  * Supports filtering and pagination.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { dbConnect } from "@/lib/db";
 import CreditTransaction from "@/app/models/CreditTransaction/creditTransaction.model";
+import { ApiResponse } from "@/utils/api-response/response";
+import { logError } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
   try {
     const { userId: authUserId } = await auth();
 
     if (!authUserId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return ApiResponse.unauthorized();
     }
 
     const searchParams = request.nextUrl.searchParams;
@@ -26,9 +25,10 @@ export async function GET(request: NextRequest) {
 
     // Security: Users can only fetch their own transactions
     if (userId !== authUserId) {
-      return NextResponse.json(
-        { error: "Forbidden - Cannot access other user's transactions" },
-        { status: 403 }
+      return ApiResponse.error(
+        "FORBIDDEN",
+        "Cannot access other user's transactions",
+        403
       );
     }
 
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
       CreditTransaction.countDocuments(query),
     ]);
 
-    return NextResponse.json({
+    return ApiResponse.ok({
       transactions,
       total,
       page,
@@ -76,11 +76,8 @@ export async function GET(request: NextRequest) {
       hasMore: page * limit < total,
     });
   } catch (error) {
-    console.error("[Credit Transactions] Error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch transactions" },
-      { status: 500 }
-    );
+    logError("Credit transactions error", error);
+    return ApiResponse.serverError("Failed to fetch transactions");
   }
 }
 

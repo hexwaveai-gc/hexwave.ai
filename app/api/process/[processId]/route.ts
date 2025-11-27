@@ -1,6 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getProcessData } from "@/app/controllers/updateProcessData";
+import { ApiResponse } from "@/utils/api-response/response";
+import { logError } from "@/lib/logger";
 
 /**
  * GET /api/process/[processId]
@@ -19,32 +21,23 @@ export async function GET(
     const { userId } = await auth();
 
     if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized - Please sign in" },
-        { status: 401 }
-      );
+      return ApiResponse.unauthorized("Please sign in");
     }
 
     const { processId } = await params;
 
     if (!processId) {
-      return NextResponse.json(
-        { error: "Process ID is required" },
-        { status: 400 }
-      );
+      return ApiResponse.badRequest("Process ID is required");
     }
 
     const processData = await getProcessData(processId);
 
     if (!processData) {
-      return NextResponse.json(
-        { error: "Process not found" },
-        { status: 404 }
-      );
+      return ApiResponse.notFound("Process not found");
     }
 
     // Return the process data in a consistent format
-    return NextResponse.json({
+    return ApiResponse.ok({
       processId: processData.processId,
       status: processData.status,
       data: processData.data || null,
@@ -52,12 +45,8 @@ export async function GET(
       updatedAt: processData.updatedAt,
     });
   } catch (error) {
-    console.error("[Process API] Error fetching process:", error);
-
-    return NextResponse.json(
-      { error: "Failed to fetch process status" },
-      { status: 500 }
-    );
+    logError("Error fetching process", error);
+    return ApiResponse.serverError("Failed to fetch process status");
   }
 }
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { NextRequest } from "next/server";
 import { z } from "zod";
+import { logError } from "@/lib/logger";
 
 // ==================== STATUS CODES ====================
 /**
@@ -222,7 +223,7 @@ export class ApiResponse {
   ) {
     // Log server errors (5xx) for monitoring
     if (status >= 500) {
-      console.log(`API Error [${code}]`, { message, status, details });
+      logError(`API Error [${code}]`, new Error(message), { status, details });
     }
 
     return NextResponse.json(

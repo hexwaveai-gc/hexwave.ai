@@ -16,6 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import { paddlePlans, type PaddlePlan } from "@/constants/plan";
 import { useUser } from "@/hooks";
+import { useAuthModal } from "@/app/providers/AuthModalProvider";
 
 // ============================================================================
 // Paddle Types
@@ -116,6 +117,7 @@ export function PricingContent() {
   const [paddleLoaded, setPaddleLoaded] = useState(false);
   const { isSignedIn } = useAuth();
   const router = useRouter();
+  const { openSignUp } = useAuthModal();
 
   // TanStack Query hook - auto-fetches when signed in
   const { subscription, hasActiveSubscription } = useUser();
@@ -168,12 +170,13 @@ export function PricingContent() {
   }, []);
 
   const handleSelectPlan = async (plan: PaddlePlan | null, cycle: "monthly" | "annual") => {
-    if (!plan) return; // Free tier - no action needed
-
+    // If user is not signed in, open sign-up modal
     if (!isSignedIn) {
-      router.push("/sign-in?redirect_url=/pricing");
+      openSignUp();
       return;
     }
+
+    if (!plan) return; // Free tier - no action needed for signed-in users
 
     if (!paddleLoaded || !window.Paddle) {
       console.error("Paddle not loaded yet");
@@ -214,6 +217,11 @@ export function PricingContent() {
   };
 
   const getButtonState = (planId: string, cycle: "monthly" | "annual") => {
+    // If user is not signed in, show "Get Started" for all plans
+    if (!isSignedIn) {
+      return { label: "Get Started", disabled: false, variant: "get-started" as const };
+    }
+
     const targetKey = `${planId}_${cycle}` as PlanKey;
 
     if (currentPlanKey === targetKey) {
@@ -307,6 +315,7 @@ export function PricingContent() {
         <FreeTierCard 
           isCurrentPlan={currentPlanKey === "free"} 
           isSignedIn={!!isSignedIn}
+          onGetStarted={openSignUp}
         />
 
         {/* Paid Plans */}
@@ -318,6 +327,7 @@ export function PricingContent() {
             buttonState={getButtonState(plan.id, billingCycle)}
             isLoading={isLoading === `${plan.id}-${billingCycle}`}
             paddleLoaded={paddleLoaded}
+            isSignedIn={!!isSignedIn}
             onSelect={() => handleSelectPlan(plan, billingCycle)}
           />
         ))}
@@ -343,16 +353,33 @@ export function PricingContent() {
 // Free Tier Card
 // ============================================================================
 
-function FreeTierCard({ isCurrentPlan, isSignedIn }: { isCurrentPlan: boolean; isSignedIn: boolean }) {
+function FreeTierCard({ isCurrentPlan, isSignedIn, onGetStarted }: { isCurrentPlan: boolean; isSignedIn: boolean; onGetStarted: () => void }) {
   const router = useRouter();
+  const { hasActiveSubscription } = useUser();
+
+  // Only show as current plan if user is signed in AND on free tier AND doesn't have active subscription
+  const showAsCurrentPlan = isSignedIn && isCurrentPlan && !hasActiveSubscription;
 
   return (
-    <div className="relative rounded-2xl border border-white/10 hover:border-white/20 transition-all duration-300 group" style={{ background: FREE_TIER.bgGradient }}>
-      {/* 7-Day Trial Badge */}
-      <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-white/10 border border-white/20 text-white text-xs font-bold flex items-center gap-1.5">
-        <Clock className="w-3 h-3" />
-        7-DAY TRIAL
-      </div>
+    <div 
+      className={cn(
+        "relative rounded-2xl border transition-all duration-300 group",
+        showAsCurrentPlan ? "border-white/20 ring-2 ring-white/20" : "border-white/10 hover:border-white/20"
+      )} 
+      style={{ background: FREE_TIER.bgGradient }}
+    >
+      {/* Badge */}
+      {showAsCurrentPlan ? (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-white/20 text-white text-xs font-bold flex items-center gap-1.5">
+          <Check className="w-3 h-3" />
+          CURRENT PLAN
+        </div>
+      ) : (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-white/10 border border-white/20 text-white text-xs font-bold flex items-center gap-1.5">
+          <Clock className="w-3 h-3" />
+          7-DAY TRIAL
+        </div>
+      )}
 
       <div className="p-6 md:p-8">
         {/* Plan Header */}
@@ -384,16 +411,28 @@ function FreeTierCard({ isCurrentPlan, isSignedIn }: { isCurrentPlan: boolean; i
         </div>
 
         {/* CTA Button */}
-        {isCurrentPlan ? (
+        {!isSignedIn ? (
+          <button
+            onClick={onGetStarted}
+            className="w-full py-3 px-6 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 bg-white/10 text-white hover:bg-white/20 border border-white/10"
+          >
+            Get Started
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        ) : showAsCurrentPlan ? (
           <div className="w-full py-3 px-6 rounded-xl font-semibold bg-white/5 text-white/50 text-center border border-white/10">
             Current Plan
           </div>
+        ) : hasActiveSubscription ? (
+          <div className="w-full py-3 px-6 rounded-xl font-semibold bg-white/5 text-white/30 text-center border border-white/5 cursor-not-allowed">
+            <span className="text-xs">You have an active subscription</span>
+          </div>
         ) : (
           <button
-            onClick={() => router.push(isSignedIn ? "/explore" : "/sign-up")}
+            onClick={() => router.push("/explore")}
             className="w-full py-3 px-6 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 bg-white/10 text-white hover:bg-white/20 border border-white/10"
           >
-            {isSignedIn ? "Start Creating" : "Start Free Trial"}
+            Start Creating
             <ArrowRight className="w-4 h-4" />
           </button>
         )}
@@ -447,13 +486,14 @@ function FreeTierCard({ isCurrentPlan, isSignedIn }: { isCurrentPlan: boolean; i
 interface PlanCardProps {
   plan: PaddlePlan;
   billingCycle: "monthly" | "annual";
-  buttonState: { label: string; disabled: boolean; variant: "current" | "upgrade" | "downgrade" };
+  buttonState: { label: string; disabled: boolean; variant: "current" | "upgrade" | "downgrade" | "get-started" };
   isLoading: boolean;
   paddleLoaded: boolean;
+  isSignedIn: boolean;
   onSelect: () => void;
 }
 
-function PlanCard({ plan, billingCycle, buttonState, isLoading, paddleLoaded, onSelect }: PlanCardProps) {
+function PlanCard({ plan, billingCycle, buttonState, isLoading, paddleLoaded, isSignedIn, onSelect }: PlanCardProps) {
   const Icon = plan.icon;
   const price = billingCycle === "annual" ? plan.annualMonthlyPrice : plan.monthlyPrice;
   const totalPrice = billingCycle === "annual" ? plan.annualPrice : plan.monthlyPrice;
@@ -541,10 +581,15 @@ function PlanCard({ plan, billingCycle, buttonState, isLoading, paddleLoaded, on
         ) : (
           <button
             onClick={onSelect}
-            disabled={isLoading || !paddleLoaded || buttonState.disabled}
+            disabled={isLoading || (isSignedIn && !paddleLoaded) || buttonState.disabled}
             className={cn(
               "w-full py-3 px-6 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 group/btn disabled:opacity-50 disabled:cursor-not-allowed",
               buttonState.variant === "current" && "bg-white/5 text-white/50 border border-white/10",
+              buttonState.variant === "get-started" && (
+                plan.popular
+                  ? "bg-[#74FF52] text-black hover:bg-[#66e648]"
+                  : "bg-white/10 text-white hover:bg-white/20 border border-white/10"
+              ),
               buttonState.variant === "upgrade" && (
                 plan.popular
                   ? "bg-[#74FF52] text-black hover:bg-[#66e648]"
@@ -557,7 +602,7 @@ function PlanCard({ plan, billingCycle, buttonState, isLoading, paddleLoaded, on
             ) : (
               <>
                 {buttonState.label}
-                {buttonState.variant === "upgrade" && (
+                {(buttonState.variant === "upgrade" || buttonState.variant === "get-started") && (
                   <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />
                 )}
               </>

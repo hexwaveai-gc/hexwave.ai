@@ -5,20 +5,19 @@
  * Requires userId as query parameter.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { dbConnect } from "@/lib/db";
 import User from "@/app/models/User/user.model";
+import { ApiResponse } from "@/utils/api-response/response";
+import { logError } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
   try {
     const { userId: authUserId } = await auth();
 
     if (!authUserId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return ApiResponse.unauthorized();
     }
 
     // Get userId from query params or use authenticated user
@@ -27,9 +26,10 @@ export async function GET(request: NextRequest) {
 
     // Security: Users can only fetch their own credits
     if (userId !== authUserId) {
-      return NextResponse.json(
-        { error: "Forbidden - Cannot access other user's credits" },
-        { status: 403 }
+      return ApiResponse.error(
+        "FORBIDDEN",
+        "Cannot access other user's credits",
+        403
       );
     }
 
@@ -40,22 +40,16 @@ export async function GET(request: NextRequest) {
       .lean();
 
     if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+      return ApiResponse.notFound("User not found");
     }
 
-    return NextResponse.json({
+    return ApiResponse.ok({
       userId,
       availableBalance: user.availableBalance || 0,
     });
   } catch (error) {
-    console.error("[Credits Balance] Error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch credits" },
-      { status: 500 }
-    );
+    logError("Credits balance error", error);
+    return ApiResponse.serverError("Failed to fetch credits");
   }
 }
 

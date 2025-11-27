@@ -9,6 +9,8 @@ import { auth } from "@clerk/nextjs/server";
 import { dbConnect } from "@/lib/db";
 import User from "@/app/models/User/user.model";
 import { getPaddleClient } from "@/lib/paddle/client";
+import { ApiResponse } from "@/utils/api-response/response";
+import { logError } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,29 +27,20 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   try {
     const { userId } = await auth();
     if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return ApiResponse.unauthorized();
     }
 
     const { transactionId } = await params;
 
     if (!transactionId) {
-      return NextResponse.json(
-        { error: "Transaction ID required" },
-        { status: 400 }
-      );
+      return ApiResponse.badRequest("Transaction ID required");
     }
 
     await dbConnect();
 
     const user = await User.findById(userId);
     if (!user?.customerId) {
-      return NextResponse.json(
-        { error: "No customer found" },
-        { status: 404 }
-      );
+      return ApiResponse.notFound("No customer found");
     }
 
     const paddle = getPaddleClient();
@@ -60,10 +53,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
       // Verify the transaction belongs to this customer
       if (txData.customerId !== user.customerId) {
-        return NextResponse.json(
-          { error: "Transaction not found" },
-          { status: 404 }
-        );
+        return ApiResponse.notFound("Transaction not found");
       }
 
       // Get invoice PDF
@@ -76,25 +66,16 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         return NextResponse.redirect(invoiceData.url);
       }
 
-      return NextResponse.json(
-        { error: "Invoice not available" },
-        { status: 404 }
-      );
+      return ApiResponse.notFound("Invoice not available");
 
     } catch (error) {
-      console.error("[Invoice] Error fetching invoice:", error);
-      return NextResponse.json(
-        { error: "Invoice not found" },
-        { status: 404 }
-      );
+      logError("Error fetching invoice", error, { userId, transactionId });
+      return ApiResponse.notFound("Invoice not found");
     }
 
   } catch (error) {
-    console.error("[Invoice] Error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    logError("Invoice API error", error);
+    return ApiResponse.serverError();
   }
 }
 

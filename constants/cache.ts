@@ -99,6 +99,21 @@ export const RATE_LIMIT_CONFIG = {
     requests: 200,
     window: "1m", // 200 requests per minute
   },
+  /** Free tier API endpoints (stricter than paid) */
+  FREE_TIER_API: {
+    requests: 20,
+    window: "1m", // 20 requests per minute for free users on API routes
+  },
+  /** Free tier rate limit (stricter) */
+  FREE_TIER: {
+    requests: 10,
+    window: "1m", // 10 requests per minute for free users
+  },
+  /** Free tier generation (very restrictive) */
+  FREE_TIER_GENERATION: {
+    requests: 3,
+    window: "1m", // 3 generations per minute for free users
+  },
 } as const;
 
 // =============================================================================
