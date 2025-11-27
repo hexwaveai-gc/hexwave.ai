@@ -1,135 +1,105 @@
-# Credit Check Hook Usage Examples
+# Hooks
 
-## Basic Usage
+Application-level React hooks.
+
+## Available Hooks
+
+### `useCheckCredits`
+
+Hook to check user credits and show upgrade modal if insufficient.
 
 ```tsx
-'use client'
+import { useCheckCredits } from "@/app/hooks/useCheckCredits";
 
-import { useCheckCredits } from '@/app/hooks/useCheckCredits'
-
-export default function GenerateButton() {
-  const { checkCredits, userCredits } = useCheckCredits()
+function MyComponent() {
+  const { checkCredits, credits, hasEnoughCredits, isLoading, refetch } = useCheckCredits();
 
   const handleGenerate = () => {
-    // Check if user has enough credits (10 credits required)
-    if (checkCredits({ 
-      requiredCredits: 10,
-      showModal: true // Automatically shows upgrade modal if insufficient
-    })) {
-      // User has enough credits - proceed with generation
-      console.log('Generating...')
+    if (checkCredits({ requiredCredits: 10, showModal: true })) {
+      // Proceed with generation
     }
-    // If insufficient, modal is automatically shown
-  }
-
-  return (
-    <button onClick={handleGenerate}>
-      Generate ({userCredits} credits available)
-    </button>
-  )
-}
-```
-
-## With Callbacks
-
-```tsx
-'use client'
-
-import { useCheckCredits } from '@/app/hooks/useCheckCredits'
-
-export default function AdvancedButton() {
-  const { checkCredits } = useCheckCredits()
-
-  const handleAction = () => {
-    checkCredits({
-      requiredCredits: 5,
-      showModal: true,
-      onSufficient: () => {
-        // User has enough credits
-        console.log('Proceeding with action...')
-        // Your action logic here
-      },
-      onInsufficient: () => {
-        // User doesn't have enough credits
-        console.log('Insufficient credits')
-        // Modal is automatically shown
-      }
-    })
-  }
-
-  return <button onClick={handleAction}>Execute Action</button>
-}
-```
-
-## Without Modal (Custom Handling)
-
-```tsx
-'use client'
-
-import { useCheckCredits } from '@/app/hooks/useCheckCredits'
-import { useRouter } from 'next/navigation'
-
-export default function CustomButton() {
-  const { checkCredits } = useCheckCredits()
-  const router = useRouter()
-
-  const handleAction = () => {
-    const hasCredits = checkCredits({
-      requiredCredits: 10,
-      showModal: false, // Don't show modal automatically
-      onInsufficient: () => {
-        // Custom handling - redirect to credits page
-        router.push('/credits')
-      }
-    })
-
-    if (hasCredits) {
-      // Proceed with action
-    }
-  }
-
-  return <button onClick={handleAction}>Custom Action</button>
-}
-```
-
-## Check Credits Without Triggering Modal
-
-```tsx
-'use client'
-
-import { useCheckCredits } from '@/app/hooks/useCheckCredits'
-
-export default function StatusDisplay() {
-  const { hasEnoughCredits, userCredits } = useCheckCredits()
-
-  const canGenerate = hasEnoughCredits(10)
+  };
 
   return (
     <div>
-      <p>Credits: {userCredits}</p>
-      <p>Can generate: {canGenerate ? 'Yes' : 'No'}</p>
+      <p>Credits: {credits}</p>
+      <button onClick={handleGenerate} disabled={isLoading}>
+        Generate
+      </button>
     </div>
-  )
+  );
 }
 ```
 
-## Direct Modal Control
+**Returns:**
+- `credits` - Current user credit balance
+- `checkCredits(options)` - Check if user has enough credits, optionally show modal
+- `hasEnoughCredits(required)` - Simple boolean check
+- `isLoading` - Loading state
+- `refetch()` - Manually refetch credits from API
+
+### `useUser` (from UserProvider)
+
+Hook to access user data from the global store.
 
 ```tsx
-'use client'
+import { useUser } from "@/app/providers/UserProvider";
 
-import { useUpgradePlan } from '@/app/providers/UpgradePlanProvider'
-
-export default function CustomButton() {
-  const { openModal, closeModal, isOpen } = useUpgradePlan()
+function MyComponent() {
+  const { 
+    credits, 
+    subscription, 
+    hasActiveSubscription, 
+    planName,
+    refetch 
+  } = useUser();
 
   return (
-    <>
-      <button onClick={openModal}>Open Upgrade Modal</button>
-      <button onClick={closeModal}>Close Modal</button>
-      <p>Modal is {isOpen ? 'open' : 'closed'}</p>
-    </>
-  )
+    <div>
+      <p>Plan: {planName}</p>
+      <p>Credits: {credits}</p>
+      {hasActiveSubscription && <span>Premium User</span>}
+    </div>
+  );
 }
 ```
 
+**Returns:**
+- `credits` - Current credit balance
+- `subscription` - Full subscription object
+- `usageSummary` - Usage analytics data
+- `isLoading` - Loading state
+- `isInitialized` - Whether initial fetch completed
+- `hasActiveSubscription` - Boolean for active/trialing status
+- `planName` - Current plan name (e.g., "Pro", "Ultimate")
+- `planTier` - Current plan tier (e.g., "pro", "enterprise")
+- `daysLeftInPeriod` - Days until subscription renewal
+- `refetch()` - Force refetch user data
+- `refetchWithSummary()` - Refetch with usage summary
+
+## Using the User Store Directly
+
+For fine-grained control, use the store directly with selectors:
+
+```tsx
+import { useUserStore, selectCredits, selectHasActiveSubscription } from "@/store";
+
+function MyComponent() {
+  // Use selectors for optimized re-renders
+  const credits = useUserStore(selectCredits);
+  const hasSubscription = useUserStore(selectHasActiveSubscription);
+  
+  // Access actions
+  const deductCredits = useUserStore((state) => state.deductCredits);
+  
+  const handleAction = () => {
+    deductCredits(10); // Optimistic update
+  };
+}
+```
+
+## Location Convention
+
+- **Global hooks** go in `app/hooks/`
+- **Feature-specific hooks** go in `app/(tools)/<feature>/hooks/`
+- **Global stores** go in `store/`

@@ -1,34 +1,35 @@
-'use client'
+"use client";
 
-import { useUser } from '@clerk/nextjs'
-import { useUpgradePlan } from '@/app/providers/UpgradePlanProvider'
-import { useCallback } from 'react'
-import { useUserCredits } from '@/hooks/queries/use-credits'
+import { useCallback } from "react";
+import { useAuth } from "@clerk/nextjs";
+import { useUpgradePlan } from "@/app/providers/UpgradePlanProvider";
+import { useUser, useRefetchUserData } from "@/hooks";
 
 interface CheckCreditsOptions {
-  requiredCredits: number
-  onInsufficient?: () => void
-  onSufficient?: () => void
-  showModal?: boolean
+  requiredCredits: number;
+  onInsufficient?: () => void;
+  onSufficient?: () => void;
+  showModal?: boolean;
 }
 
 interface UseCheckCreditsReturn {
-  checkCredits: (options: CheckCreditsOptions) => boolean
-  userCredits: number
-  hasEnoughCredits: (required: number) => boolean
-  isLoading: boolean
+  checkCredits: (options: CheckCreditsOptions) => boolean;
+  credits: number;
+  hasEnoughCredits: (required: number) => boolean;
+  isLoading: boolean;
+  refetch: () => Promise<void>;
 }
 
 /**
  * Hook to check user credits and optionally show upgrade modal
  * 
- * Uses TanStack Query to fetch credits from MongoDB (via API).
- * 
+ * Uses TanStack Query for data fetching and Zustand for state.
+ *
  * @example
  * ```tsx
- * const { checkCredits, userCredits, hasEnoughCredits } = useCheckCredits()
- * 
- * const handleGenerate = () => {
+ * const { checkCredits, credits, hasEnoughCredits, refetch } = useCheckCredits()
+ *
+ * const handleGenerate = async () => {
  *   if (checkCredits({ requiredCredits: 10, showModal: true })) {
  *     // Proceed with generation
  *   }
@@ -36,60 +37,74 @@ interface UseCheckCreditsReturn {
  * ```
  */
 export function useCheckCredits(): UseCheckCreditsReturn {
-  const { user, isLoaded: isUserLoaded } = useUser()
-  const { openModal } = useUpgradePlan()
+  const { isSignedIn, isLoaded } = useAuth();
+  const { openModal } = useUpgradePlan();
+  
+  // TanStack Query hooks
+  const { credits, isLoading: isQueryLoading } = useUser();
+  const refetchUserData = useRefetchUserData();
 
-  // Fetch credits from MongoDB via TanStack Query
-  const { data: creditsData, isLoading: isCreditsLoading } = useUserCredits(user?.id)
-
-  const isLoading = !isUserLoaded || isCreditsLoading
-  const userCredits = creditsData?.availableBalance ?? 0
+  const isLoading = !isLoaded || (isSignedIn && isQueryLoading);
 
   /**
    * Check if user has enough credits
    */
-  const hasEnoughCredits = useCallback((required: number): boolean => {
-    if (isLoading || !user) {
-      return false
-    }
-    return userCredits >= required
-  }, [user, isLoading, userCredits])
+  const hasEnoughCredits = useCallback(
+    (required: number): boolean => {
+      if (!isLoaded || !isSignedIn) {
+        return false;
+      }
+      return credits >= required;
+    },
+    [isLoaded, isSignedIn, credits]
+  );
 
   /**
    * Check credits and optionally show modal if insufficient
    * @returns true if user has enough credits, false otherwise
    */
-  const checkCredits = useCallback((options: CheckCreditsOptions): boolean => {
-    const { requiredCredits, onInsufficient, onSufficient, showModal = true } = options
+  const checkCredits = useCallback(
+    (options: CheckCreditsOptions): boolean => {
+      const { requiredCredits, onInsufficient, onSufficient, showModal = true } = options;
 
-    if (!isUserLoaded || !user) {
-      // User not logged in - show modal or redirect to sign in
-      if (showModal) {
-        openModal()
+      if (!isLoaded || !isSignedIn) {
+        // User not logged in - show modal or redirect to sign in
+        if (showModal) {
+          openModal();
+        }
+        onInsufficient?.();
+        return false;
       }
-      onInsufficient?.()
-      return false
-    }
 
-    const hasEnough = userCredits >= requiredCredits
+      const hasEnough = credits >= requiredCredits;
 
-    if (hasEnough) {
-      onSufficient?.()
-      return true
-    } else {
-      // Insufficient credits
-      if (showModal) {
-        openModal()
+      if (hasEnough) {
+        onSufficient?.();
+        return true;
+      } else {
+        // Insufficient credits
+        if (showModal) {
+          openModal();
+        }
+        onInsufficient?.();
+        return false;
       }
-      onInsufficient?.()
-      return false
-    }
-  }, [user, isUserLoaded, userCredits, openModal])
+    },
+    [isLoaded, isSignedIn, credits, openModal]
+  );
+
+  /**
+   * Refetch user data from API (via TanStack Query)
+   */
+  const refetch = useCallback(async () => {
+    await refetchUserData();
+  }, [refetchUserData]);
 
   return {
     checkCredits,
-    userCredits,
+    credits,
     hasEnoughCredits,
     isLoading,
-  }
+    refetch,
+  };
 }

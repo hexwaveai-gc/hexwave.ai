@@ -4,6 +4,7 @@ import { Webhook } from 'svix'
 import { WebhookEvent } from '@clerk/nextjs/server'
 import { dbConnect } from '@/lib/db'
 import User from '@/app/models/User/user.model'
+import UserProfile from '@/app/models/UserProfile/user-profile.model'
 
 // Disable body parsing, we need the raw body for Svix signature verification
 export const runtime = 'nodejs'
@@ -111,7 +112,7 @@ export async function POST(req: Request) {
 
 /**
  * Handle user.created event
- * Creates a new user in the database
+ * Creates a new user in the database and initializes their profile
  */
 async function handleUserCreated(data: any) {
   try {
@@ -123,10 +124,11 @@ async function handleUserCreated(data: any) {
     // Get user's name from various sources
     const firstName = data.first_name || ''
     const lastName = data.last_name || ''
-    const username = data.username || ''
+    const clerkUsername = data.username || ''
+    const imageUrl = data.image_url || null
     const name = 
       (firstName && lastName) ? `${firstName} ${lastName}` :
-      firstName || lastName || username || email.split('@')[0] || 'User'
+      firstName || lastName || clerkUsername || email.split('@')[0] || 'User'
 
     // Validate required fields
     if (!email) {
@@ -137,6 +139,15 @@ async function handleUserCreated(data: any) {
     const existingUser = await User.findById(userId)
     if (existingUser) {
       console.log(`[Webhook] User ${userId} already exists, skipping creation`)
+      // Still try to create profile if missing
+      await createOrUpdateUserProfile(userId, {
+        email,
+        firstName,
+        lastName,
+        username: clerkUsername,
+        imageUrl,
+        displayName: name,
+      })
       return
     }
 
@@ -147,12 +158,23 @@ async function handleUserCreated(data: any) {
       email: email.toLowerCase().trim(),
       customerId: null,
       subscription: null,
-      availableBalance: 0,
+      credits: 0,
       favorites: [],
     })
 
     await newUser.save()
     console.log(`[Webhook] User created successfully: ${userId} (${email})`)
+
+    // Create user profile
+    await createOrUpdateUserProfile(userId, {
+      email,
+      firstName,
+      lastName,
+      username: clerkUsername,
+      imageUrl,
+      displayName: name,
+    })
+
   } catch (error) {
     console.error('[Webhook] Error creating user:', error)
     throw error
@@ -161,7 +183,7 @@ async function handleUserCreated(data: any) {
 
 /**
  * Handle user.updated event
- * Updates existing user in the database
+ * Updates existing user in the database and their profile
  */
 async function handleUserUpdated(data: any) {
   try {
@@ -173,10 +195,11 @@ async function handleUserUpdated(data: any) {
     // Get user's name from various sources
     const firstName = data.first_name || ''
     const lastName = data.last_name || ''
-    const username = data.username || ''
+    const clerkUsername = data.username || ''
+    const imageUrl = data.image_url || null
     const name = 
       (firstName && lastName) ? `${firstName} ${lastName}` :
-      firstName || lastName || username || email.split('@')[0] || 'User'
+      firstName || lastName || clerkUsername || email.split('@')[0] || 'User'
 
     // Find existing user
     const user = await User.findById(userId)
@@ -208,6 +231,17 @@ async function handleUserUpdated(data: any) {
     } else {
       console.log(`[Webhook] No changes detected for user: ${userId}`)
     }
+
+    // Update user profile
+    await createOrUpdateUserProfile(userId, {
+      email,
+      firstName,
+      lastName,
+      username: clerkUsername,
+      imageUrl,
+      displayName: name,
+    })
+
   } catch (error) {
     console.error('[Webhook] Error updating user:', error)
     throw error
@@ -230,9 +264,156 @@ async function handleUserDeleted(data: any) {
     } else {
       console.log(`[Webhook] User ${userId} not found for deletion`)
     }
+
+    // Also delete user profile
+    const profile = await UserProfile.findOneAndDelete({ user_id: userId })
+    if (profile) {
+      console.log(`[Webhook] User profile deleted successfully: ${userId}`)
+    }
+
   } catch (error) {
     console.error('[Webhook] Error deleting user:', error)
     throw error
   }
 }
 
+/**
+ * Create or update user profile
+ * Called when user is created or updated via Clerk webhook
+ */
+interface ProfileData {
+  email: string
+  firstName?: string
+  lastName?: string
+  username?: string
+  imageUrl?: string | null
+  displayName?: string
+}
+
+async function createOrUpdateUserProfile(userId: string, data: ProfileData) {
+  try {
+    // Check if profile exists
+    const existingProfile = await UserProfile.findOne({ user_id: userId })
+    
+    if (existingProfile) {
+      // Update email and avatar if changed from Clerk
+      const updateData: Record<string, unknown> = {}
+      
+      if (data.email && data.email.toLowerCase() !== existingProfile.email) {
+        updateData.email = data.email.toLowerCase()
+      }
+      
+      // Only update avatar if user hasn't set a custom one
+      if (data.imageUrl && !existingProfile.avatar_url) {
+        updateData.avatar_url = data.imageUrl
+      }
+      
+      if (Object.keys(updateData).length > 0) {
+        await UserProfile.findOneAndUpdate(
+          { user_id: userId },
+          { $set: updateData }
+        )
+        console.log(`[Webhook] User profile updated: ${userId}`)
+      }
+      return
+    }
+
+    // Create new profile
+    const baseUsername = generateUsername(
+      data.firstName,
+      data.lastName,
+      data.username,
+      data.email
+    )
+    const uniqueUsername = await ensureUniqueUsername(baseUsername)
+
+    const newProfile = new UserProfile({
+      user_id: userId,
+      username: uniqueUsername,
+      display_name: data.displayName || uniqueUsername,
+      email: data.email.toLowerCase(),
+      avatar_url: data.imageUrl || null,
+      bio: "",
+      social_links: {},
+      stats: { likes: 0, posts: 0, views: 0, followers: 0, following: 0 },
+      is_public: true,
+      is_verified: false,
+      preferences: {
+        show_stats: true,
+        allow_messages: true,
+        email_notifications: true,
+      },
+    })
+
+    await newProfile.save()
+    console.log(`[Webhook] User profile created: ${userId} (@${uniqueUsername})`)
+
+  } catch (error) {
+    console.error('[Webhook] Error creating/updating user profile:', error)
+    // Don't throw - profile creation is not critical
+  }
+}
+
+/**
+ * Generate a username from user data
+ */
+function generateUsername(
+  firstName?: string,
+  lastName?: string,
+  existingUsername?: string,
+  email?: string
+): string {
+  // Try existing username first
+  if (existingUsername) {
+    return existingUsername.toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 30)
+  }
+
+  // Try first + last name
+  if (firstName && lastName) {
+    return `${firstName}_${lastName}`.toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 30)
+  }
+
+  // Try first name only
+  if (firstName) {
+    return firstName.toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 30)
+  }
+
+  // Try email prefix
+  if (email) {
+    return email.split("@")[0].toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 30)
+  }
+
+  // Random fallback
+  return `user_${Math.random().toString(36).slice(2, 10)}`
+}
+
+/**
+ * Ensure username is unique by appending random suffix if needed
+ */
+async function ensureUniqueUsername(baseUsername: string): Promise<string> {
+  let username = baseUsername
+  let attempts = 0
+  const maxAttempts = 10
+
+  // Add random adjective/noun to make username more interesting
+  const adjectives = ['creative', 'cosmic', 'digital', 'stellar', 'pixel', 'neon', 'cyber', 'astro']
+  const randomAdj = adjectives[Math.floor(Math.random() * adjectives.length)]
+
+  // First try with adjective prefix
+  username = `${randomAdj}_${baseUsername}`.slice(0, 30)
+
+  while (attempts < maxAttempts) {
+    const existing = await UserProfile.findOne({ username })
+    if (!existing) {
+      return username
+    }
+
+    // Add random suffix
+    const suffix = Math.random().toString(36).slice(2, 6)
+    username = `${baseUsername.slice(0, 25)}_${suffix}`
+    attempts++
+  }
+
+  // Final fallback with timestamp
+  return `${baseUsername.slice(0, 20)}_${Date.now().toString(36)}`
+}

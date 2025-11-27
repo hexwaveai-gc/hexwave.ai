@@ -1,0 +1,1322 @@
+---
+description: Frontend architecture rules for building scalable, maintainable Next.js applications with proper component structure, SEO optimization, state management, and API layer patterns.
+alwaysApply: true
+---
+
+# 🏗️ Frontend Architecture Standards
+
+This document establishes the mandatory frontend architecture patterns for the Hexwave.ai application. All frontend code must adhere to these standards.
+
+---
+
+## 📁 1. Project Structure & File Organization
+
+### 1.1 Directory Structure
+
+```
+app/
+├── (routes)/                    # Route groups
+│   └── feature-name/
+│       ├── _components/         # Route-specific components (private)
+│       │   ├── feature-header.tsx
+│       │   ├── feature-content.tsx
+│       │   └── index.ts         # Re-exports
+│       ├── _hooks/              # Route-specific hooks (if needed)
+│       ├── page.tsx             # Server Component (entry point)
+│       ├── layout.tsx           # Layout (if needed)
+│       ├── loading.tsx          # Loading UI
+│       └── error.tsx            # Error boundary
+├── components/
+│   ├── ui/                      # Base UI components (shadcn/ui)
+│   ├── common/                  # Shared reusable components
+│   ├── shared/                  # Cross-feature shared components
+│   └── [feature]/               # Feature-specific shared components
+├── hooks/                       # Global custom hooks
+├── providers/                   # React context providers
+└── models/                      # Database models/types
+
+lib/
+├── api/                         # API client & endpoint functions
+│   ├── client.ts                # Base API client with error handling
+│   └── [domain].ts              # Domain-specific API functions
+├── query/
+│   ├── client.ts                # TanStack Query client & query keys
+│   └── provider.tsx             # QueryClientProvider wrapper
+├── schemas/                     # Zod validation schemas
+├── services/                    # Business logic services
+└── utils.ts                     # Utility functions
+
+hooks/                           # Global hooks (root level)
+├── index.ts                     # Re-exports all hooks
+├── use-[feature].ts             # Feature-specific hooks
+
+store/
+├── index.ts                     # Re-exports all stores
+└── use[Store]Store.ts           # Zustand stores
+
+constants/
+├── index.ts                     # Main constants re-exports
+├── [feature]/                   # Feature-specific constants
+│   └── index.ts
+└── api.ts                       # API-related constants
+
+types/
+├── index.ts                     # Global type definitions
+└── [feature].ts                 # Feature-specific types
+```
+
+### 1.2 File Naming Conventions
+
+#### Rules:
+- ✅ **DO**: Use kebab-case for file names: `feature-header.tsx`
+- ✅ **DO**: Use PascalCase for component exports: `export function FeatureHeader()`
+- ✅ **DO**: Use camelCase for hooks: `use-feature-data.ts` → `useFeatureData()`
+- ✅ **DO**: Prefix private route folders with underscore: `_components/`
+- ✅ **DO**: Create `index.ts` files for clean re-exports
+- ❌ **DON'T**: Mix naming conventions in the same directory
+- ❌ **DON'T**: Use generic names like `Component.tsx` or `utils.ts` in feature folders
+
+```typescript
+// ✅ GOOD: Clear file naming
+// app/billing/_components/billing-card.tsx
+export function BillingCard({ ... }) { ... }
+
+// app/billing/_components/index.ts
+export { BillingCard } from "./billing-card";
+export { BillingHistory } from "./billing-history";
+
+// ❌ BAD: Unclear naming
+// app/billing/Card.tsx
+// app/billing/component1.tsx
+```
+
+---
+
+## 🧩 2. Component Architecture & DRY Principles
+
+### 2.1 Component Breakdown Rules
+
+**MANDATORY**: Break down components when they exceed 100-150 lines or handle multiple responsibilities.
+
+#### Component Size Guidelines:
+| Component Type | Max Lines | Responsibility |
+|---------------|-----------|----------------|
+| Page Component | 50-80 | Data fetching, layout composition |
+| Feature Component | 80-150 | Feature logic, orchestration |
+| UI Component | 30-80 | Single UI responsibility |
+| Atomic Component | 10-50 | Single atomic element |
+
+#### Rules:
+- ✅ **DO**: Extract reusable UI patterns into `components/common/`
+- ✅ **DO**: Break complex components into smaller sub-components
+- ✅ **DO**: Create composition patterns for complex UIs
+- ✅ **DO**: Use compound components for related functionality
+- ❌ **DON'T**: Dump everything in a single file
+- ❌ **DON'T**: Duplicate similar UI patterns across components
+- ❌ **DON'T**: Create deeply nested component hierarchies (max 3-4 levels)
+
+#### Example Component Breakdown:
+
+```typescript
+// ❌ BAD: Everything in one file (500+ lines)
+// app/billing/page.tsx
+export default function BillingPage() {
+  // State management
+  // API calls
+  // Complex rendering logic
+  // Multiple sections
+  return (
+    <div>
+      {/* 500 lines of JSX */}
+    </div>
+  );
+}
+
+// ✅ GOOD: Properly broken down
+// app/billing/page.tsx (Server Component - ~30 lines)
+import { BillingContent } from "./_components/billing-content";
+
+export default function BillingPage() {
+  return (
+    <main className="container mx-auto px-4 py-8">
+      <BillingContent />
+    </main>
+  );
+}
+
+// app/billing/_components/billing-content.tsx (Client Component - ~80 lines)
+"use client";
+
+import { BillingHeader } from "./billing-header";
+import { PlanCard } from "./plan-card";
+import { UsageSection } from "./usage-section";
+import { PaymentHistory } from "./payment-history";
+
+export function BillingContent() {
+  const { data, isLoading } = useBillingData();
+  
+  return (
+    <div className="space-y-8">
+      <BillingHeader title="Billing & Usage" />
+      <PlanCard plan={data?.plan} />
+      <UsageSection usage={data?.usage} />
+      <PaymentHistory transactions={data?.transactions} />
+    </div>
+  );
+}
+
+// app/billing/_components/plan-card.tsx (~50 lines)
+// app/billing/_components/usage-section.tsx (~60 lines)
+// app/billing/_components/payment-history.tsx (~70 lines)
+```
+
+### 2.2 DRY (Don't Repeat Yourself) Patterns
+
+#### Identify Duplication:
+1. **Visual patterns** → Extract to `components/common/`
+2. **Data fetching patterns** → Extract to custom hooks
+3. **Form patterns** → Create reusable form components
+4. **Layout patterns** → Create layout components
+
+```typescript
+// ✅ GOOD: Reusable card component
+// components/common/feature-card.tsx
+interface FeatureCardProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  gradient?: string;
+  onClick?: () => void;
+}
+
+export function FeatureCard({
+  icon,
+  title,
+  description,
+  gradient = "from-purple-500/20 to-pink-500/20",
+  onClick,
+}: FeatureCardProps) {
+  return (
+    <div
+      onClick={onClick}
+      className="group relative rounded-2xl bg-white/5 border border-white/10 p-8 
+                 hover:bg-white/10 transition-all duration-300 backdrop-blur-sm overflow-hidden"
+    >
+      <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 
+                       group-hover:opacity-100 transition-opacity duration-300`} />
+      <div className="relative z-10">
+        <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mb-4">
+          {icon}
+        </div>
+        <h3 className="text-xl font-semibold text-white mb-2">{title}</h3>
+        <p className="text-white/60 text-sm leading-relaxed">{description}</p>
+      </div>
+    </div>
+  );
+}
+
+// Usage across multiple pages
+// app/page.tsx
+import { FeatureCard } from "@/app/components/common/feature-card";
+
+{features.map((feature) => (
+  <FeatureCard
+    key={feature.id}
+    icon={<feature.icon className="w-6 h-6" />}
+    title={feature.title}
+    description={feature.description}
+    gradient={feature.gradient}
+  />
+))}
+```
+
+### 2.3 Shared Component Categories
+
+```
+components/
+├── common/                      # Shared across entire app
+│   ├── loading-spinner.tsx      # Generic spinner
+│   ├── error-message.tsx        # Error display
+│   ├── empty-state.tsx          # Empty state UI
+│   ├── feature-card.tsx         # Reusable card
+│   ├── section-header.tsx       # Section titles
+│   ├── page-header.tsx          # Page headers
+│   └── confirm-dialog.tsx       # Confirmation modals
+│
+├── shared/                      # Shared between specific features
+│   ├── credit-badge.tsx         # Credits display
+│   ├── plan-badge.tsx           # Plan indicator
+│   └── upgrade-prompt.tsx       # Upgrade CTA
+│
+└── ui/                          # Base UI (shadcn/ui)
+    ├── button.tsx
+    ├── card.tsx
+    ├── dialog.tsx
+    └── ...
+```
+
+---
+
+## ⚡ 3. Server Components vs Client Components
+
+### 3.1 Default to Server Components
+
+**MANDATORY**: Use Server Components by default. Only add `"use client"` when necessary.
+
+#### When to Use Server Components:
+- ✅ Data fetching
+- ✅ Accessing backend resources directly
+- ✅ Keeping sensitive data on server (API keys, tokens)
+- ✅ Static content that doesn't need interactivity
+- ✅ SEO-critical content
+
+#### When to Use Client Components:
+- ✅ Using React hooks (useState, useEffect, useContext)
+- ✅ Event handlers (onClick, onChange)
+- ✅ Browser APIs (window, document)
+- ✅ Interactive UI elements
+- ✅ Third-party libraries that require client-side rendering
+
+### 3.2 Component Boundary Pattern
+
+```typescript
+// ✅ GOOD: Server Component as entry, Client Component for interactivity
+// app/explore/page.tsx (Server Component)
+import { Suspense } from "react";
+import { ExploreContent } from "./_components/explore-content";
+import { ExploreHeaderSkeleton, ExploreGridSkeleton } from "./_components/skeletons";
+
+export default function ExplorePage() {
+  return (
+    <main className="container mx-auto">
+      <Suspense fallback={<ExploreHeaderSkeleton />}>
+        <ExploreHeader />
+      </Suspense>
+      <Suspense fallback={<ExploreGridSkeleton />}>
+        <ExploreContent />
+      </Suspense>
+    </main>
+  );
+}
+
+// app/explore/_components/explore-content.tsx (Client Component)
+"use client";
+
+import { useState } from "react";
+import { ExploreFilters } from "./explore-filters";
+import { ExploreGrid } from "./explore-grid";
+
+export function ExploreContent() {
+  const [activeFilter, setActiveFilter] = useState("all");
+  
+  return (
+    <div>
+      <ExploreFilters active={activeFilter} onChange={setActiveFilter} />
+      <ExploreGrid filter={activeFilter} />
+    </div>
+  );
+}
+```
+
+### 3.3 Prop Drilling Prevention
+
+```typescript
+// ✅ GOOD: Pass serializable data from Server to Client Components
+// app/billing/page.tsx (Server Component)
+import { getBillingData } from "@/lib/api/billing";
+import { BillingContent } from "./_components/billing-content";
+
+export default async function BillingPage() {
+  const initialData = await getBillingData();
+  
+  return <BillingContent initialData={initialData} />;
+}
+
+// app/billing/_components/billing-content.tsx (Client Component)
+"use client";
+
+import { useBilling } from "@/hooks/use-billing";
+
+interface BillingContentProps {
+  initialData: BillingData;
+}
+
+export function BillingContent({ initialData }: BillingContentProps) {
+  // Use initialData for hydration, TanStack Query for updates
+  const { data } = useBilling({ initialData });
+  // ...
+}
+```
+
+---
+
+## 🔍 4. SEO Optimization with generateMetadata
+
+### 4.1 Mandatory Metadata for All Pages
+
+**MANDATORY**: Every page.tsx MUST have proper SEO metadata using `generateMetadata`.
+
+#### Required Metadata Fields:
+- ✅ `title` - Page-specific title
+- ✅ `description` - Unique, descriptive text (150-160 chars)
+- ✅ `openGraph` - Full OG data for social sharing
+- ✅ `twitter` - Twitter card data
+- ✅ `alternates.canonical` - Canonical URL
+
+### 4.2 Static Metadata Pattern
+
+```typescript
+// app/pricing/page.tsx
+import type { Metadata } from "next";
+import { PricingContent } from "./_components/pricing-content";
+
+export const metadata: Metadata = {
+  title: "Pricing Plans",
+  description: "Choose the perfect plan for your creative needs. Access AI image generation, video creation, and more with flexible pricing options.",
+  keywords: ["pricing", "AI tools pricing", "creative studio plans", "subscription plans"],
+  openGraph: {
+    title: "Pricing Plans | Hexwave.ai",
+    description: "Choose the perfect plan for your creative needs. Access AI image generation, video creation, and more.",
+    url: "/pricing",
+    siteName: "Hexwave.ai",
+    images: [
+      {
+        url: "/images/og/pricing.png",
+        width: 1200,
+        height: 630,
+        alt: "Hexwave.ai Pricing Plans",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Pricing Plans | Hexwave.ai",
+    description: "Choose the perfect plan for your creative needs.",
+    images: ["/images/og/pricing.png"],
+  },
+  alternates: {
+    canonical: "/pricing",
+  },
+};
+
+export default function PricingPage() {
+  return <PricingContent />;
+}
+```
+
+### 4.3 Dynamic Metadata Pattern
+
+```typescript
+// app/explore/[category]/page.tsx
+import type { Metadata } from "next";
+
+interface Props {
+  params: Promise<{ category: string }>;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { category } = await params;
+  const categoryData = await getCategoryData(category);
+  
+  const title = `${categoryData.name} - AI ${categoryData.type} Gallery`;
+  const description = `Explore ${categoryData.count}+ ${categoryData.name.toLowerCase()} created with AI. Get inspired and create your own with Hexwave.ai.`;
+  
+  return {
+    title,
+    description,
+    openGraph: {
+      title: `${title} | Hexwave.ai`,
+      description,
+      url: `/explore/${category}`,
+      images: [
+        {
+          url: categoryData.ogImage || "/images/og/explore.png",
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [categoryData.ogImage || "/images/og/explore.png"],
+    },
+    alternates: {
+      canonical: `/explore/${category}`,
+    },
+  };
+}
+
+export default async function CategoryPage({ params }: Props) {
+  const { category } = await params;
+  return <CategoryContent category={category} />;
+}
+```
+
+### 4.4 Metadata Template (Root Layout)
+
+```typescript
+// app/layout.tsx
+export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://hexwave.ai"),
+  title: {
+    default: "Hexwave.ai - All-in-One Creative Studio",
+    template: "%s | Hexwave.ai",
+  },
+  description: "Streamlined workflow for storytelling from start to finish. AI Image Generator, Video Generator, and more.",
+  // ... rest of root metadata
+};
+```
+
+### 4.5 SEO Checklist for New Pages
+
+```markdown
+When creating a new page, ensure:
+- [ ] `generateMetadata` or static `metadata` export exists
+- [ ] Title is unique and descriptive (50-60 chars)
+- [ ] Description is compelling and includes keywords (150-160 chars)
+- [ ] OpenGraph image is set (1200x630px recommended)
+- [ ] Twitter card is configured
+- [ ] Canonical URL is set
+- [ ] Proper heading hierarchy (h1 → h2 → h3)
+- [ ] Images have alt text
+- [ ] Page is accessible (ARIA labels, semantic HTML)
+```
+
+---
+
+## 🔄 5. TanStack Query API Layer
+
+### 5.1 Centralized API Client with Retry Logic
+
+**MANDATORY**: All API calls MUST go through the centralized API client with retry support.
+
+```typescript
+// lib/api/client.ts
+import { API_TIMEOUT, MAX_RETRY_ATTEMPTS, RETRY_DELAY_BASE } from "@/constants/api";
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+    public code?: string,
+    public data?: unknown
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+
+  get isRetryable(): boolean {
+    // Retry on network errors and 5xx server errors
+    return this.status >= 500 || this.status === 0;
+  }
+}
+
+interface FetchOptions extends Omit<RequestInit, "body"> {
+  body?: unknown;
+  params?: Record<string, string | number | boolean | undefined>;
+  retry?: boolean;
+  maxRetries?: number;
+  timeout?: number;
+}
+
+/**
+ * Sleep utility for retry delays
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Calculate exponential backoff delay
+ */
+function getRetryDelay(attempt: number): number {
+  return RETRY_DELAY_BASE * Math.pow(2, attempt);
+}
+
+/**
+ * Base fetch function with error handling, retry logic, and timeout
+ */
+async function baseFetch<T>(
+  endpoint: string,
+  options: FetchOptions = {}
+): Promise<T> {
+  const {
+    body,
+    params,
+    headers: customHeaders,
+    retry = true,
+    maxRetries = MAX_RETRY_ATTEMPTS,
+    timeout = API_TIMEOUT,
+    ...restOptions
+  } = options;
+
+  // Build URL with query params
+  let url = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  
+  if (params) {
+    const searchParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== "") {
+        searchParams.set(key, String(value));
+      }
+    });
+    const queryString = searchParams.toString();
+    if (queryString) {
+      url += `?${queryString}`;
+    }
+  }
+
+  // Build headers
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    ...customHeaders,
+  };
+
+  // Create abort controller for timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  let lastError: ApiError | null = null;
+
+  for (let attempt = 0; attempt <= (retry ? maxRetries : 0); attempt++) {
+    try {
+      const response = await fetch(url, {
+        ...restOptions,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        let errorData: { error?: string; message?: string; code?: string } = {};
+        
+        try {
+          errorData = await response.json();
+        } catch {
+          // Response might not be JSON
+        }
+
+        const error = new ApiError(
+          errorData.error || errorData.message || `Request failed with status ${response.status}`,
+          response.status,
+          errorData.code,
+          errorData
+        );
+
+        // Don't retry client errors (4xx)
+        if (!error.isRetryable || attempt === maxRetries) {
+          throw error;
+        }
+
+        lastError = error;
+      } else {
+        // Success - return parsed JSON or empty object for 204
+        if (response.status === 204) {
+          return {} as T;
+        }
+        return response.json();
+      }
+    } catch (error) {
+      clearTimeout(timeoutId);
+
+      if (error instanceof ApiError) {
+        lastError = error;
+      } else if (error instanceof Error) {
+        // Handle network errors, timeouts, etc.
+        lastError = new ApiError(
+          error.name === "AbortError" ? "Request timeout" : error.message,
+          0,
+          "NETWORK_ERROR"
+        );
+      }
+
+      if (attempt === maxRetries || !retry) {
+        throw lastError;
+      }
+    }
+
+    // Wait before retrying with exponential backoff
+    await sleep(getRetryDelay(attempt));
+  }
+
+  throw lastError || new ApiError("Unknown error", 0);
+}
+
+/**
+ * API client with HTTP method helpers
+ */
+export const api = {
+  get: <T>(endpoint: string, params?: FetchOptions["params"], options?: Omit<FetchOptions, "params">) =>
+    baseFetch<T>(endpoint, { method: "GET", params, ...options }),
+
+  post: <T>(endpoint: string, body?: unknown, options?: Omit<FetchOptions, "body">) =>
+    baseFetch<T>(endpoint, { method: "POST", body, ...options }),
+
+  put: <T>(endpoint: string, body?: unknown, options?: Omit<FetchOptions, "body">) =>
+    baseFetch<T>(endpoint, { method: "PUT", body, ...options }),
+
+  patch: <T>(endpoint: string, body?: unknown, options?: Omit<FetchOptions, "body">) =>
+    baseFetch<T>(endpoint, { method: "PATCH", body, ...options }),
+
+  delete: <T>(endpoint: string, options?: FetchOptions) =>
+    baseFetch<T>(endpoint, { method: "DELETE", ...options }),
+};
+```
+
+### 5.2 Query Client Configuration
+
+```typescript
+// lib/query/client.ts
+import { QueryClient } from "@tanstack/react-query";
+
+function makeQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        // Data is fresh for 30 seconds
+        staleTime: 30 * 1000,
+        // Keep unused data in cache for 5 minutes
+        gcTime: 5 * 60 * 1000,
+        // Retry failed requests up to 2 times with exponential backoff
+        retry: (failureCount, error) => {
+          // Don't retry on 4xx errors (client errors)
+          if (error instanceof Error && error.message.includes("4")) {
+            return false;
+          }
+          return failureCount < 2;
+        },
+        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+        // Don't refetch on window focus by default
+        refetchOnWindowFocus: false,
+        // Refetch on reconnect
+        refetchOnReconnect: true,
+      },
+      mutations: {
+        // Retry mutations once on failure
+        retry: 1,
+        retryDelay: 1000,
+      },
+    },
+  });
+}
+
+let browserQueryClient: QueryClient | undefined = undefined;
+
+export function getQueryClient() {
+  if (typeof window === "undefined") {
+    // Server: always make a new query client
+    return makeQueryClient();
+  } else {
+    // Browser: reuse client across the app
+    if (!browserQueryClient) {
+      browserQueryClient = makeQueryClient();
+    }
+    return browserQueryClient;
+  }
+}
+
+// Query keys factory for type-safe query keys
+export const queryKeys = {
+  user: {
+    all: ["user"] as const,
+    me: () => [...queryKeys.user.all, "me"] as const,
+    profile: (userId?: string) => [...queryKeys.user.all, "profile", userId] as const,
+  },
+  billing: {
+    all: ["billing"] as const,
+    details: () => [...queryKeys.billing.all, "details"] as const,
+    portal: () => [...queryKeys.billing.all, "portal"] as const,
+    invoice: (transactionId: string) => [...queryKeys.billing.all, "invoice", transactionId] as const,
+  },
+  usage: {
+    all: ["usage"] as const,
+    list: (filters: Record<string, unknown>) => [...queryKeys.usage.all, "list", filters] as const,
+    summary: (days: number) => [...queryKeys.usage.all, "summary", days] as const,
+  },
+  // Add more query keys as needed
+} as const;
+```
+
+### 5.3 Custom Hook Pattern
+
+```typescript
+// hooks/use-billing.ts
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query/client";
+import { billingApi } from "@/lib/api/billing";
+import type { BillingDetails, PortalSession } from "@/types/billing";
+
+interface UseBillingOptions {
+  enabled?: boolean;
+}
+
+export function useBilling(options: UseBillingOptions = {}) {
+  const { enabled = true } = options;
+
+  return useQuery<BillingDetails>({
+    queryKey: queryKeys.billing.details(),
+    queryFn: billingApi.getDetails,
+    enabled,
+    staleTime: 60 * 1000, // 1 minute for billing data
+  });
+}
+
+export function useBillingPortal() {
+  const queryClient = useQueryClient();
+
+  return useMutation<PortalSession, Error, void>({
+    mutationFn: billingApi.createPortalSession,
+    onSuccess: () => {
+      // Invalidate billing data after portal interaction
+      queryClient.invalidateQueries({ queryKey: queryKeys.billing.all });
+    },
+  });
+}
+```
+
+### 5.4 TanStack Query vs Other Solutions Analysis
+
+#### When TanStack Query is Ideal:
+- ✅ **REST APIs with caching needs** - Built-in caching and stale management
+- ✅ **Complex data dependencies** - Dependent queries, parallel queries
+- ✅ **Optimistic updates** - Built-in rollback support
+- ✅ **Background data sync** - Automatic refetching
+- ✅ **Pagination/Infinite scroll** - `useInfiniteQuery` support
+
+#### Potential Issues to Consider:
+- ⚠️ **Over-caching** - May cause stale data if not configured properly
+- ⚠️ **Bundle size** - Adds ~13KB to bundle (acceptable trade-off)
+- ⚠️ **Learning curve** - Team must understand caching semantics
+
+#### Mitigation Strategies:
+```typescript
+// For real-time data (credits, live updates)
+const { data } = useQuery({
+  queryKey: ["credits"],
+  queryFn: fetchCredits,
+  staleTime: 0,              // Always fetch fresh
+  refetchInterval: 30000,    // Poll every 30s
+});
+
+// For static data (plans, configuration)
+const { data } = useQuery({
+  queryKey: ["plans"],
+  queryFn: fetchPlans,
+  staleTime: 24 * 60 * 60 * 1000, // Cache for 24 hours
+});
+```
+
+---
+
+## 🗄️ 6. Zustand State Management
+
+### 6.1 Store Structure with Extracted Selectors
+
+**MANDATORY**: Extract individual setter functions and use selectors to prevent unnecessary re-renders.
+
+```typescript
+// store/useUserStore.ts
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+export interface UserSubscription {
+  id: string;
+  status: "active" | "trialing" | "past_due" | "paused" | "canceled" | null;
+  plan_name: string | null;
+  plan_tier: "free" | "pro" | "basic" | "enterprise" | "custom" | null;
+}
+
+export interface UserState {
+  // State
+  credits: number;
+  subscription: UserSubscription | null;
+  isLoading: boolean;
+  isInitialized: boolean;
+  error: string | null;
+
+  // Actions (defined separately for clean API)
+  setCredits: (credits: number) => void;
+  setSubscription: (subscription: UserSubscription | null) => void;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  fetchUser: () => Promise<void>;
+  deductCredits: (amount: number) => void;
+  reset: () => void;
+}
+
+// ============================================================================
+// INITIAL STATE
+// ============================================================================
+
+const initialState = {
+  credits: 0,
+  subscription: null,
+  isLoading: false,
+  isInitialized: false,
+  error: null,
+};
+
+// ============================================================================
+// STORE
+// ============================================================================
+
+export const useUserStore = create<UserState>()(
+  persist(
+    (set, get) => ({
+      ...initialState,
+
+      // Individual setters (prevents re-renders when other state changes)
+      setCredits: (credits) => set({ credits }),
+      setSubscription: (subscription) => set({ subscription }),
+      setLoading: (isLoading) => set({ isLoading }),
+      setError: (error) => set({ error }),
+
+      fetchUser: async () => {
+        const state = get();
+        if (state.isLoading) return;
+
+        set({ isLoading: true, error: null });
+
+        try {
+          const response = await fetch("/api/me");
+          if (!response.ok) throw new Error("Failed to fetch user");
+
+          const data = await response.json();
+          set({
+            credits: data.credits || 0,
+            subscription: data.subscription,
+            isLoading: false,
+            isInitialized: true,
+          });
+        } catch (error) {
+          set({
+            isLoading: false,
+            error: error instanceof Error ? error.message : "Unknown error",
+          });
+        }
+      },
+
+      deductCredits: (amount) => {
+        const state = get();
+        set({ credits: Math.max(0, state.credits - amount) });
+      },
+
+      reset: () => set(initialState),
+    }),
+    {
+      name: "hexwave-user-store",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        credits: state.credits,
+        subscription: state.subscription,
+      }),
+    }
+  )
+);
+
+// ============================================================================
+// SELECTORS (for optimized re-renders)
+// ============================================================================
+
+// Atomic selectors - component only re-renders when this specific value changes
+export const selectCredits = (state: UserState) => state.credits;
+export const selectSubscription = (state: UserState) => state.subscription;
+export const selectIsLoading = (state: UserState) => state.isLoading;
+export const selectIsInitialized = (state: UserState) => state.isInitialized;
+export const selectError = (state: UserState) => state.error;
+
+// Computed selectors
+export const selectHasActiveSubscription = (state: UserState) =>
+  state.subscription?.status === "active" || state.subscription?.status === "trialing";
+
+export const selectPlanTier = (state: UserState) =>
+  state.subscription?.plan_tier || "free";
+
+// Action selectors (stable references)
+export const selectSetCredits = (state: UserState) => state.setCredits;
+export const selectDeductCredits = (state: UserState) => state.deductCredits;
+export const selectFetchUser = (state: UserState) => state.fetchUser;
+```
+
+### 6.2 Using Selectors in Components
+
+```typescript
+// ✅ GOOD: Using individual selectors
+import { useUserStore, selectCredits, selectIsLoading, selectDeductCredits } from "@/store/useUserStore";
+
+function CreditDisplay() {
+  // Only re-renders when credits change
+  const credits = useUserStore(selectCredits);
+  
+  return <span>{credits} credits</span>;
+}
+
+function GenerateButton() {
+  // Only re-renders when isLoading changes
+  const isLoading = useUserStore(selectIsLoading);
+  const deductCredits = useUserStore(selectDeductCredits);
+  
+  const handleGenerate = () => {
+    deductCredits(10);
+    // ... generation logic
+  };
+  
+  return (
+    <button onClick={handleGenerate} disabled={isLoading}>
+      Generate
+    </button>
+  );
+}
+
+// ❌ BAD: Subscribing to entire store (re-renders on ANY change)
+function BadComponent() {
+  const { credits, subscription, isLoading } = useUserStore();
+  // This component re-renders when ANY state changes!
+  return <span>{credits}</span>;
+}
+
+// ✅ GOOD: Multiple selectors when needed
+function UserSummary() {
+  const credits = useUserStore(selectCredits);
+  const planTier = useUserStore(selectPlanTier);
+  const hasActiveSub = useUserStore(selectHasActiveSubscription);
+  
+  return (
+    <div>
+      <span>{credits} credits</span>
+      <span>{planTier} plan</span>
+      {hasActiveSub && <Badge>Active</Badge>}
+    </div>
+  );
+}
+```
+
+### 6.3 Store Organization
+
+```typescript
+// store/index.ts - Re-export all stores
+export { useUserStore } from "./useUserStore";
+export type { UserState, UserSubscription } from "./useUserStore";
+export {
+  selectCredits,
+  selectSubscription,
+  selectIsLoading,
+  selectHasActiveSubscription,
+  selectPlanTier,
+} from "./useUserStore";
+
+// Future stores
+// export { useUIStore } from "./useUIStore";
+// export { useGenerationStore } from "./useGenerationStore";
+```
+
+---
+
+## 🎨 7. Tailwind Configuration & Theme Management
+
+### 7.1 CSS Variables in globals.css
+
+**MANDATORY**: All theme colors must be defined as CSS variables in `globals.css`.
+
+```css
+/* app/globals.css */
+:root {
+  /* Brand Colors */
+  --color-theme-1: #fff;
+  --color-theme-2: #74ff52ff;           /* Primary accent (green) */
+  --color-theme-3: #74ff521f;           /* Accent with transparency */
+  --color-theme-4: #74ff522e;           /* Accent lighter */
+  --color-theme-hover: #9fff75ff;       /* Hover state */
+
+  /* Text Colors */
+  --color-text-1: #f9fbfcff;            /* Primary text */
+  --color-text-2: #c0c6ccff;            /* Secondary text */
+  --color-text-3: #6c727aff;            /* Tertiary text */
+  --color-text-4: #51545cff;            /* Muted text */
+
+  /* Background Colors */
+  --color-bg-page: #0a0a0a;             /* Page background */
+  --color-bg-primary: #111214;          /* Card background */
+  --color-bg-secondary: #1a1c1f;        /* Secondary surfaces */
+  --color-bg-tertiary: #1f2124ff;       /* Elevated surfaces */
+
+  /* Border Colors */
+  --color-border-frame: #1a1b1fff;
+  --color-border-container: #242629ff;
+  --color-border-component: #3a3c3dff;
+  --color-border-hover: #9da1a3ff;
+
+  /* Status Colors */
+  --color-fill-success: #2feb48;
+  --color-fill-warning: #faca5aff;
+  --color-fill-error: #f04b22ff;
+
+  /* Spacing */
+  --spacing-page-padding: 24px;
+  --spacing-section-gap: 24px;
+}
+```
+
+### 7.2 Using Theme Variables
+
+```typescript
+// ✅ GOOD: Using CSS variables in Tailwind classes
+<div className="bg-[var(--color-bg-primary)] border border-[var(--color-border-container)]">
+  <h1 className="text-[var(--color-text-1)]">Title</h1>
+  <p className="text-[var(--color-text-2)]">Description</p>
+  <button className="bg-[var(--color-theme-2)] hover:bg-[var(--color-theme-hover)]">
+    Action
+  </button>
+</div>
+
+// ✅ GOOD: Creating utility classes for common patterns
+// globals.css
+@layer utilities {
+  .text-primary {
+    color: var(--color-text-1);
+  }
+  .text-secondary {
+    color: var(--color-text-2);
+  }
+  .text-muted {
+    color: var(--color-text-3);
+  }
+  .bg-surface {
+    background-color: var(--color-bg-primary);
+  }
+  .bg-surface-elevated {
+    background-color: var(--color-bg-secondary);
+  }
+  .border-default {
+    border-color: var(--color-border-container);
+  }
+  .accent-primary {
+    color: var(--color-theme-2);
+  }
+}
+
+// Usage
+<div className="bg-surface border border-default rounded-xl p-6">
+  <h1 className="text-primary text-xl font-bold">Title</h1>
+  <p className="text-secondary">Description</p>
+  <span className="accent-primary">Highlighted</span>
+</div>
+```
+
+### 7.3 Reusable Class Patterns
+
+```typescript
+// constants/styles.ts
+export const cardStyles = {
+  base: "rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm",
+  hover: "hover:bg-white/10 hover:border-white/20 transition-all duration-300",
+  padding: {
+    sm: "p-4",
+    md: "p-6",
+    lg: "p-8",
+  },
+};
+
+export const buttonStyles = {
+  primary: "px-6 py-3 rounded-xl bg-[#74FF52] text-[#0a0a0a] font-semibold hover:bg-[#66e648] transition-all duration-200",
+  secondary: "px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all duration-200",
+  ghost: "px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 transition-all duration-200",
+};
+
+export const inputStyles = {
+  base: "w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/10 transition-all backdrop-blur-sm",
+  error: "border-red-500/50 focus:border-red-500 focus:ring-red-500/20",
+};
+
+// Usage in components
+import { cardStyles, buttonStyles } from "@/constants/styles";
+import { cn } from "@/lib/utils";
+
+<div className={cn(cardStyles.base, cardStyles.hover, cardStyles.padding.md)}>
+  <button className={buttonStyles.primary}>Submit</button>
+</div>
+```
+
+---
+
+## 📋 8. Constants Management
+
+### 8.1 Centralized Constants
+
+**MANDATORY**: All magic numbers and configuration values MUST be in the `constants/` folder.
+
+```typescript
+// constants/api.ts
+export const API_TIMEOUT = 30000;           // 30 seconds
+export const MAX_RETRY_ATTEMPTS = 3;
+export const RETRY_DELAY_BASE = 1000;       // 1 second base delay
+
+// constants/ui.ts
+export const ANIMATION_DURATION = 300;      // ms
+export const DEBOUNCE_DELAY = 500;          // ms
+export const MODAL_ANIMATION = 200;         // ms
+export const TOAST_DURATION = 5000;         // ms
+
+// constants/limits.ts
+export const MAX_FILE_SIZE = 10 * 1024 * 1024;  // 10MB
+export const MAX_IMAGES_PER_REQUEST = 4;
+export const FREE_TIER_CREDITS = 50;
+export const CREDITS_PER_IMAGE = 10;
+
+// constants/index.ts - Re-exports
+export * from "./api";
+export * from "./ui";
+export * from "./limits";
+export * from "./paddle";
+```
+
+---
+
+## ✅ 9. Checklist for New Features
+
+### 9.1 New Page Checklist
+
+```markdown
+- [ ] Create page.tsx as Server Component
+- [ ] Add generateMetadata with full SEO data
+- [ ] Create _components/ folder for page-specific components
+- [ ] Break down into sub-components (< 150 lines each)
+- [ ] Use Client Components only where needed
+- [ ] Add loading.tsx for Suspense fallback
+- [ ] Add error.tsx for error boundary
+- [ ] Create index.ts for clean exports
+```
+
+### 9.2 New Component Checklist
+
+```markdown
+- [ ] Determine Server vs Client Component
+- [ ] Check for similar existing components (DRY)
+- [ ] Define TypeScript interface for props
+- [ ] Keep under 150 lines
+- [ ] Extract sub-components if complex
+- [ ] Add to appropriate folder (common/, shared/, feature/)
+- [ ] Export from index.ts
+```
+
+### 9.3 New API Integration Checklist
+
+```markdown
+- [ ] Add types in types/[feature].ts
+- [ ] Create API functions in lib/api/[feature].ts
+- [ ] Add query keys in lib/query/client.ts
+- [ ] Create custom hook in hooks/use-[feature].ts
+- [ ] Configure retry and stale time appropriately
+- [ ] Handle loading and error states in UI
+```
+
+### 9.4 New Store Checklist
+
+```markdown
+- [ ] Define state interface with TypeScript
+- [ ] Create store with persist middleware if needed
+- [ ] Extract individual setters
+- [ ] Create atomic selectors for each state piece
+- [ ] Create computed selectors for derived state
+- [ ] Export from store/index.ts
+```
+
+---
+
+## 🚫 10. Anti-Patterns to Avoid
+
+### 10.1 Component Anti-Patterns
+
+```typescript
+// ❌ BAD: God component with everything
+export default function Page() {
+  const [state1, setState1] = useState();
+  const [state2, setState2] = useState();
+  // ... 20 more state variables
+  // ... 10 useEffects
+  // ... 500 lines of JSX
+}
+
+// ❌ BAD: Prop drilling through many levels
+<GrandParent data={data}>
+  <Parent data={data}>
+    <Child data={data}>
+      <GrandChild data={data} />
+    </Child>
+  </Parent>
+</GrandParent>
+
+// ❌ BAD: useEffect for data fetching
+useEffect(() => {
+  fetch("/api/data")
+    .then((res) => res.json())
+    .then(setData);
+}, []);
+```
+
+### 10.2 State Management Anti-Patterns
+
+```typescript
+// ❌ BAD: Subscribing to entire store
+const store = useUserStore();
+
+// ❌ BAD: Creating new selectors in render
+const selectMemo = useMemo(() => (state) => state.credits, []);
+
+// ❌ BAD: Mutating state directly
+useUserStore.getState().credits = 100;
+```
+
+### 10.3 API Anti-Patterns
+
+```typescript
+// ❌ BAD: Fetching directly in components
+const [data, setData] = useState();
+const [loading, setLoading] = useState(false);
+
+async function fetchData() {
+  setLoading(true);
+  const res = await fetch("/api/data");
+  setData(await res.json());
+  setLoading(false);
+}
+
+// ❌ BAD: No error handling
+const data = await api.get("/endpoint");
+
+// ❌ BAD: No retry logic for critical operations
+await fetch("/api/payment", { method: "POST" });
+```
+
+---
+
+## 📚 Summary
+
+**Core Principles:**
+1. ✅ **Server Components by default** - Only use Client Components when necessary
+2. ✅ **Break down components** - Max 150 lines, single responsibility
+3. ✅ **DRY code** - Extract reusable patterns to common/shared
+4. ✅ **SEO first** - Every page needs proper metadata
+5. ✅ **TanStack Query for APIs** - With proper retry and caching
+6. ✅ **Zustand with selectors** - Prevent unnecessary re-renders
+7. ✅ **Theme in CSS variables** - Centralized, consistent styling
+8. ✅ **Constants folder** - No magic numbers in code
+
+**Key Benefits:**
+- 🚀 Better performance with Server Components
+- 📱 Improved SEO and social sharing
+- 🔧 Maintainable, scalable codebase
+- 🎯 Consistent UI/UX across the application
+- 🔄 Efficient state management with minimal re-renders
+- 📦 Clean, organized code structure
