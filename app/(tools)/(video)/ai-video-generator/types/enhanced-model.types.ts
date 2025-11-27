@@ -1,4 +1,12 @@
-import { ModelType } from "./index.types";
+import { 
+  ModelType, 
+  FieldConfiguration, 
+  FieldOption, 
+  ModelCapabilities 
+} from "./index.types";
+
+// Re-export for backward compatibility
+export type { FieldConfiguration, FieldOption, ModelCapabilities };
 
 /**
  * Enhanced model types for AI Video Generator
@@ -12,124 +20,6 @@ import { ModelType } from "./index.types";
  * - Enable automatic UI rendering from model metadata
  * - Maintain 100% backward compatibility
  */
-
-/**
- * Field option with value and display label
- * Used for select dropdowns and radio groups
- */
-export interface FieldOption<T = string> {
-  value: T;
-  label: string;
-}
-
-/**
- * Configuration for a single model field
- * Contains all metadata needed to render and validate the field
- */
-export interface FieldConfiguration {
-  /**
-   * Available options for select/slider fields
-   * Can be:
-   * - Array of strings: ["5", "10", "15"] for simple selects
-   * - Array of numbers: [5, 10, 15] for numeric selects
-   * - Array of FieldOption objects: [{ value: "16:9", label: "Landscape" }]
-   */
-  options?: FieldOption<string>[] | string[] | number[];
-  
-  /**
-   * Default value for this field
-   * Used for initialization and reset
-   */
-  default: any;
-  
-  /**
-   * Display label for the field
-   * Shown above the input in the UI
-   */
-  label?: string;
-  
-  /**
-   * Whether user can change this value
-   * If false, field is hidden or disabled
-   */
-  userSelectable?: boolean;
-  
-  /**
-   * Minimum value for sliders/numeric inputs
-   */
-  min?: number;
-  
-  /**
-   * Maximum value for sliders/numeric inputs
-   */
-  max?: number;
-  
-  /**
-   * Step increment for sliders/numeric inputs
-   */
-  step?: number;
-  
-  /**
-   * Help text shown below the field
-   */
-  helpText?: string;
-  
-  /**
-   * Placeholder text for inputs
-   */
-  placeholder?: string;
-}
-
-/**
- * Model capabilities and constraints
- * Flags that indicate what features a model supports
- */
-export interface ModelCapabilities {
-  /**
-   * Whether model supports end frame image upload
-   * Used for video interpolation/transition effects
-   */
-  supportsEndFrame: boolean;
-  
-  /**
-   * Whether model supports tail image (continuation frame)
-   * Used for extended video generation
-   */
-  supportsTailImage: boolean;
-  
-  /**
-   * Whether model generates audio automatically
-   * Some models (VEO3, Sora) always include audio
-   */
-  supportsAudioGeneration: boolean;
-  
-  /**
-   * Maximum characters allowed in prompt field
-   * Different models have different limits (1000-10000)
-   */
-  promptCharacterLimit: number;
-  
-  /**
-   * Maximum characters allowed in negative prompt field
-   */
-  negativePromptCharacterLimit: number;
-  
-  /**
-   * If model uses a fixed duration regardless of user input
-   * Example: VEO3 always generates 8-second videos
-   */
-  fixedDuration?: number;
-  
-  /**
-   * If model uses fixed aspect ratio regardless of user input
-   */
-  fixedAspectRatio?: string;
-  
-  /**
-   * If model uses fixed resolution regardless of user input
-   */
-  fixedResolution?: string;
-}
 
 /**
  * Enhanced model type with complete metadata

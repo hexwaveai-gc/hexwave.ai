@@ -4,8 +4,8 @@ import { dbConnect } from "@/lib/db";
 import ProcessRequest from "@/app/models/processRequest/processRequestmodel";
 import { publishProcessStatus } from "@/lib/ably";
 import { logInfo, logError } from "@/lib/logger";
-import { refundCredits } from "@/lib/credits";
-import type { ToolCategory } from "@/lib/credits/types";
+import { CreditService } from "@/lib/services";
+import type { ToolCategory } from "@/lib/types/process";
 
 // Retry helper function with exponential backoff
 async function withRetry<T>(
@@ -41,6 +41,24 @@ async function withRetry<T>(
 }
 
 /**
+ * Generate a human-readable description for a refund
+ */
+function generateRefundDescription(
+  category: string | null,
+  toolName: string | null
+): string {
+  const toolLabel = toolName || "Unknown tool";
+  const categoryLabel =
+    category === "image"
+      ? "image"
+      : category === "video"
+        ? "video"
+        : "content";
+
+  return `Refund for failed ${categoryLabel} generation with ${toolLabel}`;
+}
+
+/**
  * Handle credit refund for failed processes
  * Non-blocking - errors are logged but don't fail the main operation
  */
@@ -55,16 +73,28 @@ async function handleCreditRefund(process: {
     const { processId, userId, creditsUsed, category, toolName } = process;
 
     if (!userId || creditsUsed <= 0) {
-      logInfo("Skipping refund - no credits to refund", { processId, userId, creditsUsed });
+      logInfo("Skipping refund - no credits to refund", {
+        processId,
+        userId,
+        creditsUsed,
+      });
       return;
     }
 
-    const result = await refundCredits({
+    const description = generateRefundDescription(category, toolName);
+
+    const result = await CreditService.refundCredits({
       userId,
       amount: creditsUsed,
-      processId,
-      category: category || "image",
-      toolName: toolName || "unknown",
+      description,
+      relatedTransactionRef: `process_${processId}`,
+      source: "system",
+      metadata: {
+        processId,
+        category,
+        toolName,
+        reason: "process_failed",
+      },
     });
 
     if (result.success) {
@@ -72,15 +102,21 @@ async function handleCreditRefund(process: {
         processId,
         userId,
         amount: creditsUsed,
-        transactionId: result.transactionId,
+        transactionRef: result.transaction_ref,
+        balanceAfter: result.balance_after,
       });
     } else {
-      // Refund failed but might be because it was already refunded (idempotency)
-      logError("Failed to refund credits", new Error(result.error || "Unknown"), {
-        processId,
-        userId,
-        creditsUsed,
-      });
+      // Refund failed
+      logError(
+        "Failed to refund credits",
+        new Error(result.error || "Unknown"),
+        {
+          processId,
+          userId,
+          creditsUsed,
+          errorCode: result.error_code,
+        }
+      );
     }
   } catch (error) {
     // Log but don't throw - refund failure should not break the main flow
@@ -180,7 +216,13 @@ export async function updateProcessData(
         { new: true, upsert: true }
       );
 
+      // Refund credits BEFORE Ably notification (so frontend can fetch updated balance)
+      if (status === "failed" && existingProcess?.creditsUsed > 0) {
+        await handleCreditRefund(existingProcess);
+      }
+
       // Publish to Ably for completed or failed status
+      // Note: This comes AFTER refund so frontend can get updated credits
       if (status === "completed" || status === "failed") {
         await notifyProcessStatus(
           processId,
@@ -188,11 +230,6 @@ export async function updateProcessData(
           processData.data as Record<string, unknown>,
           status === "failed" ? (data?.error as string) : undefined
         );
-      }
-
-      // Refund credits if process failed
-      if (status === "failed" && existingProcess?.creditsUsed > 0) {
-        await handleCreditRefund(existingProcess);
       }
 
       return {
@@ -208,7 +245,12 @@ export async function updateProcessData(
 
     // Try to notify about failure via Ably
     if (status === "failed" || !status) {
-      await notifyProcessStatus(processId, "failed", undefined, "Process update failed");
+      await notifyProcessStatus(
+        processId,
+        "failed",
+        undefined,
+        "Process update failed"
+      );
     }
 
     return {
@@ -318,7 +360,13 @@ export async function updateProcessDataWithImageCount(
           { new: true, session }
         );
 
+        // Refund credits BEFORE Ably notification (so frontend can fetch updated balance)
+        if (status === "failed" && currentProcess?.creditsUsed > 0) {
+          await handleCreditRefund(currentProcess);
+        }
+
         // Notify via Ably if process completed or failed
+        // Note: This comes AFTER refund so frontend can get updated credits
         if (newTotal >= totalExpectedImages || status === "failed") {
           const finalStatus = status === "failed" ? "failed" : "completed";
           await notifyProcessStatus(
@@ -327,11 +375,6 @@ export async function updateProcessDataWithImageCount(
             result?.data as Record<string, unknown>,
             status === "failed" ? error : undefined
           );
-        }
-
-        // Refund credits if process failed
-        if (status === "failed" && currentProcess?.creditsUsed > 0) {
-          await handleCreditRefund(currentProcess);
         }
       });
 

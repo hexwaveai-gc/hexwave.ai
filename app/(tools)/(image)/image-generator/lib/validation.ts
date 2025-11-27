@@ -6,7 +6,7 @@
 
 import { z } from "zod";
 import { ModelSettings } from "../lib/modelRegistry";
-import { ActiveTab } from "../store/useImageGenerationStore";
+import { ActiveTab } from "../types/shared.types";
 import { getFieldMetadata, PRIMARY_FIELD_KEYS } from "../lib/fieldMetadata";
 
 /**

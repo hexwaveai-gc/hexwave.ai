@@ -7,6 +7,9 @@ import {
   useSimulateWebhook,
   useClearProcessCache,
 } from "@/hooks/queries/use-process";
+import { useUser } from "@/hooks/use-user";
+import { useUserStore, selectCredits } from "@/store/useUserStore";
+import { Sidebar } from "@/app/components/common/sidebar/Sidebar";
 import { FlowDiagram } from "./components/FlowDiagram";
 import { ProcessMonitor } from "./components/ProcessMonitor";
 import { WebhookSimulator } from "./components/WebhookSimulator";
@@ -16,20 +19,22 @@ export default function AblyDemoPage() {
   const [activeFlowStep, setActiveFlowStep] = useState<string | undefined>();
   const clearCache = useClearProcessCache();
 
+  // User data with credits - uses TanStack Query + Zustand sync
+  const { credits, invalidate: invalidateUser, isLoading: isUserLoading } = useUser();
+
   // Process status with TanStack Query + Ably
-  const {
-    status,
-    data,
-    error,
-    isLoading,
-  } = useProcessStatusQuery(processId, {
+  const { status, data, error, isLoading } = useProcessStatusQuery(processId, {
     onComplete: (completedData) => {
       setActiveFlowStep("ably");
+      // Refresh user data to get updated credits
+      invalidateUser();
       // Clear active step after animation
       setTimeout(() => setActiveFlowStep(undefined), 2000);
     },
     onError: (errorMessage) => {
       setActiveFlowStep(undefined);
+      // Refresh user data - credits may have been refunded
+      invalidateUser();
     },
   });
 
@@ -51,13 +56,16 @@ export default function AblyDemoPage() {
       setProcessId(result.processId);
       setActiveFlowStep("backend");
 
+      // Refresh credits after process starts (credits deducted)
+      invalidateUser();
+
       // Simulate backend -> external API flow
       setTimeout(() => setActiveFlowStep("external"), 500);
     } catch (err) {
       console.error("Failed to start process:", err);
       setActiveFlowStep(undefined);
     }
-  }, [startProcess]);
+  }, [startProcess, invalidateUser]);
 
   // Handle simulating webhook
   const handleSimulateWebhook = useCallback(
@@ -93,24 +101,33 @@ export default function AblyDemoPage() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      {/* Header */}
-      <header className="border-b border-zinc-800 bg-zinc-900/50">
-        <div className="max-w-6xl mx-auto px-6 py-8">
-          <div className="flex items-center gap-3 mb-2">
-            <span className="text-3xl">📡</span>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
-              Ably Real-Time Demo
-            </h1>
-          </div>
-          <p className="text-zinc-400 max-w-2xl">
-            Experience the complete webhook flow with real-time updates.
-            This demo shows how TanStack Query integrates with Ably for
-            instant status notifications without polling.
-          </p>
-        </div>
-      </header>
+      {/* Sidebar */}
+      <Sidebar />
 
-      <main className="max-w-6xl mx-auto px-6 py-8 space-y-8">
+      {/* Main Content - offset for sidebar on desktop */}
+      <div className="md:ml-20">
+        {/* Header */}
+        <header className="border-b border-zinc-800 bg-zinc-900/50">
+          <div className="max-w-6xl mx-auto px-6 py-8">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">📡</span>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent">
+                  Ably Real-Time Demo
+                </h1>
+              </div>
+              {/* Credit Display */}
+              <CreditDisplay credits={credits} isLoading={isUserLoading} />
+            </div>
+            <p className="text-zinc-400 max-w-2xl">
+              Experience the complete webhook flow with real-time updates. This
+              demo shows how TanStack Query integrates with Ably for instant
+              status notifications without polling.
+            </p>
+          </div>
+        </header>
+
+        <main className="max-w-6xl mx-auto px-6 py-8 pb-24 md:pb-8 space-y-8">
         {/* Flow Diagram */}
         <FlowDiagram activeStep={activeFlowStep} />
 
@@ -126,8 +143,9 @@ export default function AblyDemoPage() {
               </div>
 
               <p className="text-sm text-zinc-500 mb-4">
-                Click to generate a process ID and subscribe to real-time updates.
-                This simulates triggering a long-running operation like image generation.
+                Click to generate a process ID and subscribe to real-time
+                updates. This simulates triggering a long-running operation like
+                image generation.
               </p>
 
               <button
@@ -187,6 +205,7 @@ export default function AblyDemoPage() {
         {/* Feature Cards */}
         <FeatureCards />
       </main>
+      </div>
     </div>
   );
 }
@@ -195,24 +214,57 @@ export default function AblyDemoPage() {
 // Sub-components
 // =============================================================================
 
+/**
+ * Credit Display Component
+ * Shows current credit balance with optimized re-renders via Zustand selector
+ */
+function CreditDisplay({
+  credits,
+  isLoading,
+}: {
+  credits: number;
+  isLoading: boolean;
+}) {
+  // Also subscribe directly to store for instant updates
+  const storeCredits = useUserStore(selectCredits);
+  const displayCredits = credits || storeCredits;
+
+  return (
+    <div className="flex items-center gap-2 px-4 py-2 bg-zinc-800/50 rounded-xl border border-zinc-700">
+      <span className="text-lg">💎</span>
+      {isLoading ? (
+        <div className="w-12 h-5 bg-zinc-700 rounded animate-pulse" />
+      ) : (
+        <span className="font-semibold text-emerald-400">
+          {displayCredits.toLocaleString()}
+        </span>
+      )}
+      <span className="text-xs text-zinc-500">credits</span>
+    </div>
+  );
+}
+
 function CodeExample() {
   const [showCode, setShowCode] = useState(false);
 
   const exampleCode = `// Using the combined TanStack Query + Ably hook
 import { useProcessStatusQuery } from "@/hooks/queries/use-process";
+import { useUser } from "@/hooks/use-user";
 
 function MyComponent() {
   const [processId, setProcessId] = useState<string | null>(null);
+  const { credits, invalidate } = useUser();
 
   const { status, data, error, isLoading } = useProcessStatusQuery(
     processId,
     {
       onComplete: (data) => {
         toast.success("Done!");
-        // data is already in TanStack Query cache
+        invalidate(); // Refresh credits
       },
       onError: (error) => {
         toast.error(error);
+        invalidate(); // Credits may be refunded
       },
     }
   );
@@ -224,11 +276,12 @@ function MyComponent() {
       toolName: "my-tool",
     });
     setProcessId(processId);
-    // Hook automatically subscribes to Ably channel
+    invalidate(); // Credits deducted
   };
 
   return (
     <div>
+      <p>Credits: {credits}</p>
       <button onClick={handleStart}>Start</button>
       {isLoading && <Spinner />}
       {status === "completed" && <Results data={data} />}
@@ -259,8 +312,8 @@ function MyComponent() {
 
       {!showCode && (
         <p className="text-sm text-zinc-500">
-          Click "Show Code" to see how to use the useProcessStatusQuery hook
-          with TanStack Query and Ably in your own components.
+          Click &quot;Show Code&quot; to see how to use the useProcessStatusQuery
+          hook with TanStack Query and Ably in your own components.
         </p>
       )}
     </section>
@@ -288,10 +341,10 @@ function FeatureCards() {
         "Real-time Ably updates automatically sync with TanStack Query cache for consistency.",
     },
     {
-      icon: "🛡️",
-      title: "Fallback Ready",
+      icon: "💎",
+      title: "Credit Tracking",
       description:
-        "Enable polling as a fallback if Ably connection fails. Your app stays resilient.",
+        "Credits are deducted on process start and automatically refunded if the process fails.",
     },
   ];
 
@@ -310,4 +363,3 @@ function FeatureCards() {
     </div>
   );
 }
-

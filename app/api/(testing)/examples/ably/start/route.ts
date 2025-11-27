@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { generateUniqueId } from "@/app/controllers/processRequest";
-import type { ToolCategory } from "@/lib/credits/types";
+import type { ToolCategory } from "@/lib/types/process";
 
 /**
  * POST /api/examples/ably/start
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     const { 
       toolName = "demo-tool", 
       category = "image" as ToolCategory, 
-      creditsToDeduct = 100, // Demo uses 1 credit
+      creditsToDeduct = 120, // Demo uses 1 credit
       data = {} 
     } = body;
 
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Handle credit/process creation errors
-    if (!result.success) {
+    if (result.success === false) {
       const statusCode = result.error === "INSUFFICIENT_CREDITS" ? 402 : 500;
       return NextResponse.json(
         { 

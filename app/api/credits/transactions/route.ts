@@ -1,7 +1,7 @@
 /**
  * GET /api/credits/transactions
- * 
- * Fetches user's credit transaction history.
+ *
+ * Fetches user's credit transaction history from CreditLedger.
  * Supports filtering and pagination.
  */
 
@@ -33,16 +33,19 @@ export async function GET(request: NextRequest) {
     }
 
     // Parse query parameters
-    const type = searchParams.get("type") as "DEDUCTION" | "REFUND" | "CREDIT_ADDED" | null;
+    const type = searchParams.get("type") as CreditTransactionType | null;
     const page = parseInt(searchParams.get("page") || "1", 10);
-    const limit = Math.min(parseInt(searchParams.get("limit") || "20", 10), 100);
+    const limit = Math.min(
+      parseInt(searchParams.get("limit") || "20", 10),
+      100
+    );
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
     await dbConnect();
 
     // Build query
-    const query: Record<string, unknown> = { userId };
+    const query: Record<string, unknown> = { user_id: userId };
 
     if (type) {
       query.type = type;
@@ -60,12 +63,12 @@ export async function GET(request: NextRequest) {
 
     // Execute queries in parallel
     const [transactions, total] = await Promise.all([
-      CreditTransaction.find(query)
+      CreditLedger.find(query)
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      CreditTransaction.countDocuments(query),
+      CreditLedger.countDocuments(query),
     ]);
 
     return ApiResponse.ok({
@@ -80,4 +83,3 @@ export async function GET(request: NextRequest) {
     return ApiResponse.serverError("Failed to fetch transactions");
   }
 }
-

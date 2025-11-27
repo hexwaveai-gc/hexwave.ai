@@ -6,7 +6,7 @@
  */
 
 import { Model, ModelSettings } from "../lib/modelRegistry";
-import { ActiveTab } from "../store/useImageGenerationStore";
+import { ActiveTab } from "../types/shared.types";
 import {
   uploadToCloudinary,
   uploadMultipleToCloudinary,

@@ -5,6 +5,8 @@ import { createBaseModel, IBaseDocument } from "@/lib/models/BaseModel";
  * Defines tool-specific metadata for AI image generation
  */
 interface IImageGenMetadata {
+  [key: string]: unknown; // Index signature for compatibility with Record<string, unknown>
+
   // Core generation parameters (required)
   prompt: string;
   model: string;
@@ -77,4 +79,5 @@ export function getImageGenModel() {
  * Export types for use in other files
  */
 export type { IImageGen, IImageGenMetadata };
+
 

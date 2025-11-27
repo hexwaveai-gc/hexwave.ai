@@ -7,20 +7,25 @@
  * - Caching to avoid re-fetching completed processes
  * - State recovery after page refresh
  *
- * Ably handles:
+ * Ably handles (via singleton manager):
+ * - On-demand connection (only when subscribing)
  * - Real-time status updates
  * - Instant completion notifications
+ * - Auto-disconnect when all processes complete
  */
 
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef, useState } from "react";
 import {
   useQuery,
   useMutation,
   useQueryClient,
   queryOptions,
 } from "@tanstack/react-query";
-import type Ably from "ably";
-import { getProcessChannel } from "@/lib/ably/client";
+import {
+  subscribeToProcess,
+  addConnectionListener,
+  isConnected as checkIsConnected,
+} from "@/lib/ably/client";
 import type { ProcessStatusMessage } from "@/lib/ably/types";
 import { processKeys } from "@/lib/query";
 import { STALE_TIME_INFINITE } from "@/constants/query";
@@ -93,6 +98,11 @@ export function processQueryOptions(processId: string | null) {
 /**
  * Combined TanStack Query + Ably hook for process status tracking
  *
+ * Features:
+ * - On-demand Ably connection (no connection until you have a processId)
+ * - Auto-disconnect when process completes/fails
+ * - Automatic cache sync with real-time updates
+ *
  * @param processId - The process ID to track
  * @param options - Configuration options
  *
@@ -118,24 +128,57 @@ export function useProcessStatusQuery(
   } = options;
 
   const queryClient = useQueryClient();
-  const channelRef = useRef<Ably.RealtimeChannel | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
   const callbacksRef = useRef({ onStatusChange, onComplete, onError });
+
+  // Track if we've received a terminal status
+  const hasCompletedRef = useRef(false);
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   // Keep callbacks ref updated
   useEffect(() => {
     callbacksRef.current = { onStatusChange, onComplete, onError };
   }, [onStatusChange, onComplete, onError]);
 
+  // Listen to connection state changes
+  useEffect(() => {
+    setIsConnected(checkIsConnected());
+    const removeListener = addConnectionListener((state) => {
+      setIsConnected(state === "connected");
+    });
+    return removeListener;
+  }, []);
+
   // TanStack Query for initial data and caching
   const query = useQuery({
     ...processQueryOptions(processId),
-    // Enable polling only if Ably is disabled
-    refetchInterval: enablePolling && !enableRealtime ? pollingInterval : false,
+    // Enable polling only if Ably is disabled or not connected
+    refetchInterval:
+      enablePolling && (!enableRealtime || !isConnected) ? pollingInterval : false,
   });
 
-  // Handle Ably message
-  const handleAblyMessage = useCallback(
-    (message: Ably.Message) => {
+  // Setup Ably subscription (on-demand connection)
+  useEffect(() => {
+    if (!processId || !enableRealtime) return;
+
+    // Reset completion flag when processId changes
+    hasCompletedRef.current = false;
+
+    // Check if process is already completed - no need to subscribe
+    const cachedData = queryClient.getQueryData<ProcessData>(
+      processKeys.detail(processId)
+    );
+    if (cachedData?.status === "completed" || cachedData?.status === "failed") {
+      hasCompletedRef.current = true;
+      return;
+    }
+
+    let isCancelled = false;
+
+    // Subscribe asynchronously (this triggers connection on first subscription)
+    subscribeToProcess(processId, (message) => {
+      if (isCancelled || hasCompletedRef.current) return;
+
       const messageData = message.data as ProcessStatusMessage;
 
       // Update query cache with real-time data
@@ -155,45 +198,43 @@ export function useProcessStatusQuery(
       callbacksRef.current.onStatusChange?.(messageData.status, messageData.data);
 
       if (messageData.status === "completed" && messageData.data) {
+        hasCompletedRef.current = true;
         callbacksRef.current.onComplete?.(messageData.data);
+        // Auto-unsubscribe on completion
+        setTimeout(() => {
+          unsubscribeRef.current?.();
+          unsubscribeRef.current = null;
+        }, 0);
       }
 
       if (messageData.status === "failed" && messageData.error) {
+        hasCompletedRef.current = true;
         callbacksRef.current.onError?.(messageData.error);
+        // Auto-unsubscribe on failure
+        setTimeout(() => {
+          unsubscribeRef.current?.();
+          unsubscribeRef.current = null;
+        }, 0);
       }
-    },
-    [queryClient]
-  );
+    })
+      .then((unsubscribe) => {
+        if (isCancelled) {
+          unsubscribe();
+          return;
+        }
+        unsubscribeRef.current = unsubscribe;
+      })
+      .catch((error) => {
+        console.error("[useProcessStatusQuery] Failed to subscribe:", error);
+      });
 
-  // Setup Ably subscription
-  useEffect(() => {
-    if (!processId || !enableRealtime) return;
-
-    // Check if process is already completed - no need to subscribe
-    const cachedData = queryClient.getQueryData<ProcessData>(
-      processKeys.detail(processId)
-    );
-    if (cachedData?.status === "completed" || cachedData?.status === "failed") {
-      return;
-    }
-
-    try {
-      const channel = getProcessChannel(processId);
-      channelRef.current = channel;
-
-      channel.subscribe("status-update", handleAblyMessage);
-    } catch (error) {
-      console.error("[useProcessStatusQuery] Failed to subscribe:", error);
-    }
-
+    // Cleanup on unmount or processId change
     return () => {
-      if (channelRef.current) {
-        channelRef.current.unsubscribe();
-        channelRef.current.detach();
-        channelRef.current = null;
-      }
+      isCancelled = true;
+      unsubscribeRef.current?.();
+      unsubscribeRef.current = null;
     };
-  }, [processId, enableRealtime, handleAblyMessage, queryClient]);
+  }, [processId, enableRealtime, queryClient]);
 
   // Derived status
   const status: ProcessStatus = query.data?.status ?? "idle";
@@ -212,6 +253,9 @@ export function useProcessStatusQuery(
     isFetching: query.isFetching,
     isStale: query.isStale,
 
+    // Connection state
+    isConnected,
+
     // Actions
     refetch: query.refetch,
   };
@@ -224,11 +268,13 @@ export function useProcessStatusQuery(
 interface StartProcessInput {
   toolName: string;
   category?: string;
+  creditsToDeduct?: number;
   data?: Record<string, unknown>;
 }
 
 interface StartProcessResponse {
   processId: string;
+  creditsUsed?: number;
 }
 
 /**
@@ -271,8 +317,6 @@ export function useStartProcess() {
  * Simulate webhook completion (for demo purposes)
  */
 export function useSimulateWebhook() {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async ({
       processId,
@@ -335,4 +379,3 @@ export function useClearProcessCache() {
     [queryClient]
   );
 }
-

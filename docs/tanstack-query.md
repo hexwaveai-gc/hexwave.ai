@@ -704,7 +704,7 @@ import {
 
 // Display balance
 const { data, isLoading } = useUserCredits(userId);
-console.log(data?.availableBalance);
+console.log(data?.credits);
 
 // Check before expensive operation
 const { hasEnough, balance } = useCreditsCheck(userId);

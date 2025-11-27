@@ -28,7 +28,7 @@ const userSchema = new Mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
-      index: true,
+      // Note: index defined via schema.index() below for consistency
       validate: {
         validator: function(v: string) {
           return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
@@ -41,7 +41,7 @@ const userSchema = new Mongoose.Schema(
     customerId: { 
       type: String, 
       default: null,
-      index: true,
+      // Note: index defined via schema.index() below with sparse option
     },
     
     // Subscription details
@@ -51,8 +51,7 @@ const userSchema = new Mongoose.Schema(
         id: { 
           type: String, 
           required: false,
-          index: true,
-          sparse: true,
+          // Note: indexed via parent schema for compound queries
         },
         // Paddle Customer ID (duplicated for quick access)
         customerId: { 
@@ -63,7 +62,7 @@ const userSchema = new Mongoose.Schema(
         product_id: { 
           type: String, 
           required: false,
-          index: true,
+          // Note: indexed via parent schema.index()
         },
         // Paddle Price ID
         price_id: { 
@@ -74,7 +73,7 @@ const userSchema = new Mongoose.Schema(
         transaction_id: {
           type: String,
           required: false,
-          index: true,
+          // Note: indexed via parent schema.index() with sparse option
         },
         
         // Subscription Status
@@ -93,19 +92,18 @@ const userSchema = new Mongoose.Schema(
             "expired",
           ],
           required: false,
-          index: true,
+          // Note: indexed via parent schema.index()
         },
         
         // Billing Period (Unix timestamps in ms)
         current_period_start: { 
           type: Number, 
           required: false,
-          index: true,
         },
         current_period_ends: { 
           type: Number, 
           required: false,
-          index: true,
+          // Note: indexed via parent schema.index()
         },
         
         // Subscription Details
@@ -214,11 +212,22 @@ const userSchema = new Mongoose.Schema(
 );
 
 // Indexes for performance-critical queries
+// Note: Avoid using `index: true` in field definitions to prevent duplicate indexes
+
+// Email uniqueness (required for user lookup)
 userSchema.index({ email: 1 }, { unique: true });
+
+// Customer ID for Paddle integration
+userSchema.index({ customerId: 1 }, { sparse: true });
+
+// Subscription lookups
+userSchema.index({ "subscription.id": 1 }, { sparse: true });
 userSchema.index({ "subscription.status": 1 });
 userSchema.index({ "subscription.product_id": 1 });
 userSchema.index({ "subscription.current_period_ends": 1 });
-userSchema.index({ customerId: 1 }, { sparse: true });
+userSchema.index({ "subscription.transaction_id": 1 }, { sparse: true });
+
+// Compound indexes for common queries
 userSchema.index({ 
   "subscription.status": 1, 
   "subscription.current_period_ends": 1 
@@ -236,7 +245,8 @@ userSchema.index({
   "subscription.plan_tier": 1,
   "subscription.status": 1,
 });
-userSchema.index({ "subscription.transaction_id": 1 }, { sparse: true });
+
+// Sort index
 userSchema.index({ createdAt: -1 });
 
 // Subscription interface

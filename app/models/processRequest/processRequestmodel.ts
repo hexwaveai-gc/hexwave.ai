@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import type { ToolCategory } from '@/lib/credits/types';
+import type { ToolCategory } from '@/lib/types/process';
 
 // Define the status types for better type safety
 export type ProcessStatus = 'processing' | 'completed' | 'failed';

@@ -1,4 +1,4 @@
-import Ably from "ably";
+import * as Ably from "ably";
 import type { ProcessStatusMessage } from "./types";
 
 // Singleton REST client for server-side operations

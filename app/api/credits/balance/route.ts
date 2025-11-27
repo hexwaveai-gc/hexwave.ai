@@ -1,6 +1,6 @@
 /**
  * GET /api/credits/balance
- * 
+ *
  * Fetches user's current credit balance.
  * Requires userId as query parameter.
  */
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
     await dbConnect();
 
     const user = await User.findById(userId)
-      .select("availableBalance")
+      .select("credits balance_verified_at")
       .lean();
 
     if (!user) {
@@ -45,11 +45,11 @@ export async function GET(request: NextRequest) {
 
     return ApiResponse.ok({
       userId,
-      availableBalance: user.availableBalance || 0,
+      credits: user.credits || 0,
+      balanceVerified: !!user.balance_verified_at,
     });
   } catch (error) {
     logError("Credits balance error", error);
     return ApiResponse.serverError("Failed to fetch credits");
   }
 }
-
