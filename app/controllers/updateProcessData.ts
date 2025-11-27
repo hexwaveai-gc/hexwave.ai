@@ -4,7 +4,7 @@ import { dbConnect } from "@/lib/db";
 import ProcessRequest from "@/app/models/processRequest/processRequestmodel";
 import { publishProcessStatus } from "@/lib/ably";
 import { logInfo, logError } from "@/lib/logger";
-import { refundCredits } from "@/lib/services";
+import { CreditService } from "@/lib/services";
 import type { ToolCategory } from "@/lib/types/process";
 
 // Retry helper function with exponential backoff
@@ -83,7 +83,7 @@ async function handleCreditRefund(process: {
 
     const description = generateRefundDescription(category, toolName);
 
-    const result = await refundCredits({
+    const result = await CreditService.refundCredits({
       userId,
       amount: creditsUsed,
       description,

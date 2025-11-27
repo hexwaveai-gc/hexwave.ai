@@ -1,30 +1,20 @@
 /**
  * Process Request Controller
  *
- * Handles process creation with atomic credit deduction.
+ * Handles process creation with credit deduction via CreditService.
  * All tool usage (image/video generation) goes through generateUniqueId(),
  * which ensures credits are available and deducted before processing starts.
  */
 
 import { v4 as uuidv4 } from "uuid";
 import { dbConnect } from "@/lib/db";
-import User from "@/app/models/User/user.model";
 import ProcessRequest from "@/app/models/processRequest/processRequestmodel";
-import CreditLedger from "@/app/models/CreditLedger/credit-ledger.model";
+import { CreditService } from "@/lib/services/CreditService";
 import { logInfo, logError } from "@/lib/logger";
 import type {
   GenerateProcessOptions,
   GenerateProcessResult,
 } from "@/lib/types/process";
-
-/**
- * Generate a transaction reference for ledger entries
- */
-function generateTransactionRef(): string {
-  const timestamp = Date.now().toString(36);
-  const random = uuidv4().split("-")[0];
-  return `txn_${timestamp}_${random}`;
-}
 
 /**
  * Generate a human-readable description for a credit transaction
@@ -45,15 +35,13 @@ function generateTransactionDescription(
 }
 
 /**
- * Generate a unique process ID with atomic credit deduction
+ * Generate a unique process ID with credit deduction via CreditService
  *
- * This function performs the following atomically within a MongoDB transaction:
- * 1. Validates user exists and has sufficient credits
- * 2. Deducts credits from user's balance
+ * This function performs the following:
+ * 1. Validates user exists and has sufficient credits (via CreditService)
+ * 2. Deducts credits from user's balance (via CreditService)
  * 3. Creates the process record with credit info
- * 4. Creates a credit ledger entry
- *
- * If any step fails, all changes are rolled back.
+ * 4. If process creation fails, refunds credits automatically
  *
  * @param options - Process creation options including credit info
  * @returns Result object with processId on success, or error details on failure
@@ -96,151 +84,127 @@ export async function generateUniqueId(
   }
 
   const processId = uuidv4();
-  const transactionRef = generateTransactionRef();
+  const idempotencyKey = `process_${processId}`;
 
   try {
     await dbConnect();
 
-    // Start MongoDB session for transaction
-    const session = await ProcessRequest.startSession();
-    let result: GenerateProcessResult = {
-      success: false,
-      error: "TRANSACTION_FAILED",
-      message: "Transaction failed",
-    };
+    // Step 1: Validate balance first (fast check without deducting)
+    const validation = await CreditService.validateBalance(userId, creditsToDeduct);
+    
+    if (!validation.valid) {
+      return {
+        success: false,
+        error: "INSUFFICIENT_CREDITS",
+        message: `Insufficient credits. Required: ${creditsToDeduct}, Available: ${validation.balance}`,
+        availableCredits: validation.balance,
+      };
+    }
 
+    // Step 2: Deduct credits using CreditService
+    const description = generateTransactionDescription(category, toolName);
+    
+    const deductResult = await CreditService.deductCredits({
+      userId,
+      amount: creditsToDeduct,
+      description,
+      usageDetails: {
+        operation_type: `${category}_generation`,
+        model_id: toolName || undefined,
+        generation_id: processId,
+      },
+      idempotencyKey,
+    });
+
+    if (!deductResult.success) {
+      // Map CreditService error codes to our error types
+      const errorType = deductResult.error_code === "INSUFFICIENT_BALANCE" 
+        ? "INSUFFICIENT_CREDITS" 
+        : deductResult.error_code === "USER_NOT_FOUND"
+          ? "USER_NOT_FOUND"
+          : "TRANSACTION_FAILED";
+
+      return {
+        success: false,
+        error: errorType,
+        message: deductResult.error || "Failed to deduct credits",
+        availableCredits: deductResult.balance_before,
+      };
+    }
+
+    // Step 3: Create process record
     try {
-      await session.withTransaction(async () => {
-        // Step 1: Find user and check balance
-        const user = await User.findById(userId)
-          .select("credits")
-          .session(session);
+      await ProcessRequest.create({
+        processId,
+        userId,
+        status: "processing",
+        creditsUsed: creditsToDeduct,
+        category,
+        toolName,
+        data: {
+          req: data || {},
+        },
+      });
 
-        if (!user) {
-          result = {
-            success: false,
-            error: "USER_NOT_FOUND",
-            message: "User not found",
-          };
-          throw new Error("USER_NOT_FOUND");
-        }
+      logInfo("Process created with credit deduction via CreditService", {
+        processId,
+        userId,
+        creditsToDeduct,
+        category,
+        toolName,
+        transactionRef: deductResult.transaction_ref,
+        balanceBefore: deductResult.balance_before,
+        balanceAfter: deductResult.balance_after,
+      });
 
-        const currentBalance = user.credits || 0;
+      return {
+        success: true,
+        processId,
+        transactionRef: deductResult.transaction_ref,
+      };
 
-        // Step 2: Check if user has sufficient credits
-        if (currentBalance < creditsToDeduct) {
-          result = {
-            success: false,
-            error: "INSUFFICIENT_CREDITS",
-            message: `Insufficient credits. Required: ${creditsToDeduct}, Available: ${currentBalance}`,
-            availableCredits: currentBalance,
-          };
-          throw new Error("INSUFFICIENT_CREDITS");
-        }
+    } catch (processError) {
+      // Process creation failed - refund the credits
+      logError("Process creation failed, refunding credits", processError, {
+        processId,
+        userId,
+        creditsToDeduct,
+      });
 
-        const newBalance = currentBalance - creditsToDeduct;
+      const refundResult = await CreditService.refundCredits({
+        userId,
+        amount: creditsToDeduct,
+        description: `Refund: Failed to create process ${processId}`,
+        relatedTransactionRef: deductResult.transaction_ref,
+        source: "system",
+        metadata: {
+          reason: "process_creation_failed",
+          original_process_id: processId,
+        },
+      });
 
-        // Step 3: Deduct credits from user balance
-        await User.findByIdAndUpdate(
-          userId,
-          {
-            $set: {
-              credits: newBalance,
-              balance_verified_at: new Date(),
-            },
-          },
-          { session }
-        );
-
-        // Step 4: Create process record with credit info
-        await ProcessRequest.create(
-          [
-            {
-              processId,
-              userId,
-              status: "processing",
-              creditsUsed: creditsToDeduct,
-              category,
-              toolName,
-              data: {
-                req: data || {},
-              },
-            },
-          ],
-          { session }
-        );
-
-        // Step 5: Create credit ledger entry
-        const description = generateTransactionDescription(category, toolName);
-
-        await CreditLedger.create(
-          [
-            {
-              user_id: userId,
-              transaction_ref: transactionRef,
-              type: "usage_deduction",
-              amount: -creditsToDeduct, // Negative for deductions
-              balance_before: currentBalance,
-              balance_after: newBalance,
-              status: "completed",
-              source: "api",
-              description,
-              usage_details: {
-                operation_type: `${category}_generation`,
-                model_id: toolName,
-                generation_id: processId,
-              },
-              idempotency_key: `process_${processId}`,
-            },
-          ],
-          { session }
-        );
-
-        // Success - set result
-        result = {
-          success: true,
+      if (refundResult.success) {
+        logInfo("Credits refunded after process creation failure", {
           processId,
-          transactionRef,
-        };
-
-        logInfo("Process created with credit deduction", {
+          userId,
+          refundedAmount: creditsToDeduct,
+        });
+      } else {
+        logError("Failed to refund credits after process creation failure", null, {
           processId,
           userId,
           creditsToDeduct,
-          category,
-          toolName,
-          transactionRef,
-          balanceBefore: currentBalance,
-          balanceAfter: newBalance,
+          refundError: refundResult.error,
         });
-      });
-    } catch (transactionError) {
-      // Transaction was aborted - result already set with specific error
-      const errorMessage =
-        transactionError instanceof Error
-          ? transactionError.message
-          : "Unknown error";
-
-      // Only log if it's not an expected error (insufficient credits, user not found)
-      if (
-        errorMessage !== "INSUFFICIENT_CREDITS" &&
-        errorMessage !== "USER_NOT_FOUND"
-      ) {
-        logError(
-          "Transaction failed during process creation",
-          transactionError,
-          {
-            processId,
-            userId,
-            creditsToDeduct,
-          }
-        );
       }
-    } finally {
-      await session.endSession();
+
+      return {
+        success: false,
+        error: "TRANSACTION_FAILED",
+        message: "Failed to create process record",
+      };
     }
 
-    return result;
   } catch (error) {
     logError("Failed to create process with credit deduction", error, {
       processId,
