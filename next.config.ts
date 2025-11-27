@@ -18,10 +18,10 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Mark ably as external to prevent SSR bundling issues
-  // Ably's Node.js bundle has dependencies (got, keyv, cacheable-request) 
-  // that don't work in browser/SSR environments
-  serverExternalPackages: ['ably'],
+  // Mark packages as external to prevent SSR bundling issues
+  // - ably: Node.js bundle has dependencies that don't work in browser/SSR
+  // - thread-stream: Contains test files that Turbopack tries to bundle
+  serverExternalPackages: ['ably', 'thread-stream'],
   // Webpack config for backward compatibility
   webpack: (config, { isServer, webpack }) => {
     // Add externals for WebSocket optional dependencies
@@ -30,6 +30,34 @@ const nextConfig: NextConfig = {
       'utf-8-validate': 'commonjs utf-8-validate',
       'bufferutil': 'commonjs bufferutil',
     });
+
+    // Ignore why-is-node-running module (used only in test files)
+    // This prevents build errors from thread-stream test files
+    config.plugins = config.plugins || [];
+    config.plugins.push(
+      new webpack.IgnorePlugin({
+        resourceRegExp: /^why-is-node-running$/,
+      }),
+      // Ignore all test files in node_modules
+      new webpack.IgnorePlugin({
+        checkResource(resource) {
+          // Ignore test files, benchmark files, and other non-production files
+          if (resource.includes('node_modules')) {
+            if (
+              resource.includes('/test/') ||
+              resource.includes('/tests/') ||
+              resource.includes('/__tests__/') ||
+              resource.includes('/bench') ||
+              resource.match(/\.test\.(js|ts|mjs)$/) ||
+              resource.match(/\.spec\.(js|ts|mjs)$/)
+            ) {
+              return true;
+            }
+          }
+          return false;
+        },
+      })
+    );
 
     // Exclude Node.js built-in modules from client bundle
     if (!isServer) {
@@ -53,7 +81,6 @@ const nextConfig: NextConfig = {
       };
       
       // Ignore cloudinary's analytics module that uses fs
-      config.plugins = config.plugins || [];
       config.plugins.push(
         new webpack.IgnorePlugin({
           resourceRegExp: /^cloudinary\/lib\/utils\/analytics\/getSDKVersions$/,
@@ -61,12 +88,6 @@ const nextConfig: NextConfig = {
       );
     }
     return config;
-  },
-  // Turbopack config for Next.js 16+
-  // Turbopack handles Node.js built-ins automatically, but we add this to silence the warning
-  // Setting root explicitly to prevent Turbopack from traversing to parent directories
-  turbopack: {
-    root: path.resolve(__dirname),
   },
 };
 
