@@ -4,8 +4,7 @@ import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { IconSprite } from "./components/ui/icon-sprite"; 
 import { UpgradePlanProvider } from "./providers/UpgradePlanProvider";
-import { QueryProvider } from "@/lib/query";
-import { AblyProvider } from "@/lib/ably/provider"; 
+import { QueryProvider } from "@/lib/query"; 
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -109,12 +108,10 @@ export default function RootLayout({
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         > 
           <QueryProvider>
-            <AblyProvider>
-              <UpgradePlanProvider>
-                <IconSprite />
-                {children}
-              </UpgradePlanProvider>
-            </AblyProvider>
+            <UpgradePlanProvider>
+              <IconSprite />
+              {children}
+            </UpgradePlanProvider>
           </QueryProvider>
         </body>
       </html>

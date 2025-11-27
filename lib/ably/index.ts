@@ -11,7 +11,15 @@ export {
 // Client-side exports (for React components)
 // Import directly from "@/lib/ably/provider" to avoid bundling server code
 // =============================================================================
-export { AblyProvider, useAbly, useProcessSubscription } from "./provider";
+export { useProcessSubscription, useAblyConnection } from "./provider";
+
+// Client singleton manager (for advanced use cases)
+export {
+  subscribeToProcess,
+  closeConnection,
+  isConnected,
+  getConnectionState,
+} from "./client";
 
 // =============================================================================
 // Types (safe to import anywhere)
