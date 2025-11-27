@@ -34,3 +34,14 @@ export {
   selectVoicesByGender,
   selectUniqueAccents,
 } from "./use-voices";
+
+// Assets hooks
+export {
+  useAssets,
+  useInfiniteAssets,
+  useLibrary,
+  useInfiniteLibrary,
+  useShareAsset,
+  useUnshareAsset,
+  assetsKeys,
+} from "./use-assets";

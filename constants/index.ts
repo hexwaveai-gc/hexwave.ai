@@ -42,3 +42,6 @@ export * from "./templates";
 
 // Audio constants (voices and audio generation)
 export * from "./audio";
+
+// Assets constants (tabs, filters, sort options)
+export * from "./assets";

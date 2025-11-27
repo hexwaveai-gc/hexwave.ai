@@ -75,5 +75,19 @@ export const queryKeys = {
     history: (filters?: Record<string, unknown>) => [...queryKeys.audio.all, "history", filters] as const,
     generation: (id: string) => [...queryKeys.audio.all, "generation", id] as const,
   },
+
+  // Assets queries
+  assets: {
+    all: ["assets"] as const,
+    lists: () => [...queryKeys.assets.all, "list"] as const,
+    list: (filters: Record<string, unknown>) => [...queryKeys.assets.lists(), filters] as const,
+    infinite: (filters: Record<string, unknown>) => [...queryKeys.assets.all, "infinite", filters] as const,
+    library: {
+      all: ["library"] as const,
+      lists: () => [...queryKeys.assets.library.all, "list"] as const,
+      list: (filters: Record<string, unknown>) => [...queryKeys.assets.library.lists(), filters] as const,
+      infinite: (filters: Record<string, unknown>) => [...queryKeys.assets.library.all, "infinite", filters] as const,
+    },
+  },
 } as const;
 

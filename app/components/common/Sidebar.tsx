@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { useUser, useClerk } from "@clerk/nextjs";
 import { useUserStore, selectCredits, selectHasActiveSubscription, selectPlanName, selectSubscription } from "@/store";
+import { useAuthModal } from "@/app/providers/AuthModalProvider";
 
 interface SidebarItem {
   id: string;
@@ -37,6 +38,7 @@ interface SidebarItem {
   href: string;
   matchPaths?: string[]; // Additional paths that should activate this item
   badge?: string;
+  requiresAuth?: boolean; // Whether this route requires authentication
 }
 
 const sidebarItems: SidebarItem[] = [
@@ -45,21 +47,23 @@ const sidebarItems: SidebarItem[] = [
     label: "Explore",
     icon: Sparkles,
     href: "/explore",
+    requiresAuth: false,
   },
-  { id: "assets", label: "Assets", icon: FolderOpen, href: "/assets" },
-  { id: "video-agent", label: "Video Agent", icon: Bot, href: "/video-agent", badge: "BETA" },
-  { id: "templates", label: "Templates", icon: LayoutTemplate, href: "/templates" },
-  { id: "image", label: "Image", icon: ImageIcon, href: "/image-generator" },
-  { id: "video", label: "Video", icon: Video, href: "/ai-video-generator", badge: "NEW" },
-  { id: "audio", label: "Audio", icon: Mic, href: "/audio" },
-  { id: "tools", label: "All Tools", icon: Wrench, href: "/tools" },
-  { id: "pricing", label: "Pricing", icon: CreditCard, href: "/pricing" },
+  { id: "assets", label: "Assets", icon: FolderOpen, href: "/assets", requiresAuth: true },
+  { id: "video-agent", label: "Video Agent", icon: Bot, href: "/video-agent", badge: "BETA", requiresAuth: true },
+  { id: "templates", label: "Templates", icon: LayoutTemplate, href: "/templates", requiresAuth: true },
+  { id: "image", label: "Image", icon: ImageIcon, href: "/image-generator", requiresAuth: true },
+  { id: "video", label: "Video", icon: Video, href: "/ai-video-generator", badge: "NEW", requiresAuth: true },
+  { id: "audio", label: "Audio", icon: Mic, href: "/audio", requiresAuth: true },
+  { id: "tools", label: "All Tools", icon: Wrench, href: "/tools", requiresAuth: false },
+  { id: "pricing", label: "Pricing", icon: CreditCard, href: "/pricing", requiresAuth: false },
 ];
 
 export default function Sidebar() { 
   const pathname = usePathname(); 
   const { isSignedIn, user, isLoaded } = useUser();
   const { signOut } = useClerk();
+  const { openSignIn } = useAuthModal();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
   
@@ -68,6 +72,15 @@ export default function Sidebar() {
   const hasActiveSubscription = useUserStore(selectHasActiveSubscription);
   const planName = useUserStore(selectPlanName);
   const subscription = useUserStore(selectSubscription);
+
+  // Handle navigation item click
+  const handleNavClick = (e: React.MouseEvent, item: SidebarItem) => {
+    // If item requires auth and user is not signed in, show auth modal
+    if (item.requiresAuth && !isSignedIn) {
+      e.preventDefault();
+      openSignIn();
+    }
+  };
 
   // Close settings menu when clicking outside
   useEffect(() => {
@@ -138,6 +151,7 @@ export default function Sidebar() {
               <Link
                 key={item.id}
                 href={item.href}
+                onClick={(e) => handleNavClick(e, item)}
                 className={`group flex flex-col items-center justify-center gap-1 py-2 rounded-lg transition-colors relative ${isActive
                   ? "bg-white/10 text-[#74FF52]"
                   : "text-white/70 hover:text-white hover:bg-white/5"
@@ -363,32 +377,45 @@ export default function Sidebar() {
                 )}
               </>
             ) : (
-              <Link
-                href="/sign-in"
-                className="flex flex-col items-center justify-center gap-1 py-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition-colors"
+              <button
+                onClick={openSignIn}
+                className="flex flex-col items-center justify-center gap-1 py-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition-colors w-full"
                 title="Sign In"
               >
                 <LogIn className="w-5 h-5 flex-shrink-0" />
                 <span className="text-[10px] font-medium text-center leading-tight">
                   Sign In
                 </span>
-              </Link>
+              </button>
             )}
           </>
         )}
 
         {/* Upgrade Button - Only show if no active subscription */}
         {(!isSignedIn || !hasActiveSubscription) && (
-          <Link
-            href="/pricing"
-          className="flex flex-col items-center justify-center gap-1 py-2 px-1.5 rounded-lg bg-[#74FF52] text-[#0a0a0a] hover:bg-[#66e648] transition-colors font-semibold"
-            title="Upgrade Plan"
-        >
-          <Zap className="w-4 h-4 flex-shrink-0" />
-          <span className="text-[9px] text-center leading-tight">
-              Upgrade
-          </span>
-          </Link>
+          isSignedIn ? (
+            <Link
+              href="/pricing"
+              className="flex flex-col items-center justify-center gap-1 py-2 px-1.5 rounded-lg bg-[#74FF52] text-[#0a0a0a] hover:bg-[#66e648] transition-colors font-semibold"
+              title="Upgrade Plan"
+            >
+              <Zap className="w-4 h-4 flex-shrink-0" />
+              <span className="text-[9px] text-center leading-tight">
+                Upgrade
+              </span>
+            </Link>
+          ) : (
+            <button
+              onClick={openSignIn}
+              className="flex flex-col items-center justify-center gap-1 py-2 px-1.5 rounded-lg bg-[#74FF52] text-[#0a0a0a] hover:bg-[#66e648] transition-colors font-semibold w-full"
+              title="Get Started"
+            >
+              <Zap className="w-4 h-4 flex-shrink-0" />
+              <span className="text-[9px] text-center leading-tight">
+                Get Started
+              </span>
+            </button>
+          )
         )}
       </div>
       </aside>

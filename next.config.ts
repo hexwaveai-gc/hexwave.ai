@@ -89,6 +89,9 @@ const nextConfig: NextConfig = {
     }
     return config;
   },
+  // Add empty turbopack config to silence warning when using webpack
+  // We use webpack for both dev and build to ensure consistent behavior
+  turbopack: {},
 };
 
 export default nextConfig;
