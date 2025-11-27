@@ -19,8 +19,7 @@ import {
   useQueryClient,
   queryOptions,
 } from "@tanstack/react-query";
-import type Ably from "ably";
-import { getProcessChannel } from "@/lib/ably/client";
+import { useAbly } from "@/lib/ably/provider";
 import type { ProcessStatusMessage } from "@/lib/ably/types";
 import { processKeys } from "@/lib/query";
 import { STALE_TIME_INFINITE } from "@/constants/query";
@@ -118,7 +117,7 @@ export function useProcessStatusQuery(
   } = options;
 
   const queryClient = useQueryClient();
-  const channelRef = useRef<Ably.RealtimeChannel | null>(null);
+  const { subscribeToProcess, isConnected } = useAbly();
   const callbacksRef = useRef({ onStatusChange, onComplete, onError });
 
   // Keep callbacks ref updated
@@ -129,13 +128,24 @@ export function useProcessStatusQuery(
   // TanStack Query for initial data and caching
   const query = useQuery({
     ...processQueryOptions(processId),
-    // Enable polling only if Ably is disabled
-    refetchInterval: enablePolling && !enableRealtime ? pollingInterval : false,
+    // Enable polling only if Ably is disabled or not connected
+    refetchInterval:
+      enablePolling && (!enableRealtime || !isConnected) ? pollingInterval : false,
   });
 
-  // Handle Ably message
-  const handleAblyMessage = useCallback(
-    (message: Ably.Message) => {
+  // Setup Ably subscription via provider
+  useEffect(() => {
+    if (!processId || !enableRealtime || !isConnected) return;
+
+    // Check if process is already completed - no need to subscribe
+    const cachedData = queryClient.getQueryData<ProcessData>(
+      processKeys.detail(processId)
+    );
+    if (cachedData?.status === "completed" || cachedData?.status === "failed") {
+      return;
+    }
+
+    const unsubscribe = subscribeToProcess(processId, (message) => {
       const messageData = message.data as ProcessStatusMessage;
 
       // Update query cache with real-time data
@@ -161,39 +171,10 @@ export function useProcessStatusQuery(
       if (messageData.status === "failed" && messageData.error) {
         callbacksRef.current.onError?.(messageData.error);
       }
-    },
-    [queryClient]
-  );
+    });
 
-  // Setup Ably subscription
-  useEffect(() => {
-    if (!processId || !enableRealtime) return;
-
-    // Check if process is already completed - no need to subscribe
-    const cachedData = queryClient.getQueryData<ProcessData>(
-      processKeys.detail(processId)
-    );
-    if (cachedData?.status === "completed" || cachedData?.status === "failed") {
-      return;
-    }
-
-    try {
-      const channel = getProcessChannel(processId);
-      channelRef.current = channel;
-
-      channel.subscribe("status-update", handleAblyMessage);
-    } catch (error) {
-      console.error("[useProcessStatusQuery] Failed to subscribe:", error);
-    }
-
-    return () => {
-      if (channelRef.current) {
-        channelRef.current.unsubscribe();
-        channelRef.current.detach();
-        channelRef.current = null;
-      }
-    };
-  }, [processId, enableRealtime, handleAblyMessage, queryClient]);
+    return unsubscribe;
+  }, [processId, enableRealtime, isConnected, subscribeToProcess, queryClient]);
 
   // Derived status
   const status: ProcessStatus = query.data?.status ?? "idle";
@@ -211,6 +192,9 @@ export function useProcessStatusQuery(
     isInitialLoading: query.isLoading,
     isFetching: query.isFetching,
     isStale: query.isStale,
+
+    // Connection state
+    isConnected,
 
     // Actions
     refetch: query.refetch,
@@ -271,8 +255,6 @@ export function useStartProcess() {
  * Simulate webhook completion (for demo purposes)
  */
 export function useSimulateWebhook() {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async ({
       processId,
@@ -335,4 +317,3 @@ export function useClearProcessCache() {
     [queryClient]
   );
 }
-

@@ -11,6 +11,10 @@ import {
   createAddToRecentUpdater,
   createToggleFavoriteUpdater,
 } from "@/lib/store/storeUtils";
+import { ActiveTab } from "../types/shared.types";
+
+// Re-export ActiveTab for backward compatibility
+export type { ActiveTab };
 
 /**
  * Image generation result
@@ -21,11 +25,6 @@ export interface ImageResult {
   createdAt: Date;
   model: string;
 }
-
-/**
- * Active tab type
- */
-export type ActiveTab = "text-to-image" | "image-reference" | "restyle";
 
 /**
  * Complete Zustand store interface for Image Generation

@@ -1,11 +1,45 @@
-// Import enhanced types (must be at top before using in interfaces)
-import {
-    FieldConfiguration as EnhancedFieldConfiguration,
-    ModelCapabilities as EnhancedModelCapabilities,
-  } from "./enhanced-model.types";
-  
-  // Locally defined CostType to avoid import issues
-  export interface CostType {
+/**
+ * Field option with value and display label
+ * Used for select dropdowns and radio groups
+ */
+export interface FieldOption<T = string> {
+  value: T;
+  label: string;
+}
+
+/**
+ * Configuration for a single model field
+ * Contains all metadata needed to render and validate the field
+ */
+export interface FieldConfiguration {
+  options?: FieldOption<string>[] | string[] | number[];
+  default: any;
+  label?: string;
+  userSelectable?: boolean;
+  min?: number;
+  max?: number;
+  step?: number;
+  helpText?: string;
+  placeholder?: string;
+}
+
+/**
+ * Model capabilities and constraints
+ * Flags that indicate what features a model supports
+ */
+export interface ModelCapabilities {
+  supportsEndFrame: boolean;
+  supportsTailImage: boolean;
+  supportsAudioGeneration: boolean;
+  promptCharacterLimit: number;
+  negativePromptCharacterLimit: number;
+  fixedDuration?: number;
+  fixedAspectRatio?: string;
+  fixedResolution?: string;
+}
+
+// Locally defined CostType to avoid import issues
+export interface CostType {
     type: "fixed" | "per_second" | "tiered" | "tiered_template";
     value?: number;
     base_value?: number;
@@ -46,25 +80,25 @@ import {
     // These fields consolidate all model-specific configuration
     // that was previously scattered across utility functions
     fieldOptions?: {
-      duration?: EnhancedFieldConfiguration;
-      aspectRatio?: EnhancedFieldConfiguration;
-      resolution?: EnhancedFieldConfiguration;
-      loop?: EnhancedFieldConfiguration;
-      promptOptimizer?: EnhancedFieldConfiguration;
-      enhancePrompt?: EnhancedFieldConfiguration;
-      cameraFixed?: EnhancedFieldConfiguration;
-      negativePrompt?: EnhancedFieldConfiguration;
-      movementAmplitude?: EnhancedFieldConfiguration;
-      template?: EnhancedFieldConfiguration;
-      pixverseStyles?: EnhancedFieldConfiguration;
-      pikaScenesIngredient?: EnhancedFieldConfiguration;
-      shift?: EnhancedFieldConfiguration;
-      seed?: EnhancedFieldConfiguration;
-      addAudioToVideo?: EnhancedFieldConfiguration;
-      [key: string]: EnhancedFieldConfiguration | undefined;
+      duration?: FieldConfiguration;
+      aspectRatio?: FieldConfiguration;
+      resolution?: FieldConfiguration;
+      loop?: FieldConfiguration;
+      promptOptimizer?: FieldConfiguration;
+      enhancePrompt?: FieldConfiguration;
+      cameraFixed?: FieldConfiguration;
+      negativePrompt?: FieldConfiguration;
+      movementAmplitude?: FieldConfiguration;
+      template?: FieldConfiguration;
+      pixverseStyles?: FieldConfiguration;
+      pikaScenesIngredient?: FieldConfiguration;
+      shift?: FieldConfiguration;
+      seed?: FieldConfiguration;
+      addAudioToVideo?: FieldConfiguration;
+      [key: string]: FieldConfiguration | undefined;
     };
     
-    capabilities?: EnhancedModelCapabilities;
+    capabilities?: ModelCapabilities;
   }
   
   // Interface for the structure containing text, image, and video models

@@ -7,7 +7,7 @@ This document explains how long-running processes (image generation, video proce
 When a user triggers a long-running operation:
 1. Backend creates a `processId` and stores initial data in MongoDB
 2. Backend sends request to external API (with webhook URL)
-3. Frontend subscribes to Ably channel for that `processId`
+3. Frontend subscribes to Ably channel for that `processId` (via AblyProvider)
 4. When external API completes, webhook updates database AND publishes to Ably
 5. Frontend receives instant update via Ably subscription
 
@@ -127,12 +127,40 @@ This automatically:
 2. Publishes to Ably channel `process:{processId}`
 3. **If status is "failed":** Refunds `creditsUsed` to user (with idempotency check)
 
-### 4. Frontend Subscription (TanStack Query + Ably)
+### 4. AblyProvider Setup
+
+**File:** `lib/ably/provider.tsx`
+
+The `AblyProvider` manages Ably connection lifecycle with:
+- Dynamic imports to prevent SSR bundling issues
+- Connection tied to Clerk authentication
+- Automatic cleanup on sign out
+- Connection recovery on page refresh
+
+```tsx
+// app/layout.tsx
+import { AblyProvider } from "@/lib/ably/provider";
+
+export default function RootLayout({ children }) {
+  return (
+    <ClerkProvider>
+      <QueryProvider>
+        <AblyProvider>
+          {children}
+        </AblyProvider>
+      </QueryProvider>
+    </ClerkProvider>
+  );
+}
+```
+
+### 5. Frontend Subscription (TanStack Query + Ably)
 
 **File:** `hooks/queries/use-process.ts`
 
 The `useProcessStatusQuery` hook combines TanStack Query with Ably real-time subscriptions:
 
+- **AblyProvider** manages the connection and provides subscription methods
 - **TanStack Query** handles initial data fetching, caching, and state recovery
 - **Ably** handles real-time push updates when processes complete
 
@@ -141,10 +169,11 @@ import { useProcessStatusQuery } from "@/hooks/queries/use-process";
 
 function MyComponent({ processId }) {
   const { 
-    status,      // "idle" | "processing" | "completed" | "failed"
-    data,        // Result data from backend (cached by TanStack Query)
-    error,       // Error message if failed
-    isLoading    // true while processing
+    status,       // "idle" | "processing" | "completed" | "failed"
+    data,         // Result data from backend (cached by TanStack Query)
+    error,        // Error message if failed
+    isLoading,    // true while processing
+    isConnected   // true when Ably connection is established
   } = useProcessStatusQuery(processId, {
     onComplete: (data) => {
       toast.success("Done!");
@@ -161,11 +190,13 @@ function MyComponent({ processId }) {
 }
 ```
 
-**Benefits of TanStack Query integration:**
+**Benefits of this architecture:**
+- SSR-safe: Dynamic imports prevent Node.js bundling issues
 - Automatic caching of completed processes
 - State recovery on page refresh
 - Optional fallback polling if Ably connection fails
 - Automatic cache sync when Ably updates arrive
+- Connection lifecycle tied to authentication
 
 ## Complete Example: Image Generator
 
@@ -248,7 +279,7 @@ import { useProcessStatusQuery } from "@/hooks/queries/use-process";
 export function ImageGenerator() {
   const [processId, setProcessId] = useState<string | null>(null);
   
-  const { status, data, error, isLoading } = useProcessStatusQuery(processId, {
+  const { status, data, error, isLoading, isConnected } = useProcessStatusQuery(processId, {
     onComplete: (data) => {
       // Process completed - data is now cached by TanStack Query
       console.log("Generation complete:", data);
@@ -272,6 +303,7 @@ export function ImageGenerator() {
     <div>
       <button onClick={handleGenerate}>Generate</button>
       
+      {!isConnected && <p className="text-yellow-500">Connecting...</p>}
       {isLoading && <p>Generating...</p>}
       {error && <p>Error: {error}</p>}
       {status === "completed" && data?.generations && (
@@ -293,6 +325,57 @@ Messages published to `process:{processId}` channel:
   data?: { ... },     // Result data
   error?: string,     // Error message
   timestamp: number   // Unix timestamp
+}
+```
+
+## AblyProvider API
+
+### Context Value
+
+```typescript
+interface AblyContextValue {
+  isConnected: boolean;      // Whether Ably connection is established
+  isInitializing: boolean;   // Whether Ably is currently initializing
+  subscribeToProcess: (      // Subscribe to a process channel
+    processId: string,
+    onMessage: (message: AblyMessage) => void
+  ) => () => void;           // Returns unsubscribe function
+}
+```
+
+### Available Hooks
+
+**File:** `lib/ably/provider.tsx`
+
+```typescript
+import { 
+  AblyProvider,           // Provider component (wrap in layout)
+  useAbly,                // Access Ably context directly
+  useProcessSubscription  // Subscribe to process updates
+} from "@/lib/ably/provider";
+```
+
+### useProcessSubscription Hook
+
+For custom implementations outside of TanStack Query:
+
+```typescript
+import { useProcessSubscription } from "@/lib/ably/provider";
+
+function CustomComponent({ processId }) {
+  const { isConnected } = useProcessSubscription(processId, {
+    onStatusChange: (status, data) => {
+      console.log("Status changed:", status);
+    },
+    onComplete: (data) => {
+      console.log("Completed:", data);
+    },
+    onError: (error) => {
+      console.error("Failed:", error);
+    }
+  });
+
+  return <div>Connected: {isConnected ? "Yes" : "No"}</div>;
 }
 ```
 
@@ -350,6 +433,9 @@ const {
   isFetching,      // true during any fetch
   isStale,         // true if data is stale
 
+  // Connection state
+  isConnected,     // true when Ably connection is established
+
   // Actions
   refetch,         // Force refetch from API
 } = useProcessStatusQuery(processId);
@@ -397,18 +483,19 @@ hexwave.ai/
 │   ├── controllers/
 │   │   ├── processRequest.ts     # generateUniqueId, getProcessRequest
 │   │   └── updateProcessData.ts  # updateProcessData (+ Ably publish)
+│   ├── layout.tsx                # AblyProvider setup
 │   └── models/
 │       └── processRequest/
 │           └── processRequestmodel.ts
 ├── hooks/
-│   ├── queries/
-│   │   ├── index.ts              # Query hooks exports
-│   │   └── use-process.ts        # TanStack Query + Ably hook
-│   └── useProcessStatus.ts       # Legacy: Ably-only hook
+│   └── queries/
+│       ├── index.ts              # Query hooks exports
+│       └── use-process.ts        # TanStack Query + Ably hook
 ├── lib/
 │   ├── ably/
+│   │   ├── provider.tsx          # AblyProvider, useAbly, useProcessSubscription
 │   │   ├── server.ts             # REST client, publishProcessStatus
-│   │   ├── client.ts             # Realtime client for frontend
+│   │   ├── types.ts              # ProcessStatusMessage type
 │   │   └── index.ts              # Exports
 │   └── query/
 │       ├── query-keys.ts         # TanStack Query keys (includes processKeys)
@@ -421,6 +508,7 @@ hexwave.ai/
 - **Subscribe Only:** Frontend tokens only allow subscribing, not publishing
 - **User Scoped:** Tokens include `clientId` matching the user's ID
 - **Channel Pattern:** `process:*` - each process has its own channel
+- **Auth Required:** AblyProvider only initializes when user is signed in
 
 ## Debugging
 
@@ -428,6 +516,7 @@ hexwave.ai/
 2. **Check Ably Dashboard:** View real-time channel activity
 3. **Browser Console:** Look for Ably connection logs
 4. **Network Tab:** Verify `/api/ably/token` returns valid token
+5. **Check `isConnected`:** Hook returns connection state for debugging
 
 ## Common Issues
 
@@ -436,9 +525,11 @@ hexwave.ai/
 | No updates received | Check `ABLY_API_KEY` is set |
 | 401 on token endpoint | User not authenticated with Clerk |
 | Process stuck on "processing" | Webhook not updating status |
-| Hook not subscribing | Verify `processId` is not null |
+| Hook not subscribing | Verify `processId` is not null and `isConnected` is true |
 | Stale data after page refresh | Process status fetched from `/api/process/[processId]` on mount |
 | Cache not updating | Ably updates automatically sync with TanStack Query cache |
+| SSR build errors | Ensure AblyProvider is in layout.tsx (uses dynamic imports) |
+| Connection not establishing | Check user is signed in (AblyProvider requires auth) |
 
 ## Related Documentation
 
@@ -452,4 +543,3 @@ Visit `/examples/ably` to see a working demo of the complete webhook flow with:
 - Process status monitor
 - Webhook simulation controls
 - Code examples
-

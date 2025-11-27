@@ -3,7 +3,7 @@
  * Shared between client and server
  */
 
-import { ActiveTab } from "../store/useImageGenerationStore";
+import { ActiveTab } from "./shared.types";
 
 /**
  * Cloudinary upload response
@@ -54,4 +54,7 @@ export function isFile(value: any): value is File {
 export function isFileArray(value: any): value is File[] {
   return Array.isArray(value) && value.length > 0 && value[0] instanceof File;
 }
+
+
+
 
