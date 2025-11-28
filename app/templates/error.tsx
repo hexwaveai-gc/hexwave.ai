@@ -46,3 +46,4 @@ export default function TemplatesError({ error, reset }: ErrorProps) {
   );
 }
 
+

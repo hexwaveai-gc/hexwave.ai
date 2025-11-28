@@ -5,6 +5,7 @@ import { WebhookEvent } from '@clerk/nextjs/server'
 import { dbConnect } from '@/lib/db'
 import User from '@/app/models/User/user.model'
 import UserProfile from '@/app/models/UserProfile/user-profile.model'
+import { logInfo, logError, logWarn, createTimer } from '@/lib/logger'
 
 // Disable body parsing, we need the raw body for Svix signature verification
 export const runtime = 'nodejs'
@@ -16,6 +17,8 @@ export const dynamic = 'force-dynamic'
  * Stores user data in MongoDB using the User model
  */
 export async function POST(req: Request) {
+  const timer = createTimer('clerk_webhook')
+
   // Get the Svix headers for verification
   const headerPayload = await headers()
   const svixId = headerPayload.get('svix-id')
@@ -24,7 +27,7 @@ export async function POST(req: Request) {
 
   // Validate headers
   if (!svixId || !svixTimestamp || !svixSignature) {
-    console.error('[Webhook] Missing Svix headers')
+    logWarn('Clerk webhook missing Svix headers', { svixId: !!svixId })
     return NextResponse.json(
       { error: 'Missing svix headers' },
       { status: 400 }
@@ -38,7 +41,7 @@ export async function POST(req: Request) {
   // Verify webhook secret
   const webhookSecret = process.env.CLERK_WEBHOOK_SECRET
   if (!webhookSecret) {
-    console.error('[Webhook] CLERK_WEBHOOK_SECRET is not set')
+    logError('Clerk webhook secret not configured')
     return NextResponse.json(
       { error: 'Webhook secret not configured' },
       { status: 500 }
@@ -58,7 +61,7 @@ export async function POST(req: Request) {
       'svix-signature': svixSignature,
     }) as WebhookEvent
   } catch (err) {
-    console.error('[Webhook] Verification failed:', err)
+    logError('Clerk webhook verification failed', err)
     return NextResponse.json(
       { error: 'Verification failed' },
       { status: 400 }
@@ -69,7 +72,7 @@ export async function POST(req: Request) {
   const eventType = evt.type
   const eventId = evt.data.id
 
-  console.log(`[Webhook] Processing event: ${eventType} for user: ${eventId}`)
+  logInfo('Clerk webhook received', { eventType, eventId })
 
   try {
     // Connect to database
@@ -89,15 +92,19 @@ export async function POST(req: Request) {
         break
       }
       default:
-        console.log(`[Webhook] Unhandled event type: ${eventType}`)
+        logWarn('Unhandled Clerk webhook event', { eventType })
     }
+
+    const duration = timer.done({ eventType, eventId })
+    logInfo('Clerk webhook processed', { eventType, eventId, duration })
 
     return NextResponse.json({ 
       success: true, 
       message: `Event ${eventType} processed successfully` 
     })
   } catch (error) {
-    console.error(`[Webhook] Error processing ${eventType}:`, error)
+    timer.done({ error: true })
+    logError('Clerk webhook processing error', error, { eventType, eventId })
     
     // Return 500 to trigger Clerk's retry mechanism
     return NextResponse.json(
@@ -115,57 +122,31 @@ export async function POST(req: Request) {
  * Creates a new user in the database and initializes their profile
  */
 async function handleUserCreated(data: any) {
-  try {
-    const userId = data.id
-    const emailAddresses = data.email_addresses || []
-    const primaryEmail = emailAddresses.find((email: any) => email.id === data.primary_email_address_id)
-    const email = primaryEmail?.email_address || emailAddresses[0]?.email_address || ''
-    
-    // Get user's name from various sources
-    const firstName = data.first_name || ''
-    const lastName = data.last_name || ''
-    const clerkUsername = data.username || ''
-    const imageUrl = data.image_url || null
-    const name = 
-      (firstName && lastName) ? `${firstName} ${lastName}` :
-      firstName || lastName || clerkUsername || email.split('@')[0] || 'User'
+  const userId = data.id
+  const emailAddresses = data.email_addresses || []
+  const primaryEmail = emailAddresses.find((email: any) => email.id === data.primary_email_address_id)
+  const email = primaryEmail?.email_address || emailAddresses[0]?.email_address || ''
+  
+  // Get user's name from various sources
+  const firstName = data.first_name || ''
+  const lastName = data.last_name || ''
+  const clerkUsername = data.username || ''
+  const imageUrl = data.image_url || null
+  const name = 
+    (firstName && lastName) ? `${firstName} ${lastName}` :
+    firstName || lastName || clerkUsername || email.split('@')[0] || 'User'
 
-    // Validate required fields
-    if (!email) {
-      throw new Error('Email address is required but not found')
-    }
+  // Validate required fields
+  if (!email) {
+    logError('Clerk webhook user.created missing email', null, { userId })
+    throw new Error('Email address is required but not found')
+  }
 
-    // Check if user already exists (idempotency)
-    const existingUser = await User.findById(userId)
-    if (existingUser) {
-      console.log(`[Webhook] User ${userId} already exists, skipping creation`)
-      // Still try to create profile if missing
-      await createOrUpdateUserProfile(userId, {
-        email,
-        firstName,
-        lastName,
-        username: clerkUsername,
-        imageUrl,
-        displayName: name,
-      })
-      return
-    }
-
-    // Create new user
-    const newUser = new User({
-      _id: userId,
-      name: name.trim(),
-      email: email.toLowerCase().trim(),
-      customerId: null,
-      subscription: null,
-      credits: 0,
-      favorites: [],
-    })
-
-    await newUser.save()
-    console.log(`[Webhook] User created successfully: ${userId} (${email})`)
-
-    // Create user profile
+  // Check if user already exists (idempotency)
+  const existingUser = await User.findById(userId)
+  if (existingUser) {
+    logInfo('Clerk webhook user already exists, skipping creation', { userId })
+    // Still try to create profile if missing
     await createOrUpdateUserProfile(userId, {
       email,
       firstName,
@@ -174,11 +155,32 @@ async function handleUserCreated(data: any) {
       imageUrl,
       displayName: name,
     })
-
-  } catch (error) {
-    console.error('[Webhook] Error creating user:', error)
-    throw error
+    return
   }
+
+  // Create new user
+  const newUser = new User({
+    _id: userId,
+    name: name.trim(),
+    email: email.toLowerCase().trim(),
+    customerId: null,
+    subscription: null,
+    credits: 0,
+    favorites: [],
+  })
+
+  await newUser.save()
+  logInfo('Clerk webhook user created', { userId, email })
+
+  // Create user profile
+  await createOrUpdateUserProfile(userId, {
+    email,
+    firstName,
+    lastName,
+    username: clerkUsername,
+    imageUrl,
+    displayName: name,
+  })
 }
 
 /**
@@ -186,66 +188,58 @@ async function handleUserCreated(data: any) {
  * Updates existing user in the database and their profile
  */
 async function handleUserUpdated(data: any) {
-  try {
-    const userId = data.id
-    const emailAddresses = data.email_addresses || []
-    const primaryEmail = emailAddresses.find((email: any) => email.id === data.primary_email_address_id)
-    const email = primaryEmail?.email_address || emailAddresses[0]?.email_address || ''
-    
-    // Get user's name from various sources
-    const firstName = data.first_name || ''
-    const lastName = data.last_name || ''
-    const clerkUsername = data.username || ''
-    const imageUrl = data.image_url || null
-    const name = 
-      (firstName && lastName) ? `${firstName} ${lastName}` :
-      firstName || lastName || clerkUsername || email.split('@')[0] || 'User'
+  const userId = data.id
+  const emailAddresses = data.email_addresses || []
+  const primaryEmail = emailAddresses.find((email: any) => email.id === data.primary_email_address_id)
+  const email = primaryEmail?.email_address || emailAddresses[0]?.email_address || ''
+  
+  // Get user's name from various sources
+  const firstName = data.first_name || ''
+  const lastName = data.last_name || ''
+  const clerkUsername = data.username || ''
+  const imageUrl = data.image_url || null
+  const name = 
+    (firstName && lastName) ? `${firstName} ${lastName}` :
+    firstName || lastName || clerkUsername || email.split('@')[0] || 'User'
 
-    // Find existing user
-    const user = await User.findById(userId)
-    if (!user) {
-      console.log(`[Webhook] User ${userId} not found, creating new user`)
-      // If user doesn't exist, create them (handles edge cases)
-      await handleUserCreated(data)
-      return
-    }
-
-    // Update user fields
-    const updateData: Partial<{
-      name: string
-      email: string
-    }> = {}
-
-    if (name.trim() && name.trim() !== user.name) {
-      updateData.name = name.trim()
-    }
-
-    if (email && email.toLowerCase().trim() !== user.email) {
-      updateData.email = email.toLowerCase().trim()
-    }
-
-    // Only update if there are changes
-    if (Object.keys(updateData).length > 0) {
-      await User.findByIdAndUpdate(userId, updateData, { new: true })
-      console.log(`[Webhook] User updated successfully: ${userId}`)
-    } else {
-      console.log(`[Webhook] No changes detected for user: ${userId}`)
-    }
-
-    // Update user profile
-    await createOrUpdateUserProfile(userId, {
-      email,
-      firstName,
-      lastName,
-      username: clerkUsername,
-      imageUrl,
-      displayName: name,
-    })
-
-  } catch (error) {
-    console.error('[Webhook] Error updating user:', error)
-    throw error
+  // Find existing user
+  const user = await User.findById(userId)
+  if (!user) {
+    logInfo('Clerk webhook user.updated - user not found, creating', { userId })
+    // If user doesn't exist, create them (handles edge cases)
+    await handleUserCreated(data)
+    return
   }
+
+  // Update user fields
+  const updateData: Partial<{
+    name: string
+    email: string
+  }> = {}
+
+  if (name.trim() && name.trim() !== user.name) {
+    updateData.name = name.trim()
+  }
+
+  if (email && email.toLowerCase().trim() !== user.email) {
+    updateData.email = email.toLowerCase().trim()
+  }
+
+  // Only update if there are changes
+  if (Object.keys(updateData).length > 0) {
+    await User.findByIdAndUpdate(userId, updateData, { new: true })
+    logInfo('Clerk webhook user updated', { userId, updatedFields: Object.keys(updateData) })
+  }
+
+  // Update user profile
+  await createOrUpdateUserProfile(userId, {
+    email,
+    firstName,
+    lastName,
+    username: clerkUsername,
+    imageUrl,
+    displayName: name,
+  })
 }
 
 /**
@@ -253,27 +247,21 @@ async function handleUserUpdated(data: any) {
  * Soft delete or remove user from database
  */
 async function handleUserDeleted(data: any) {
-  try {
-    const userId = data.id
+  const userId = data.id
 
-    // Find and delete user
-    const user = await User.findByIdAndDelete(userId)
-    
-    if (user) {
-      console.log(`[Webhook] User deleted successfully: ${userId}`)
-    } else {
-      console.log(`[Webhook] User ${userId} not found for deletion`)
-    }
+  // Find and delete user
+  const user = await User.findByIdAndDelete(userId)
+  
+  if (user) {
+    logInfo('Clerk webhook user deleted', { userId })
+  } else {
+    logWarn('Clerk webhook user.deleted - user not found', { userId })
+  }
 
-    // Also delete user profile
-    const profile = await UserProfile.findOneAndDelete({ user_id: userId })
-    if (profile) {
-      console.log(`[Webhook] User profile deleted successfully: ${userId}`)
-    }
-
-  } catch (error) {
-    console.error('[Webhook] Error deleting user:', error)
-    throw error
+  // Also delete user profile
+  const profile = await UserProfile.findOneAndDelete({ user_id: userId })
+  if (profile) {
+    logInfo('Clerk webhook user profile deleted', { userId })
   }
 }
 
@@ -313,7 +301,7 @@ async function createOrUpdateUserProfile(userId: string, data: ProfileData) {
           { user_id: userId },
           { $set: updateData }
         )
-        console.log(`[Webhook] User profile updated: ${userId}`)
+        logInfo('Clerk webhook profile updated', { userId, updatedFields: Object.keys(updateData) })
       }
       return
     }
@@ -346,10 +334,10 @@ async function createOrUpdateUserProfile(userId: string, data: ProfileData) {
     })
 
     await newProfile.save()
-    console.log(`[Webhook] User profile created: ${userId} (@${uniqueUsername})`)
+    logInfo('Clerk webhook profile created', { userId, username: uniqueUsername })
 
   } catch (error) {
-    console.error('[Webhook] Error creating/updating user profile:', error)
+    logError('Clerk webhook profile creation error', error, { userId })
     // Don't throw - profile creation is not critical
   }
 }

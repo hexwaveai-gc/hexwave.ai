@@ -1,24 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import Image from "next/image";
+import { useState, useEffect, useRef } from "react";
+import Link from "next/link"; 
 import { ArrowRight, Play, Sparkles } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 
 const heroVideos = [
   {
-    src: "https://cdn.revid.ai/static/music-to-video.mp4",
+    src: "https://files2.heygen.ai/avatar/v3/3b12e6689f564eccb403b407ebd3188f/half/2.2/preview_video_target.mp4",
     poster: "/showcase/video-1.webp",
     label: "AI Video",
   },
   {
-    src: "https://cdn.revid.ai/static/Lily_s%20Dutch%20Adventure.mp4",
+    src: "https://files2.heygen.ai/avatar/v3/b8c8944769c847f08c7f85d1fb310bf1/full/2.2/preview_video_target.mp4",
     poster: "/showcase/video-2.webp",
     label: "Story Video",
   },
   {
-    src: "https://cdn.revid.ai/static/Eldenvale_%20A%20Tapestry%20of%20Life.mp4",
+    src: "https://files2.heygen.ai/avatar/v3/20f3b5a6aa5b44b3852d6b1b19ad37b4/full/2.2/preview_video_target.mp4",
     poster: "/showcase/video-3.webp",
     label: "AI Film",
   },
@@ -36,6 +35,12 @@ export function HeroSection() {
   const { isSignedIn } = useAuth();
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  
+  // Video refs
+  const leftVideoRef = useRef<HTMLVideoElement>(null);
+  const centerVideoRef = useRef<HTMLVideoElement>(null);
+  const rightVideoRef = useRef<HTMLVideoElement>(null);
+  const loadedVideosRef = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -48,6 +53,87 @@ export function HeroSection() {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Load and play center video immediately (main hero video)
+  useEffect(() => {
+    if (centerVideoRef.current && !loadedVideosRef.current.has(1)) {
+      const video = centerVideoRef.current;
+      video.load();
+      loadedVideosRef.current.add(1);
+      
+      // Try to play the center video
+      video.play().catch((err) => {
+        console.warn("Center video autoplay failed:", err);
+      });
+    }
+  }, []);
+
+  // IntersectionObserver to load side videos when they come into view
+  useEffect(() => {
+    const videoRefs = [
+      { ref: leftVideoRef, index: 0 },
+      { ref: rightVideoRef, index: 2 },
+    ];
+
+    const observers: IntersectionObserver[] = [];
+
+    videoRefs.forEach(({ ref, index }) => {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting && ref.current && !loadedVideosRef.current.has(index)) {
+              const video = ref.current;
+              video.load();
+              loadedVideosRef.current.add(index);
+              
+              // Try to play the video
+              video.play().catch((err) => {
+                console.warn(`Video ${index} autoplay failed:`, err);
+              });
+            }
+          });
+        },
+        {
+          threshold: 0.1,
+          rootMargin: "50px",
+        }
+      );
+
+      if (ref.current) {
+        observer.observe(ref.current);
+        observers.push(observer);
+      }
+    });
+
+    return () => {
+      observers.forEach((observer) => observer.disconnect());
+    };
+  }, []);
+
+  // Handle video hover
+  const handleVideoHover = async (ref: React.RefObject<HTMLVideoElement>, index: number) => {
+    if (!ref.current) return;
+    
+    const video = ref.current;
+    
+    // Load video if not already loaded
+    if (!loadedVideosRef.current.has(index)) {
+      video.load();
+      loadedVideosRef.current.add(index);
+    }
+    
+    // Try to play on hover
+    try {
+      await video.play();
+    } catch (err) {
+      console.warn(`Video ${index} play failed:`, err);
+    }
+  };
+
+  const handleVideoLeave = (ref: React.RefObject<HTMLVideoElement>) => {
+    if (!ref.current) return;
+    ref.current.pause();
+  };
 
   return (
     <section className="relative min-h-[90vh] flex flex-col items-center justify-center px-4 pt-24 pb-16 overflow-hidden">
@@ -151,15 +237,20 @@ export function HeroSection() {
       <div className="relative z-10 mt-16 w-full max-w-5xl mx-auto">
         <div className="relative h-[300px] sm:h-[400px] flex items-center justify-center">
           {/* Left Video */}
-          <div className="absolute left-0 sm:left-[10%] top-8 w-[140px] sm:w-[180px] -rotate-6 opacity-80 hover:opacity-100 hover:scale-105 transition-all duration-500 cursor-pointer group">
+          <div 
+            className="absolute left-0 sm:left-[10%] top-8 w-[140px] sm:w-[180px] -rotate-6 opacity-80 hover:opacity-100 hover:scale-105 transition-all duration-500 cursor-pointer group"
+            onMouseEnter={() => handleVideoHover(leftVideoRef, 0)}
+            onMouseLeave={() => handleVideoLeave(leftVideoRef)}
+          >
             <div className="relative aspect-[9/16] rounded-2xl overflow-hidden bg-white/5 border border-white/10 shadow-2xl">
               <video
+                ref={leftVideoRef}
                 className="w-full h-full object-cover"
                 poster={heroVideos[0].poster}
                 muted
                 loop
                 playsInline
-                preload="none"
+                preload="metadata"
               >
                 <source src={heroVideos[0].src} type="video/mp4" />
               </video>
@@ -171,15 +262,21 @@ export function HeroSection() {
           </div>
 
           {/* Center Video (Main) */}
-          <div className="relative w-[200px] sm:w-[260px] z-10 hover:scale-105 transition-all duration-500 cursor-pointer group">
+          <div 
+            className="relative w-[200px] sm:w-[260px] z-10 hover:scale-105 transition-all duration-500 cursor-pointer group"
+            onMouseEnter={() => handleVideoHover(centerVideoRef, 1)}
+            onMouseLeave={() => handleVideoLeave(centerVideoRef)}
+          >
             <div className="relative aspect-[9/16] rounded-2xl overflow-hidden bg-white/5 border border-white/20 shadow-2xl shadow-[#74FF52]/10">
               <video
+                ref={centerVideoRef}
                 className="w-full h-full object-cover"
                 poster={heroVideos[1].poster}
                 muted
                 loop
                 playsInline
-                preload="none"
+                autoPlay
+                preload="metadata"
               >
                 <source src={heroVideos[1].src} type="video/mp4" />
               </video>
@@ -199,15 +296,20 @@ export function HeroSection() {
           </div>
 
           {/* Right Video */}
-          <div className="absolute right-0 sm:right-[10%] top-8 w-[140px] sm:w-[180px] rotate-6 opacity-80 hover:opacity-100 hover:scale-105 transition-all duration-500 cursor-pointer group">
+          <div 
+            className="absolute right-0 sm:right-[10%] top-8 w-[140px] sm:w-[180px] rotate-6 opacity-80 hover:opacity-100 hover:scale-105 transition-all duration-500 cursor-pointer group"
+            onMouseEnter={() => handleVideoHover(rightVideoRef, 2)}
+            onMouseLeave={() => handleVideoLeave(rightVideoRef)}
+          >
             <div className="relative aspect-[9/16] rounded-2xl overflow-hidden bg-white/5 border border-white/10 shadow-2xl">
               <video
+                ref={rightVideoRef}
                 className="w-full h-full object-cover"
                 poster={heroVideos[2].poster}
                 muted
                 loop
                 playsInline
-                preload="none"
+                preload="metadata"
               >
                 <source src={heroVideos[2].src} type="video/mp4" />
               </video>

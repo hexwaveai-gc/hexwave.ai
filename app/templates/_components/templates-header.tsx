@@ -11,11 +11,7 @@ import {
 } from "@/constants/templates";
 import { cn } from "@/lib/utils";
 
-type TabType = "avatars" | "canvas" | "generations";
-
 interface TemplatesHeaderProps {
-  activeTab: TabType;
-  onTabChange: (tab: TabType) => void;
   typeFilter: AvatarTypeFilter;
   onTypeFilterChange: (type: AvatarTypeFilter) => void;
   genderFilter: GenderFilter;
@@ -27,15 +23,7 @@ interface TemplatesHeaderProps {
   totalCount: number;
 }
 
-const tabs: { id: TabType; label: string }[] = [
-  { id: "avatars", label: "Avatars" },
-  { id: "canvas", label: "Canvas" },
-  { id: "generations", label: "Generations" },
-];
-
 export function TemplatesHeader({
-  activeTab,
-  onTabChange,
   typeFilter,
   onTypeFilterChange,
   genderFilter,
@@ -48,57 +36,41 @@ export function TemplatesHeader({
 }: TemplatesHeaderProps) {
   return (
     <div className="space-y-4">
-      {/* Top Row: Tabs and Search */}
+      {/* Top Row: Type Tabs and Search */}
       <div className="flex items-center justify-between gap-4">
-        {/* Tabs */}
-        <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1">
-          {tabs.map((tab) => (
+        {/* Avatar Type Tabs */}
+        <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1 overflow-x-auto scrollbar-hide">
+          {AVATAR_TYPE_OPTIONS.map((option) => (
             <button
-              key={tab.id}
-              onClick={() => onTabChange(tab.id)}
+              key={option.id}
+              onClick={() => onTypeFilterChange(option.id)}
               className={cn(
-                "px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
-                activeTab === tab.id
-                  ? "bg-white/10 text-white"
+                "px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap",
+                typeFilter === option.id
+                  ? "bg-[#74FF52]/20 text-[#74FF52]"
                   : "text-white/60 hover:text-white hover:bg-white/5"
               )}
             >
-              {tab.label}
+              {option.label}
             </button>
           ))}
         </div>
 
         {/* Search Input */}
-        <div className="relative flex-1 max-w-md">
+        <div className="relative flex-shrink-0 w-48">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
           <input
             type="text"
-            placeholder="Search avatars..."
+            placeholder="Search..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white text-sm placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/10 hover:bg-white/10 transition-all"
+            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-white text-sm placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/10 hover:bg-white/10 transition-all"
           />
         </div>
       </div>
 
       {/* Filter Row */}
       <div className="flex items-center gap-3 flex-wrap">
-        {/* Avatar Type Filter */}
-        <div className="relative">
-          <select
-            value={typeFilter}
-            onChange={(e) => onTypeFilterChange(e.target.value as AvatarTypeFilter)}
-            className="appearance-none bg-white/5 border border-white/10 rounded-xl px-4 py-2 pr-10 text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white/10 hover:bg-white/10 transition-all cursor-pointer"
-          >
-            {AVATAR_TYPE_OPTIONS.map((option) => (
-              <option key={option.id} value={option.id} className="bg-[#1a1a1a]">
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50 pointer-events-none" />
-        </div>
-
         {/* Gender Filter Tabs */}
         <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
           {GENDER_OPTIONS.map((option) => (
@@ -108,7 +80,7 @@ export function TemplatesHeader({
               className={cn(
                 "px-3 py-1.5 rounded-md text-xs font-medium transition-all",
                 genderFilter === option.id
-                  ? "bg-[#74FF52]/20 text-[#74FF52]"
+                  ? "bg-white/10 text-white"
                   : "text-white/60 hover:text-white hover:bg-white/5"
               )}
             >
@@ -135,7 +107,7 @@ export function TemplatesHeader({
 
         {/* Results Count */}
         <div className="ml-auto text-white/40 text-sm">
-          {totalCount} avatar{totalCount !== 1 ? "s" : ""}
+          {totalCount} template{totalCount !== 1 ? "s" : ""}
         </div>
       </div>
     </div>

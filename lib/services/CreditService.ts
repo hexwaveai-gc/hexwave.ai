@@ -3,6 +3,7 @@
  * 
  * Handles all credit operations with:
  * - Double-entry bookkeeping (ledger + user balance)
+ * - MongoDB transactions for atomicity
  * - Idempotency protection
  * - Balance validation
  * - Audit trail
@@ -10,6 +11,7 @@
  */
 
 import { v4 as uuidv4 } from "uuid";
+import mongoose from "mongoose";
 import User, { type IUser } from "@/app/models/User/user.model";
 import CreditLedger, {
   type ICreditLedgerEntry,
@@ -20,7 +22,7 @@ import CreditLedger, {
 import { dbConnect } from "@/lib/db";
 import { getCreditsForPrice, getPlanNameFromPriceId } from "@/constants/paddle";
 import { getPaddleClient } from "@/lib/paddle/client";
-import { logInfo, logError, logCredits } from "@/lib/logger";
+import { logInfo, logError, logCredits, logWarn } from "@/lib/logger";
 
 // Result type for credit operations
 export interface CreditOperationResult {
@@ -98,6 +100,7 @@ class CreditServiceClass {
    * Add credits to user account
    * 
    * Used for: subscriptions, renewals, purchases, bonuses
+   * Uses MongoDB transaction for atomic operation
    */
   async addCredits(input: AddCreditsInput): Promise<CreditOperationResult> {
     await dbConnect();
@@ -129,8 +132,8 @@ class CreditServiceClass {
       };
     }
 
+    // Check idempotency before starting transaction (outside transaction for performance)
     try {
-      // Check idempotency if key provided
       if (idempotencyKey) {
         const existing = await CreditLedger.findOne({ idempotency_key: idempotencyKey });
         if (existing) {
@@ -145,7 +148,6 @@ class CreditServiceClass {
         }
       }
 
-      // Check transaction idempotency
       if (transactionId) {
         const existing = await CreditLedger.findOne({ 
           transaction_id: transactionId,
@@ -162,10 +164,93 @@ class CreditServiceClass {
           };
         }
       }
+    } catch (error) {
+      logError("Error checking idempotency", error, { userId });
+    }
 
-      // Get user
-      const user = await User.findById(userId);
-      if (!user) {
+    // Start MongoDB transaction for atomic operation
+    const session = await mongoose.startSession();
+    
+    try {
+      let result: CreditOperationResult | null = null;
+
+      await session.withTransaction(async () => {
+        // Get user within transaction
+        const user = await User.findById(userId).session(session);
+        if (!user) {
+          result = {
+            success: false,
+            balance_before: 0,
+            balance_after: 0,
+            amount: 0,
+            error: "User not found",
+            error_code: "USER_NOT_FOUND",
+          };
+          throw new Error("USER_NOT_FOUND"); // Abort transaction
+        }
+
+        const balanceBefore = user.credits || 0;
+        const balanceAfter = balanceBefore + amount;
+        const transactionRef = this.generateTransactionRef();
+
+        // Create ledger entry within transaction
+        const ledgerEntry: Partial<ICreditLedgerEntry> = {
+          user_id: userId,
+          transaction_ref: transactionRef,
+          type,
+          amount,
+          balance_before: balanceBefore,
+          balance_after: balanceAfter,
+          status: "completed",
+          source,
+          description,
+          transaction_id: transactionId,
+          subscription_id: subscriptionId,
+          customer_id: customerId,
+          price_id: priceId,
+          product_id: productId,
+          idempotency_key: idempotencyKey,
+          metadata: metadata ? new Map(Object.entries(metadata)) : undefined,
+        };
+
+        // Save ledger entry within transaction
+        await CreditLedger.create([ledgerEntry], { session });
+
+        // Update user balance within transaction
+        await User.findByIdAndUpdate(
+          userId,
+          {
+            $set: {
+              credits: balanceAfter,
+              balance_verified_at: new Date(),
+            },
+          },
+          { session }
+        );
+
+        logCredits("add", amount, {
+          userId,
+          type,
+          source,
+          transactionRef,
+          balanceBefore,
+          balanceAfter,
+        });
+
+        result = {
+          success: true,
+          transaction_ref: transactionRef,
+          balance_before: balanceBefore,
+          balance_after: balanceAfter,
+          amount,
+        };
+      });
+
+      return result!;
+
+    } catch (error) {
+      // Check if this was our controlled abort
+      if (error instanceof Error && error.message === "USER_NOT_FOUND") {
         return {
           success: false,
           balance_before: 0,
@@ -176,60 +261,7 @@ class CreditServiceClass {
         };
       }
 
-      const balanceBefore = user.credits || 0;
-      const balanceAfter = balanceBefore + amount;
-      const transactionRef = this.generateTransactionRef();
-
-      // Create ledger entry
-      const ledgerEntry: Partial<ICreditLedgerEntry> = {
-        user_id: userId,
-        transaction_ref: transactionRef,
-        type,
-        amount,
-        balance_before: balanceBefore,
-        balance_after: balanceAfter,
-        status: "completed",
-        source,
-        description,
-        transaction_id: transactionId,
-        subscription_id: subscriptionId,
-        customer_id: customerId,
-        price_id: priceId,
-        product_id: productId,
-        idempotency_key: idempotencyKey,
-        metadata: metadata ? new Map(Object.entries(metadata)) : undefined,
-      };
-
-      // Save ledger entry
-      await CreditLedger.create(ledgerEntry);
-
-      // Update user balance
-      await User.findByIdAndUpdate(userId, {
-        $set: {
-          credits: balanceAfter,
-          balance_verified_at: new Date(),
-        },
-      });
-
-      logCredits("add", amount, {
-        userId,
-        type,
-        source,
-        transactionRef,
-        balanceBefore,
-        balanceAfter,
-      });
-
-      return {
-        success: true,
-        transaction_ref: transactionRef,
-        balance_before: balanceBefore,
-        balance_after: balanceAfter,
-        amount,
-      };
-
-    } catch (error) {
-      logError("Error adding credits", error, { userId, amount, type });
+      logError("Error adding credits (transaction rolled back)", error, { userId, amount, type });
       return {
         success: false,
         balance_before: 0,
@@ -238,6 +270,8 @@ class CreditServiceClass {
         error: error instanceof Error ? error.message : "Unknown error",
         error_code: "INTERNAL_ERROR",
       };
+    } finally {
+      await session.endSession();
     }
   }
 
@@ -245,6 +279,7 @@ class CreditServiceClass {
    * Deduct credits from user account
    * 
    * Used for: usage/generation costs
+   * Uses MongoDB transaction for atomic operation
    */
   async deductCredits(input: DeductCreditsInput): Promise<CreditOperationResult> {
     await dbConnect();
@@ -270,8 +305,8 @@ class CreditServiceClass {
       };
     }
 
+    // Check idempotency before starting transaction
     try {
-      // Check idempotency
       if (idempotencyKey) {
         const existing = await CreditLedger.findOne({ idempotency_key: idempotencyKey });
         if (existing) {
@@ -284,82 +319,128 @@ class CreditServiceClass {
           };
         }
       }
+    } catch (error) {
+      logError("Error checking idempotency", error, { userId });
+    }
 
-      // Get user
-      const user = await User.findById(userId);
-      if (!user) {
-        return {
-          success: false,
-          balance_before: 0,
-          balance_after: 0,
-          amount: 0,
-          error: "User not found",
-          error_code: "USER_NOT_FOUND",
-        };
-      }
+    // Start MongoDB transaction for atomic operation
+    const session = await mongoose.startSession();
 
-      const balanceBefore = user.credits || 0;
+    try {
+      let result: CreditOperationResult | null = null;
 
-      // Check sufficient balance
-      if (balanceBefore < amount) {
-        return {
-          success: false,
+      await session.withTransaction(async () => {
+        // Get user within transaction with lock
+        const user = await User.findById(userId).session(session);
+        if (!user) {
+          result = {
+            success: false,
+            balance_before: 0,
+            balance_after: 0,
+            amount: 0,
+            error: "User not found",
+            error_code: "USER_NOT_FOUND",
+          };
+          throw new Error("USER_NOT_FOUND");
+        }
+
+        const balanceBefore = user.credits || 0;
+
+        // Check sufficient balance within transaction
+        if (balanceBefore < amount) {
+          result = {
+            success: false,
+            balance_before: balanceBefore,
+            balance_after: balanceBefore,
+            amount: 0,
+            error: "Insufficient credits",
+            error_code: "INSUFFICIENT_BALANCE",
+          };
+          throw new Error("INSUFFICIENT_BALANCE");
+        }
+
+        const balanceAfter = balanceBefore - amount;
+        const transactionRef = this.generateTransactionRef();
+
+        // Create ledger entry (negative amount for deduction) within transaction
+        const ledgerEntry: Partial<ICreditLedgerEntry> = {
+          user_id: userId,
+          transaction_ref: transactionRef,
+          type: "usage_deduction",
+          amount: -amount, // Negative for deductions
           balance_before: balanceBefore,
-          balance_after: balanceBefore,
-          amount: 0,
-          error: "Insufficient credits",
-          error_code: "INSUFFICIENT_BALANCE",
+          balance_after: balanceAfter,
+          status: "completed",
+          source: "api",
+          description,
+          usage_details: usageDetails,
+          idempotency_key: idempotencyKey,
+          metadata: metadata ? new Map(Object.entries(metadata)) : undefined,
         };
-      }
 
-      const balanceAfter = balanceBefore - amount;
-      const transactionRef = this.generateTransactionRef();
+        // Save ledger entry within transaction
+        await CreditLedger.create([ledgerEntry], { session });
 
-      // Create ledger entry (negative amount for deduction)
-      const ledgerEntry: Partial<ICreditLedgerEntry> = {
-        user_id: userId,
-        transaction_ref: transactionRef,
-        type: "usage_deduction",
-        amount: -amount, // Negative for deductions
-        balance_before: balanceBefore,
-        balance_after: balanceAfter,
-        status: "completed",
-        source: "api",
-        description,
-        usage_details: usageDetails,
-        idempotency_key: idempotencyKey,
-        metadata: metadata ? new Map(Object.entries(metadata)) : undefined,
-      };
+        // Update user balance within transaction
+        await User.findByIdAndUpdate(
+          userId,
+          {
+            $set: {
+              credits: balanceAfter,
+              balance_verified_at: new Date(),
+            },
+          },
+          { session }
+        );
 
-      // Save ledger entry
-      await CreditLedger.create(ledgerEntry);
+        logCredits("deduct", amount, {
+          userId,
+          transactionRef,
+          balanceBefore,
+          balanceAfter,
+          operationType: usageDetails?.operation_type,
+        });
 
-      // Update user balance
-      await User.findByIdAndUpdate(userId, {
-        $set: {
-          credits: balanceAfter,
-          balance_verified_at: new Date(),
-        },
+        result = {
+          success: true,
+          transaction_ref: transactionRef,
+          balance_before: balanceBefore,
+          balance_after: balanceAfter,
+          amount,
+        };
       });
 
-      logCredits("deduct", amount, {
-        userId,
-        transactionRef,
-        balanceBefore,
-        balanceAfter,
-        operationType: usageDetails?.operation_type,
-      });
-
-      return {
-        success: true,
-        transaction_ref: transactionRef,
-        balance_before: balanceBefore,
-        balance_after: balanceAfter,
-        amount,
-      };
+      return result!;
 
     } catch (error) {
-      logError("Error deducting credits", error, { userId, amount });
+      // Check if this was our controlled abort
+      if (error instanceof Error) {
+        if (error.message === "USER_NOT_FOUND") {
+          return {
+            success: false,
+            balance_before: 0,
+            balance_after: 0,
+            amount: 0,
+            error: "User not found",
+            error_code: "USER_NOT_FOUND",
+          };
+        }
+        if (error.message === "INSUFFICIENT_BALANCE") {
+          // Get current balance for response
+          const user = await User.findById(userId);
+          const balance = user?.credits || 0;
+          return {
+            success: false,
+            balance_before: balance,
+            balance_after: balance,
+            amount: 0,
+            error: "Insufficient credits",
+            error_code: "INSUFFICIENT_BALANCE",
+          };
+        }
+      }
+
+      logError("Error deducting credits (transaction rolled back)", error, { userId, amount });
       return {
         success: false,
         balance_before: 0,
@@ -368,6 +449,8 @@ class CreditServiceClass {
         error: error instanceof Error ? error.message : "Unknown error",
         error_code: "INTERNAL_ERROR",
       };
+    } finally {
+      await session.endSession();
     }
   }
 

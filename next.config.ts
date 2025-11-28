@@ -3,19 +3,39 @@ import path from "path";
 
 const nextConfig: NextConfig = {
   // Skip TypeScript errors during build - run type checking separately in CI
+  // This prevents OOM issues during build while still catching errors in development
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Security: Only allow images from trusted domains
   images: {
     remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**',
-      },
-      {
-        protocol: 'http',
-        hostname: '**', 
-      },
+      // Cloudinary CDN
+      { protocol: 'https', hostname: 'res.cloudinary.com' },
+      { protocol: 'https', hostname: '*.cloudinary.com' },
+      // UploadThing CDN
+      { protocol: 'https', hostname: 'uploadthing.com' },
+      { protocol: 'https', hostname: '*.uploadthing.com' },
+      { protocol: 'https', hostname: 'utfs.io' },
+      // Unsplash (for sample/placeholder images)
+      { protocol: 'https', hostname: 'images.unsplash.com' },
+      { protocol: 'https', hostname: '*.unsplash.com' },
+      // Clerk (user avatars)
+      { protocol: 'https', hostname: 'img.clerk.com' },
+      { protocol: 'https', hostname: '*.clerk.com' },
+      // AI Model providers (for generated content)
+      { protocol: 'https', hostname: '*.replicate.delivery' },
+      { protocol: 'https', hostname: 'replicate.delivery' },
+      { protocol: 'https', hostname: '*.fal.ai' },
+      { protocol: 'https', hostname: 'fal.ai' },
+      { protocol: 'https', hostname: '*.runwayml.com' },
+      // HeyGen (avatar templates)
+      { protocol: 'https', hostname: '*.heygen.ai' },
+      { protocol: 'https', hostname: 'files2.heygen.ai' },
+      { protocol: 'https', hostname: 'resource2.heygen.ai' },
+      // Common CDNs
+      { protocol: 'https', hostname: '*.githubusercontent.com' },
+      { protocol: 'https', hostname: 'cdn.jsdelivr.net' },
     ],
   },
   // Mark packages as external to prevent SSR bundling issues

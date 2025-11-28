@@ -2,14 +2,17 @@
  * /api/profile - User Profile API
  * 
  * Handles profile CRUD operations.
+ * Protected by auth middleware with rate limiting.
  */
 
 import { NextRequest } from "next/server";
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { currentUser } from "@clerk/nextjs/server";
 import { dbConnect } from "@/lib/db";
 import UserProfile, { type IUserProfile } from "@/app/models/UserProfile/user-profile.model";
 import { ApiResponse } from "@/utils/api-response/response";
-import { logError } from "@/lib/logger";
+import { logError, logInfo } from "@/lib/logger";
+import { withAuth, type AuthContext } from "@/lib/api/auth-middleware";
+import { checkRateLimit, getRateLimitIdentifier } from "@/lib/rate-limiter";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,16 +20,34 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/profile
  * Get current user's profile or profile by username
+ * 
+ * Public profile lookup (with username param): Rate limited by IP
+ * Own profile: Protected by withAuth middleware
  */
 export async function GET(req: NextRequest) {
-  try {
-    await dbConnect();
+  const { searchParams } = new URL(req.url);
+  const username = searchParams.get("username");
 
-    const { searchParams } = new URL(req.url);
-    const username = searchParams.get("username");
+  // Public profile lookup - rate limit by IP
+  if (username) {
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+               req.headers.get("x-real-ip") || "anonymous";
+    
+    // Rate limit public lookups
+    const rateLimitResult = await checkRateLimit(
+      getRateLimitIdentifier(null, ip),
+      "PUBLIC"
+    );
+    
+    if (!rateLimitResult.success) {
+      return ApiResponse.rateLimit(
+        Math.ceil((rateLimitResult.reset - Date.now()) / 1000)
+      );
+    }
 
-    // If username provided, get public profile
-    if (username) {
+    try {
+      await dbConnect();
+      
       const profile = await UserProfile.findOne({ 
         username: username.toLowerCase(),
         is_public: true,
@@ -47,173 +68,191 @@ export async function GET(req: NextRequest) {
         stats: profile.preferences.show_stats ? profile.stats : null,
         is_verified: profile.is_verified,
       });
+    } catch (error) {
+      logError("Profile GET (public) error", error);
+      return ApiResponse.serverError();
     }
+  }
 
-    // Otherwise, get current user's profile
-    const { userId } = await auth();
-    if (!userId) {
-      return ApiResponse.unauthorized();
-    }
+  // Own profile - use auth middleware wrapper
+  return getOwnProfile(req);
+}
 
-    let profile = await UserProfile.findOne({ user_id: userId }).lean();
+/**
+ * Get own profile - protected by auth middleware
+ */
+const getOwnProfile = withAuth(
+  async (req: NextRequest, authContext: AuthContext) => {
+    const { userId } = authContext;
 
-    // If profile doesn't exist, create one
-    if (!profile) {
-      const clerkUser = await currentUser();
-      if (!clerkUser) {
-        return ApiResponse.notFound("User not found");
+    try {
+      await dbConnect();
+      
+      let profile = await UserProfile.findOne({ user_id: userId }).lean();
+
+      // If profile doesn't exist, create one
+      if (!profile) {
+        const clerkUser = await currentUser();
+        if (!clerkUser) {
+          return ApiResponse.notFound("User not found");
+        }
+
+        const email = clerkUser.emailAddresses[0]?.emailAddress || "";
+        const baseUsername = generateUsername(
+          clerkUser.firstName,
+          clerkUser.lastName,
+          clerkUser.username,
+          email
+        );
+
+        // Ensure unique username
+        const uniqueUsername = await ensureUniqueUsername(baseUsername);
+
+        const newProfile = new UserProfile({
+          user_id: userId,
+          username: uniqueUsername,
+          display_name: clerkUser.fullName || clerkUser.firstName || uniqueUsername,
+          email,
+          avatar_url: clerkUser.imageUrl,
+          bio: "",
+          social_links: {},
+          stats: { likes: 0, posts: 0, views: 0, followers: 0, following: 0 },
+          is_public: true,
+          is_verified: false,
+          preferences: {
+            show_stats: true,
+            allow_messages: true,
+            email_notifications: true,
+          },
+        });
+
+        await newProfile.save();
+        profile = newProfile.toObject();
+        
+        logInfo("Created new profile", { userId, username: uniqueUsername });
       }
 
-      const email = clerkUser.emailAddresses[0]?.emailAddress || "";
-      const baseUsername = generateUsername(
-        clerkUser.firstName,
-        clerkUser.lastName,
-        clerkUser.username,
-        email
-      );
+      return ApiResponse.ok(profile);
 
-      // Ensure unique username
-      const uniqueUsername = await ensureUniqueUsername(baseUsername);
-
-      const newProfile = new UserProfile({
-        user_id: userId,
-        username: uniqueUsername,
-        display_name: clerkUser.fullName || clerkUser.firstName || uniqueUsername,
-        email,
-        avatar_url: clerkUser.imageUrl,
-        bio: "",
-        social_links: {},
-        stats: { likes: 0, posts: 0, views: 0, followers: 0, following: 0 },
-        is_public: true,
-        is_verified: false,
-        preferences: {
-          show_stats: true,
-          allow_messages: true,
-          email_notifications: true,
-        },
-      });
-
-      await newProfile.save();
-      profile = newProfile.toObject();
+    } catch (error) {
+      logError("Profile GET error", error, { userId });
+      return ApiResponse.serverError();
     }
-
-    return ApiResponse.ok(profile);
-
-  } catch (error) {
-    logError("Profile GET error", error);
-    return ApiResponse.serverError();
-  }
-}
+  },
+  "authenticated_free_tier" // Rate limited: 100 req/min for paid, 20 req/min for free
+);
 
 /**
  * PUT /api/profile
  * Update current user's profile
+ * Protected by withAuth middleware with rate limiting
  */
-export async function PUT(req: NextRequest) {
-  try {
-    const { userId } = await auth();
-    if (!userId) {
-      return ApiResponse.unauthorized();
-    }
+export const PUT = withAuth(
+  async (req: NextRequest, authContext: AuthContext) => {
+    const { userId } = authContext;
 
-    await dbConnect();
+    try {
+      await dbConnect();
 
-    const body = await req.json();
-    const {
-      username,
-      display_name,
-      bio,
-      avatar_url,
-      cover_url,
-      social_links,
-      is_public,
-      preferences,
-    } = body;
+      const body = await req.json();
+      const {
+        username,
+        display_name,
+        bio,
+        avatar_url,
+        cover_url,
+        social_links,
+        is_public,
+        preferences,
+      } = body;
 
-    // Build update object
-    const updateData: Partial<IUserProfile> = {};
+      // Build update object
+      const updateData: Partial<IUserProfile> = {};
 
-    // Validate and set username
-    if (username !== undefined) {
-      const cleanUsername = username.toLowerCase().trim();
-      
-      // Validate username format
-      if (!/^[a-z0-9_]{3,30}$/.test(cleanUsername)) {
-        return ApiResponse.invalid(
-          "Username must be 3-30 characters and only contain lowercase letters, numbers, and underscores",
-          "username"
-        );
+      // Validate and set username
+      if (username !== undefined) {
+        const cleanUsername = username.toLowerCase().trim();
+        
+        // Validate username format
+        if (!/^[a-z0-9_]{3,30}$/.test(cleanUsername)) {
+          return ApiResponse.invalid(
+            "Username must be 3-30 characters and only contain lowercase letters, numbers, and underscores",
+            "username"
+          );
+        }
+
+        // Check if username is taken (by another user)
+        const existingProfile = await UserProfile.findOne({
+          username: cleanUsername,
+          user_id: { $ne: userId },
+        });
+
+        if (existingProfile) {
+          return ApiResponse.badRequest("Username is already taken");
+        }
+
+        updateData.username = cleanUsername;
       }
 
-      // Check if username is taken (by another user)
-      const existingProfile = await UserProfile.findOne({
-        username: cleanUsername,
-        user_id: { $ne: userId },
-      });
-
-      if (existingProfile) {
-        return ApiResponse.badRequest("Username is already taken");
+      if (display_name !== undefined) {
+        updateData.display_name = display_name.trim().slice(0, 50);
       }
 
-      updateData.username = cleanUsername;
+      if (bio !== undefined) {
+        updateData.bio = bio.trim().slice(0, 500);
+      }
+
+      if (avatar_url !== undefined) {
+        updateData.avatar_url = avatar_url;
+      }
+
+      if (cover_url !== undefined) {
+        updateData.cover_url = cover_url;
+      }
+
+      if (social_links !== undefined) {
+        updateData.social_links = {
+          twitter: social_links.twitter?.trim().slice(0, 100) || "",
+          instagram: social_links.instagram?.trim().slice(0, 100) || "",
+          youtube: social_links.youtube?.trim().slice(0, 100) || "",
+          tiktok: social_links.tiktok?.trim().slice(0, 100) || "",
+          website: social_links.website?.trim().slice(0, 200) || "",
+        };
+      }
+
+      if (is_public !== undefined) {
+        updateData.is_public = Boolean(is_public);
+      }
+
+      if (preferences !== undefined) {
+        updateData.preferences = {
+          show_stats: preferences.show_stats ?? true,
+          allow_messages: preferences.allow_messages ?? true,
+          email_notifications: preferences.email_notifications ?? true,
+        };
+      }
+
+      // Update profile
+      const updatedProfile = await UserProfile.findOneAndUpdate(
+        { user_id: userId },
+        { $set: updateData },
+        { new: true, runValidators: true }
+      ).lean();
+
+      if (!updatedProfile) {
+        return ApiResponse.notFound("Profile not found");
+      }
+
+      logInfo("Profile updated", { userId, updatedFields: Object.keys(updateData) });
+      return ApiResponse.ok(updatedProfile);
+
+    } catch (error) {
+      logError("Profile PUT error", error, { userId });
+      return ApiResponse.serverError();
     }
-
-    if (display_name !== undefined) {
-      updateData.display_name = display_name.trim().slice(0, 50);
-    }
-
-    if (bio !== undefined) {
-      updateData.bio = bio.trim().slice(0, 500);
-    }
-
-    if (avatar_url !== undefined) {
-      updateData.avatar_url = avatar_url;
-    }
-
-    if (cover_url !== undefined) {
-      updateData.cover_url = cover_url;
-    }
-
-    if (social_links !== undefined) {
-      updateData.social_links = {
-        twitter: social_links.twitter?.trim().slice(0, 100) || "",
-        instagram: social_links.instagram?.trim().slice(0, 100) || "",
-        youtube: social_links.youtube?.trim().slice(0, 100) || "",
-        tiktok: social_links.tiktok?.trim().slice(0, 100) || "",
-        website: social_links.website?.trim().slice(0, 200) || "",
-      };
-    }
-
-    if (is_public !== undefined) {
-      updateData.is_public = Boolean(is_public);
-    }
-
-    if (preferences !== undefined) {
-      updateData.preferences = {
-        show_stats: preferences.show_stats ?? true,
-        allow_messages: preferences.allow_messages ?? true,
-        email_notifications: preferences.email_notifications ?? true,
-      };
-    }
-
-    // Update profile
-    const updatedProfile = await UserProfile.findOneAndUpdate(
-      { user_id: userId },
-      { $set: updateData },
-      { new: true, runValidators: true }
-    ).lean();
-
-    if (!updatedProfile) {
-      return ApiResponse.notFound("Profile not found");
-    }
-
-    return ApiResponse.ok(updatedProfile);
-
-  } catch (error) {
-    logError("Profile PUT error", error);
-    return ApiResponse.serverError();
-  }
-}
+  },
+  "authenticated_free_tier"
+);
 
 /**
  * Generate a username from user data
@@ -274,45 +313,46 @@ async function ensureUniqueUsername(baseUsername: string): Promise<string> {
 
 /**
  * Check username availability
+ * Protected by withAuth middleware with rate limiting
  */
-export async function POST(req: NextRequest) {
-  try {
-    const { userId } = await auth();
-    if (!userId) {
-      return ApiResponse.unauthorized();
-    }
+export const POST = withAuth(
+  async (req: NextRequest, authContext: AuthContext) => {
+    const { userId } = authContext;
 
-    await dbConnect();
+    try {
+      await dbConnect();
 
-    const body = await req.json();
-    const { action, username } = body;
+      const body = await req.json();
+      const { action, username } = body;
 
-    if (action === "check_username") {
-      const cleanUsername = username?.toLowerCase().trim();
+      if (action === "check_username") {
+        const cleanUsername = username?.toLowerCase().trim();
 
-      if (!cleanUsername || !/^[a-z0-9_]{3,30}$/.test(cleanUsername)) {
+        if (!cleanUsername || !/^[a-z0-9_]{3,30}$/.test(cleanUsername)) {
+          return ApiResponse.ok({
+            available: false,
+            error: "Invalid username format",
+          });
+        }
+
+        const existing = await UserProfile.findOne({
+          username: cleanUsername,
+          user_id: { $ne: userId },
+        });
+
         return ApiResponse.ok({
-          available: false,
-          error: "Invalid username format",
+          available: !existing,
+          username: cleanUsername,
         });
       }
 
-      const existing = await UserProfile.findOne({
-        username: cleanUsername,
-        user_id: { $ne: userId },
-      });
+      return ApiResponse.badRequest("Invalid action");
 
-      return ApiResponse.ok({
-        available: !existing,
-        username: cleanUsername,
-      });
+    } catch (error) {
+      logError("Profile POST error", error, { userId });
+      return ApiResponse.serverError();
     }
-
-    return ApiResponse.badRequest("Invalid action");
-
-  } catch (error) {
-    logError("Profile POST error", error);
-    return ApiResponse.serverError();
-  }
-}
+  },
+  "authenticated_free_tier"
+);
 

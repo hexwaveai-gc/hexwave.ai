@@ -71,3 +71,4 @@ export function AvatarCard({ avatar, isSelected, onClick }: AvatarCardProps) {
   );
 }
 
+

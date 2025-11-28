@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Heart, Video, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { Video } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 
 const DEFAULT_THUMBNAIL = "/default.svg";
 
@@ -36,9 +36,26 @@ export default function MediaCard({
   href,
   type = "video",
   onRecreate,
+  videoUrl,
 }: MediaCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Handle video playback on hover
+  useEffect(() => {
+    if (videoRef.current && videoUrl) {
+      if (isHovered) {
+        videoRef.current.play().catch((error) => {
+          // Handle autoplay restrictions
+          console.warn("Video autoplay failed:", error);
+        });
+      } else {
+        videoRef.current.pause();
+        videoRef.current.currentTime = 0; // Reset to beginning
+      }
+    }
+  }, [isHovered, videoUrl]);
 
   return (
     <div
@@ -49,12 +66,30 @@ export default function MediaCard({
       <Link href={href} className="block">
         {/* Thumbnail Container */}
         <div className="relative w-full bg-white/5 overflow-hidden">
+          {/* Video Element - Shows on hover when videoUrl exists */}
+          {videoUrl && (
+            <video
+              ref={videoRef}
+              src={videoUrl}
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+                isHovered ? "opacity-100 z-10" : "opacity-0 z-0"
+              }`}
+              muted
+              loop
+              playsInline
+              preload="metadata"
+            />
+          )}
+          
+          {/* Image Thumbnail - Shows when not hovering or as fallback */}
           <Image
             src={imageError ? DEFAULT_THUMBNAIL : thumbnail}
             alt={title || "Media content"}
             width={500}
             height={500}
-            className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105"
+            className={`w-full h-auto object-cover transition-all duration-500 ${
+              isHovered && videoUrl ? "opacity-0 scale-105" : "opacity-100 group-hover:scale-105"
+            }`}
             unoptimized
             onError={() => setImageError(true)}
           />
@@ -71,7 +106,7 @@ export default function MediaCard({
 
           {/* Overlay Gradient on Hover */}
           <div
-            className={`absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent transition-opacity duration-300 flex flex-col items-center justify-center p-6 text-center ${
+            className={`absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent transition-opacity duration-300 flex flex-col items-center justify-center p-6 text-center z-20 ${
               isHovered ? "opacity-100" : "opacity-0"
             }`}
           >

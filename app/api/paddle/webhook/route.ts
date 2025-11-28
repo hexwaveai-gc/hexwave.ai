@@ -11,6 +11,7 @@ import {
   handleTransactionCompleted,
   handleTransactionPaymentFailed,
 } from "@/lib/paddle/webhook-handlers";
+import { logInfo, logError, logWarn, createTimer, logSubscription } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -35,7 +36,7 @@ function verifyPaddleSignature(
     const h1Match = parts.find((p) => p.startsWith("h1="));
 
     if (!tsMatch || !h1Match) {
-      console.error("[Webhook] Invalid signature format");
+      logWarn("Paddle webhook invalid signature format");
       return false;
     }
 
@@ -63,13 +64,13 @@ function verifyPaddleSignature(
     const timeDiff = Math.abs(currentTime - timestampNum);
 
     if (timeDiff > 300) {
-      console.error("[Webhook] Timestamp too old or in future");
+      logWarn("Paddle webhook timestamp expired", { timeDiff });
       return false;
     }
 
     return isValid;
   } catch (error) {
-    console.error("[Webhook] Signature verification error:", error);
+    logError("Paddle webhook signature verification error", error);
     return false;
   }
 }
@@ -79,7 +80,7 @@ function verifyPaddleSignature(
  * Handle incoming Paddle webhook events
  */
 export async function POST(req: NextRequest) {
-  const startTime = Date.now();
+  const timer = createTimer("paddle_webhook");
 
   try {
     // Get raw body for signature verification
@@ -89,7 +90,7 @@ export async function POST(req: NextRequest) {
     const signature = req.headers.get(PADDLE_SIGNATURE_HEADER);
 
     if (!signature) {
-      console.error("[Webhook] Missing signature header");
+      logWarn("Paddle webhook missing signature header");
       return NextResponse.json(
         { error: "Missing signature" },
         { status: 401 }
@@ -98,7 +99,7 @@ export async function POST(req: NextRequest) {
 
     // Verify webhook secret is configured
     if (!PADDLE_CONFIG.webhookSecret) {
-      console.error("[Webhook] Webhook secret not configured");
+      logError("Paddle webhook secret not configured");
       return NextResponse.json(
         { error: "Webhook not configured" },
         { status: 500 }
@@ -113,7 +114,7 @@ export async function POST(req: NextRequest) {
     );
 
     if (!isValid) {
-      console.error("[Webhook] Invalid signature");
+      logWarn("Paddle webhook invalid signature");
       return NextResponse.json(
         { error: "Invalid signature" },
         { status: 401 }
@@ -126,12 +127,13 @@ export async function POST(req: NextRequest) {
     const data = payload.data;
     const eventId = payload.event_id;
 
-    console.log(`[Webhook] Received event: ${eventType} (${eventId})`);
+    logInfo("Paddle webhook received", { eventType, eventId });
 
     // Route to appropriate handler
     switch (eventType) {
       case WEBHOOK_EVENTS.SUBSCRIPTION_CREATED:
         await handleSubscriptionCreated(data);
+        logSubscription("created", { eventId, customerId: data.customer_id });
         break;
 
       case WEBHOOK_EVENTS.SUBSCRIPTION_UPDATED:
@@ -140,10 +142,12 @@ export async function POST(req: NextRequest) {
 
       case WEBHOOK_EVENTS.SUBSCRIPTION_CANCELED:
         await handleSubscriptionCanceled(data);
+        logSubscription("cancelled", { eventId, subscriptionId: data.id });
         break;
 
       case WEBHOOK_EVENTS.SUBSCRIPTION_ACTIVATED:
         await handleSubscriptionActivated(data);
+        logSubscription("activated", { eventId, subscriptionId: data.id });
         break;
 
       case WEBHOOK_EVENTS.SUBSCRIPTION_PAUSED:
@@ -163,11 +167,11 @@ export async function POST(req: NextRequest) {
         break;
 
       default:
-        console.log(`[Webhook] Unhandled event type: ${eventType}`);
+        logWarn("Paddle webhook unhandled event", { eventType });
     }
 
-    const duration = Date.now() - startTime;
-    console.log(`[Webhook] Event ${eventType} processed in ${duration}ms`);
+    const duration = timer.done({ eventType, eventId });
+    logInfo("Paddle webhook processed", { eventType, eventId, duration });
 
     return NextResponse.json({
       success: true,
@@ -176,8 +180,8 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    const duration = Date.now() - startTime;
-    console.error(`[Webhook] Error processing webhook:`, error);
+    timer.done({ error: true });
+    logError("Paddle webhook processing error", error);
 
     // Return 200 to prevent Paddle from retrying for non-retryable errors
     // Return 500 for retryable errors
@@ -190,7 +194,6 @@ export async function POST(req: NextRequest) {
         {
           error: "Processing failed",
           message: error instanceof Error ? error.message : "Unknown error",
-          duration: `${duration}ms`,
         },
         { status: 500 }
       );
@@ -200,7 +203,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
-      duration: `${duration}ms`,
     });
   }
 }

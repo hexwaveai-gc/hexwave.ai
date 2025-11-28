@@ -13,10 +13,7 @@ import { TemplatesHeader } from "./templates-header";
 import { TemplatesSidebar } from "./templates-sidebar";
 import { TemplatesGrid } from "./templates-grid";
 
-type TabType = "avatars" | "canvas" | "generations";
-
 export function TemplatesContent() {
-  const [activeTab, setActiveTab] = useState<TabType>("avatars");
   const [typeFilter, setTypeFilter] = useState<AvatarTypeFilter>("all");
   const [genderFilter, setGenderFilter] = useState<GenderFilter>("all");
   const [orientationFilter, setOrientationFilter] = useState<OrientationFilter>("all");
@@ -70,8 +67,6 @@ export function TemplatesContent() {
         {/* Header with tabs, filters, search */}
         <div className="p-6 pb-0">
           <TemplatesHeader
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
             typeFilter={typeFilter}
             onTypeFilterChange={setTypeFilter}
             genderFilter={genderFilter}
@@ -86,43 +81,11 @@ export function TemplatesContent() {
 
         {/* Grid */}
         <div className="flex-1 overflow-y-auto p-6 pt-4">
-          {activeTab === "avatars" && (
-            <TemplatesGrid
-              avatars={filteredAvatars}
-              selectedAvatar={selectedAvatar}
-              onSelectAvatar={setSelectedAvatar}
-            />
-          )}
-
-          {activeTab === "canvas" && (
-            <div className="flex flex-col items-center justify-center h-full">
-              <div className="w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center mb-4">
-                <span className="text-4xl">🎨</span>
-              </div>
-              <h3 className="text-white font-semibold text-xl mb-2">
-                Canvas Coming Soon
-              </h3>
-              <p className="text-white/50 text-sm text-center max-w-md">
-                Create custom templates with our powerful canvas editor.
-                Available in the next update.
-              </p>
-            </div>
-          )}
-
-          {activeTab === "generations" && (
-            <div className="flex flex-col items-center justify-center h-full">
-              <div className="w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center mb-4">
-                <span className="text-4xl">📁</span>
-              </div>
-              <h3 className="text-white font-semibold text-xl mb-2">
-                No Generations Yet
-              </h3>
-              <p className="text-white/50 text-sm text-center max-w-md">
-                Your generated content will appear here. Select an avatar and
-                start creating!
-              </p>
-            </div>
-          )}
+          <TemplatesGrid
+            avatars={filteredAvatars}
+            selectedAvatar={selectedAvatar}
+            onSelectAvatar={setSelectedAvatar}
+          />
         </div>
       </div>
     </div>
