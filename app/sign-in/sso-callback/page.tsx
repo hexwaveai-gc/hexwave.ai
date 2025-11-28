@@ -1,6 +1,7 @@
 'use client'
 
-import { AuthenticateWithRedirectCallback, useClerk } from '@clerk/nextjs'
+import { Suspense } from 'react'
+import { AuthenticateWithRedirectCallback } from '@clerk/nextjs'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import HexwaveLoader from '@/app/components/common/HexwaveLoader'
@@ -26,13 +27,24 @@ const ERROR_MESSAGES: Record<string, string> = {
 }
 
 // =============================================================================
-// COMPONENT
+// LOADING FALLBACK
 // =============================================================================
 
-export default function SSOCallback() {
+function SSOCallbackFallback() {
+  return (
+    <div className="flex h-screen w-screen items-center justify-center bg-black">
+      <HexwaveLoader message="Completing sign in..." size="lg" />
+    </div>
+  )
+}
+
+// =============================================================================
+// SSO CALLBACK CONTENT (uses useSearchParams)
+// =============================================================================
+
+function SSOCallbackContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const clerk = useClerk()
   
   const [error, setError] = useState<string | null>(null)
   const [isTimeout, setIsTimeout] = useState(false)
@@ -149,5 +161,17 @@ export default function SSOCallback() {
         afterSignUpUrl="/explore"
       />
     </div>
+  )
+}
+
+// =============================================================================
+// PAGE COMPONENT (with Suspense boundary)
+// =============================================================================
+
+export default function SSOCallback() {
+  return (
+    <Suspense fallback={<SSOCallbackFallback />}>
+      <SSOCallbackContent />
+    </Suspense>
   )
 }
