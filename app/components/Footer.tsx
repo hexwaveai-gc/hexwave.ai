@@ -139,8 +139,9 @@ export default function Footer() {
             </p>
           </div>
           <div className="*:text-[#BEFFD6] dark:*:text-green-400 *:underline *:underline-offset-2 space-x-3">
-            <span className="cursor-default">Terms of Service</span>
-            <span className="cursor-default">Privacy Policy</span>
+            <Link href="/about" className="hover:text-[#74FF52] transition-colors">About</Link>
+            <Link href="/terms" className="hover:text-[#74FF52] transition-colors">Terms of Service</Link>
+            <Link href="/privacy" className="hover:text-[#74FF52] transition-colors">Privacy Policy</Link>
           </div>
         </div>
       </section>
