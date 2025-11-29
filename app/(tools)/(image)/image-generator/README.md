@@ -1,5 +1,6 @@
 # Image Generator - Standardized Two-Column Layout
 
+ 
 ## Overview
 
 This image generator implements a standardized two-column layout system with resizable panels and dynamic model-based configuration. It serves as the reference implementation for all future generation tools (image and video).
