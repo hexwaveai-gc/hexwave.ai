@@ -72,7 +72,7 @@ export const POST = withAuth(
           plan_name: getPlanNameFromPriceId(priceId),
         },
         settings: {
-          successUrl: `${success}?transaction_id={transaction_id}`,
+          successUrl: success,
           displayMode: "overlay" as const,
           theme: "dark" as const,
           locale: "en",

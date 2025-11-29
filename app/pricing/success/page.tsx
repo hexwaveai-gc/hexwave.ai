@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle2, Sparkles, ArrowRight, Loader2 } from "lucide-react";
-import { Sidebar } from "@/app/components/common/sidebar/Sidebar";
+import Sidebar from "@/app/components/common/Sidebar";
 import { useUser, useRefetchUserData } from "@/hooks";
 
 /**

@@ -74,11 +74,20 @@ export interface UserState {
 // API RESPONSE TYPE
 // ============================================================================
 
-interface UserMeResponse {
+interface UserMeData {
   credits: number;
   subscription: UserSubscription | null;
-  balance_verified: boolean;
+  balance_verified?: boolean;
   usage_summary?: UsageSummary;
+}
+
+/**
+ * API response wrapper from ApiResponse.ok()
+ * The actual data is nested inside { success: true, data: {...} }
+ */
+interface UserMeResponse {
+  success: boolean;
+  data: UserMeData;
 }
 
 // ============================================================================
@@ -160,13 +169,16 @@ export const useUserStore = create<UserState>()(
             throw new Error(`Failed to fetch user data: ${response.statusText}`);
           }
 
-          const data: UserMeResponse = await response.json();
+          const apiResponse: UserMeResponse = await response.json();
+          
+          // API response is wrapped in { success: true, data: {...} }
+          const data = apiResponse.data;
 
           set({
-            credits: data.credits || 0,
-            subscription: data.subscription,
-            balanceVerified: data.balance_verified,
-            usageSummary: data.usage_summary || null,
+            credits: data?.credits || 0,
+            subscription: data?.subscription || null,
+            balanceVerified: data?.balance_verified || false,
+            usageSummary: data?.usage_summary || null,
             isLoading: false,
             isInitialized: true,
             lastFetchedAt: now,

@@ -16,7 +16,6 @@ import {
   LogOut,
   CreditCard,
   Coins,
-  Settings,
   Receipt,
   UserCircle,
   HelpCircle,
@@ -26,10 +25,15 @@ import {
   LayoutTemplate,
   Bot,
   Mic,
+  Plus,
 } from "lucide-react";
 import { useUser, useClerk } from "@clerk/nextjs";
 import { useUserStore, selectCredits, selectHasActiveSubscription, selectPlanName, selectSubscription } from "@/store";
 import { useAuthModal } from "@/app/providers/AuthModalProvider";
+import { useUpgradePlan } from "@/app/providers/UpgradePlanProvider";
+
+// Threshold for showing "Add Credits" button
+const LOW_CREDITS_THRESHOLD = 2000;
 
 interface SidebarItem {
   id: string;
@@ -64,6 +68,7 @@ export default function Sidebar() {
   const { isSignedIn, user, isLoaded } = useUser();
   const { signOut } = useClerk();
   const { openSignIn } = useAuthModal();
+  const { openModal: openUpgradeModal } = useUpgradePlan();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
   
@@ -72,6 +77,9 @@ export default function Sidebar() {
   const hasActiveSubscription = useUserStore(selectHasActiveSubscription);
   const planName = useUserStore(selectPlanName);
   const subscription = useUserStore(selectSubscription);
+  
+  // Check if credits are low (below threshold)
+  const isLowCredits = credits < LOW_CREDITS_THRESHOLD;
 
   // Handle navigation item click
   const handleNavClick = (e: React.MouseEvent, item: SidebarItem) => {
@@ -184,19 +192,35 @@ export default function Sidebar() {
               <>
                 {/* Credits Display - Only show for subscribers */}
                 {hasActiveSubscription && (
-                  <Link
-                    href="/pricing"
-                    className="flex flex-col items-center justify-center gap-1 py-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition-colors"
-                    title={`${credits.toLocaleString()} credits available`}
-                  >
-                    <Coins className="w-5 h-5 flex-shrink-0 text-[#74FF52]" />
-                    <span className="text-[10px] font-semibold text-center leading-tight text-[#74FF52]">
-                      {formatCredits(credits)}
-                    </span>
-                    <span className="text-[8px] text-white/50 leading-tight">
-                      {planName}
-                    </span>
-                  </Link>
+                  <>
+                    <Link
+                      href="/billing"
+                      className={`flex flex-col items-center justify-center gap-1 py-2 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition-colors ${
+                        isLowCredits ? "border border-yellow-500/30" : ""
+                      }`}
+                      title={`${credits.toLocaleString()} credits available`}
+                    >
+                      <Coins className={`w-5 h-5 flex-shrink-0 ${isLowCredits ? "text-yellow-500" : "text-[#74FF52]"}`} />
+                      <span className={`text-[10px] font-semibold text-center leading-tight ${isLowCredits ? "text-yellow-500" : "text-[#74FF52]"}`}>
+                        {formatCredits(credits)}
+                      </span>
+                      <span className="text-[8px] text-white/50 leading-tight">
+                        {planName}
+                      </span>
+                    </Link>
+                    
+                    {/* Add Credits Button - Show when credits are low */}
+                    {isLowCredits && (
+                      <button
+                        onClick={openUpgradeModal}
+                        className="flex flex-col items-center justify-center gap-1 py-2 px-2 rounded-lg bg-yellow-500/20 border border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/30 transition-all font-semibold w-full group"
+                        title="Add more credits"
+                      >
+                        <Plus className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" />
+                        <span className="text-[8px] text-center leading-tight">Add Credits</span>
+                      </button>
+                    )}
+                  </>
                 )}
 
                 {/* User Avatar / Settings Button */}

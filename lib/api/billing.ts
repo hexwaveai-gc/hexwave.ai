@@ -54,10 +54,20 @@ export interface BillingPortalResponse {
 
 export interface BillingActionResponse {
   success: boolean;
-  message: string;
+  message?: string;
 }
 
 export type BillingAction = "cancel" | "cancel_immediately" | "pause" | "resume" | "reactivate";
+
+/**
+ * API response wrapper from ApiResponse.ok()
+ * The actual data is nested inside { success: true, data: {...} }
+ */
+interface ApiWrappedResponse<T> {
+  success: boolean;
+  data?: T;
+  message?: string;
+}
 
 // ============================================================================
 // API Functions
@@ -65,22 +75,29 @@ export type BillingAction = "cancel" | "cancel_immediately" | "pause" | "resume"
 
 /**
  * Fetch billing details including subscription and transactions
+ * 
+ * Note: API returns wrapped response { success: true, data: {...} }
  */
 export async function fetchBilling(): Promise<BillingData> {
-  return api.get<BillingData>("/api/billing");
+  const response = await api.get<ApiWrappedResponse<BillingData>>("/api/billing");
+  return response.data || { subscription: null, transactions: [] };
 }
 
 /**
  * Perform billing action (cancel, pause, resume, etc.)
+ * 
+ * Note: API returns wrapped response { success: true, message: "..." }
  */
 export async function performBillingAction(action: BillingAction): Promise<BillingActionResponse> {
-  return api.post<BillingActionResponse>("/api/billing", { action });
+  const response = await api.post<ApiWrappedResponse<undefined>>("/api/billing", { action });
+  return { success: response.success, message: response.message };
 }
 
 /**
  * Get customer portal URL for payment method updates
  */
 export async function getPortalUrl(): Promise<BillingPortalResponse> {
-  return api.get<BillingPortalResponse>("/api/billing/portal");
+  const response = await api.get<ApiWrappedResponse<BillingPortalResponse>>("/api/billing/portal");
+  return response.data || { success: false };
 }
 

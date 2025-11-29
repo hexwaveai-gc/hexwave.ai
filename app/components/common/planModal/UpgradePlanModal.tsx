@@ -135,7 +135,10 @@ export default function UpgradePlanModal({
 
       try {
         const response = await fetch("/api/paddle/checkout");
-        const config = await response.json();
+        const result = await response.json();
+        
+        // API response is wrapped: { success, data: { clientToken, environment } }
+        const config = result.data || result;
 
         if (!config.clientToken) {
           console.error("Paddle client token not configured");
@@ -191,19 +194,22 @@ export default function UpgradePlanModal({
         body: JSON.stringify({ priceId, billingCycle: cycle }),
       });
 
-      const data = await response.json();
+      const result = await response.json();
 
-      if (!data.success) {
-        console.error("Failed to get checkout data:", data.error);
+      if (!result.success) {
+        console.error("Failed to get checkout data:", result.error);
         setIsLoading(null);
         return;
       }
 
+      // API response is wrapped: { success, data: { checkoutData } }
+      const { checkoutData } = result.data;
+
       window.Paddle.Checkout.open({
-        items: data.checkoutData.items,
-        customer: data.checkoutData.customer,
-        customData: data.checkoutData.customData,
-        settings: data.checkoutData.settings,
+        items: checkoutData.items,
+        customer: checkoutData.customer,
+        customData: checkoutData.customData,
+        settings: checkoutData.settings,
       });
     } catch (error) {
       console.error("Error initiating checkout:", error);
@@ -237,19 +243,22 @@ export default function UpgradePlanModal({
         }),
       });
 
-      const data = await response.json();
+      const result = await response.json();
 
-      if (!data.success) {
-        console.error("Failed to get checkout data:", data.error);
+      if (!result.success) {
+        console.error("Failed to get checkout data:", result.error);
         setIsLoading(null);
         return;
       }
 
+      // API response is wrapped: { success, data: { checkoutData } }
+      const { checkoutData } = result.data;
+
       window.Paddle.Checkout.open({
-        items: data.checkoutData.items,
-        customer: data.checkoutData.customer,
-        customData: data.checkoutData.customData,
-        settings: data.checkoutData.settings,
+        items: checkoutData.items,
+        customer: checkoutData.customer,
+        customData: checkoutData.customData,
+        settings: checkoutData.settings,
       });
     } catch (error) {
       console.error("Error initiating checkout:", error);
