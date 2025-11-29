@@ -115,6 +115,7 @@ export function PricingContent() {
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("annual");
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [paddleLoaded, setPaddleLoaded] = useState(false);
+  const [paddleError, setPaddleError] = useState<string | null>(null);
   const { isSignedIn } = useAuth();
   const router = useRouter();
   const { openSignUp } = useAuthModal();
@@ -129,8 +130,13 @@ export function PricingContent() {
     return getPlanKey(planId, subscription.billing_cycle);
   }, [hasActiveSubscription, subscription]);
 
-  // Load Paddle.js script
+  // Load Paddle.js script - only when user is signed in
   useEffect(() => {
+    // Don't load Paddle until we know the auth state
+    if (!isSignedIn) {
+      return;
+    }
+
     const loadPaddle = async () => {
       if (window.Paddle) {
         setPaddleLoaded(true);
@@ -141,8 +147,33 @@ export function PricingContent() {
         const response = await fetch("/api/paddle/checkout");
         const config = await response.json();
 
-        if (!config.clientToken) {
-          console.error("Paddle client token not configured");
+        if (!response.ok) {
+          console.error("[Paddle] Failed to get config:", response.status);
+          // Retry after a short delay if auth might not be ready
+          setTimeout(loadPaddle, 1000);
+          return;
+        }
+
+        // API response is wrapped: { success: true, data: { environment, clientToken } }
+        const paddleConfig = config.data;
+        
+        if (!paddleConfig?.clientToken) {
+          console.error("[Paddle] Client token not configured - please set NEXT_PUBLIC_PADDLE_CLIENT_TOKEN");
+          setPaddleError("Payment system not configured. Please contact support.");
+          return;
+        }
+
+        // Check if script already exists
+        const existingScript = document.querySelector('script[src*="paddle.com"]');
+        if (existingScript) {
+          // Script exists, just initialize
+          if (window.Paddle) {
+            if (paddleConfig.environment === "sandbox") {
+              window.Paddle.Environment.set("sandbox");
+            }
+            window.Paddle.Initialize({ token: paddleConfig.clientToken });
+            setPaddleLoaded(true);
+          }
           return;
         }
 
@@ -152,12 +183,16 @@ export function PricingContent() {
 
         script.onload = () => {
           if (window.Paddle) {
-            if (config.environment === "sandbox") {
+            if (paddleConfig.environment === "sandbox") {
               window.Paddle.Environment.set("sandbox");
             }
-            window.Paddle.Initialize({ token: config.clientToken });
+            window.Paddle.Initialize({ token: paddleConfig.clientToken });
             setPaddleLoaded(true);
           }
+        };
+
+        script.onerror = () => {
+          console.error("[Paddle] Failed to load Paddle.js script");
         };
 
         document.head.appendChild(script);
@@ -167,7 +202,7 @@ export function PricingContent() {
     };
 
     loadPaddle();
-  }, []);
+  }, [isSignedIn]);
 
   const handleSelectPlan = async (plan: PaddlePlan | null, cycle: "monthly" | "annual") => {
     // If user is not signed in, open sign-up modal
@@ -180,6 +215,9 @@ export function PricingContent() {
 
     if (!paddleLoaded || !window.Paddle) {
       console.error("Paddle not loaded yet");
+      if (paddleError) {
+        alert(paddleError);
+      }
       return;
     }
 
@@ -195,19 +233,22 @@ export function PricingContent() {
         body: JSON.stringify({ priceId, billingCycle: cycle }),
       });
 
-      const data = await response.json();
+      const response_data = await response.json();
 
-      if (!data.success) {
-        console.error("Failed to get checkout data:", data.error);
+      if (!response_data.success) {
+        console.error("Failed to get checkout data:", response_data.error);
         setIsLoading(null);
         return;
       }
 
-      window.Paddle.Checkout.open({
-        items: data.checkoutData.items,
-        customer: data.checkoutData.customer,
-        customData: data.checkoutData.customData,
-        settings: data.checkoutData.settings,
+      // API response is wrapped: { success: true, data: { checkoutData: {...} } }
+      const { checkoutData } = response_data.data;
+
+      window.Paddle?.Checkout.open({
+        items: checkoutData.items,
+        customer: checkoutData.customer,
+        customData: checkoutData.customData,
+        settings: checkoutData.settings,
       });
     } catch (error) {
       console.error("Error initiating checkout:", error);
@@ -262,7 +303,7 @@ export function PricingContent() {
             <div className="w-2 h-2 rounded-full bg-[#74FF52] animate-pulse" />
             <span className="text-[#74FF52] font-medium">
               Current Plan: {subscription.plan_name}{" "}
-              {subscription.billing_cycle === "yearly" ? "(Annual)" : "(Monthly)"}
+              {subscription.billing_cycle === "annual" ? "(Annual)" : "(Monthly)"}
             </span>
             {subscription.cancel_at_period_end && (
               <span className="text-yellow-400 text-sm">(Cancels at period end)</span>

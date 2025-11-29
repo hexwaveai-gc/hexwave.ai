@@ -62,8 +62,8 @@ function getCSPHeader(isApi: boolean): string {
   const directives = [
     "default-src 'self'",
     // Allow Clerk scripts from their CDN domains
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://*.clerk.accounts.dev https://*.clerk.com https://clerk.hexwave.ai https://cdn.jsdelivr.net",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://*.clerk.accounts.dev https://*.clerk.com https://clerk.hexwave.ai https://cdn.jsdelivr.net https://cdn.paddle.com https://*.paddle.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.paddle.com",
     "img-src 'self' data: blob: https: http:",
     "font-src 'self' https://fonts.gstatic.com data:",
     // Extended connect-src for Clerk API calls
