@@ -1,7 +1,7 @@
 /**
- * /api/billing/portal - Paddle Customer Portal Redirect
+ * /api/billing/portal - Paddle Payment Method Update
  * 
- * Generates a URL to update payment method via Paddle checkout overlay.
+ * Creates a transaction for updating payment method via Paddle.js overlay.
  */
 
 import { auth } from "@clerk/nextjs/server";
@@ -9,14 +9,14 @@ import { dbConnect } from "@/lib/db";
 import User from "@/app/models/User/user.model";
 import { getPaddleClient } from "@/lib/paddle/client";
 import { ApiResponse } from "@/utils/api-response/response";
-import { logError } from "@/lib/logger";
+import { logError, logInfo } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
  * GET /api/billing/portal
- * Get customer portal / update payment method URL
+ * Get transaction ID for payment method update via Paddle.js overlay
  */
 export async function GET() {
   try {
@@ -36,35 +36,31 @@ export async function GET() {
 
     try {
       // Get subscription with update payment method transaction
-      const subscription = await paddle.subscriptions.getPaymentMethodChangeTransaction(
+      const transaction = await paddle.subscriptions.getPaymentMethodChangeTransaction(
         user.subscription.id
       );
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const subData = subscription as any;
+      const txnData = transaction as any;
+      
+      logInfo("Payment method change transaction created", {
+        userId,
+        subscriptionId: user.subscription.id,
+        transactionId: txnData.id,
+      });
 
-      if (subData.checkout?.url) {
-        return ApiResponse.ok({
-          url: subData.checkout.url,
-          type: "checkout",
-        });
-      }
-
-      // Fallback: Return subscription management info
+      // Return transaction ID for Paddle.js overlay
       return ApiResponse.ok({
-        subscription_id: user.subscription.id,
-        customer_id: user.customerId,
-        type: "info",
-        message: "Use the Paddle overlay to manage your subscription",
+        transactionId: txnData.id,
+        type: "paddle_overlay",
       });
 
     } catch (error) {
       logError("Error getting payment method change transaction", error, { userId });
       
-      // Return subscription info for manual management
       return ApiResponse.error(
         "PORTAL_ERROR",
-        "Could not generate portal URL",
+        "Could not create payment method update session",
         400,
         { subscription_id: user.subscription.id }
       );

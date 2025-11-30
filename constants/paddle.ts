@@ -104,11 +104,14 @@ export const PLAN_PRICING = {
 // TIER MAPPING
 // ============================================================================
 
-/** Map product ID to plan tier */
-export const PRODUCT_TO_TIER: Record<string, "pro" | "basic" | "enterprise" | "custom" | "free"> = {
+/** 
+ * Map product ID to plan tier
+ * Tiers match plan IDs for consistency: pro, ultimate, creator
+ */
+export const PRODUCT_TO_TIER: Record<string, "pro" | "ultimate" | "creator" | "free"> = {
   [PADDLE_PRODUCTS.PRO]: "pro",
-  [PADDLE_PRODUCTS.ULTIMATE]: "enterprise",
-  [PADDLE_PRODUCTS.CREATOR]: "custom",
+  [PADDLE_PRODUCTS.ULTIMATE]: "ultimate",
+  [PADDLE_PRODUCTS.CREATOR]: "creator",
 };
 
 /** Map price ID to plan name */
@@ -153,6 +156,9 @@ export const WEBHOOK_EVENTS = {
   SUBSCRIPTION_RESUMED: "subscription.resumed",
   TRANSACTION_COMPLETED: "transaction.completed",
   TRANSACTION_PAYMENT_FAILED: "transaction.payment_failed",
+  // Adjustment/refund events
+  ADJUSTMENT_CREATED: "adjustment.created",
+  ADJUSTMENT_UPDATED: "adjustment.updated",
 } as const;
 
 /** Paddle status to internal status mapping */
@@ -206,7 +212,7 @@ export function isAnnualBilling(priceId: string): boolean {
 /**
  * Get billing cycle from price ID
  */
-export function getBillingCycle(priceId: string): "monthly" | "yearly" {
-  return isAnnualBilling(priceId) ? "yearly" : "monthly";
+export function getBillingCycle(priceId: string): "monthly" | "annual" {
+  return isAnnualBilling(priceId) ? "annual" : "monthly";
 }
 

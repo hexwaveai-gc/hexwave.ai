@@ -92,7 +92,8 @@ export const GET = withAuth(
     }
 
     // Process monthly credits for annual subscribers
-    if (user?.subscription?.billing_cycle === "yearly" && user.subscription.status === "active") {
+    // Note: billing_cycle is "annual" (was previously "yearly" in some places)
+    if (user?.subscription?.billing_cycle === "annual" && user.subscription.status === "active") {
       const monthlyResult = await CreditService.processMonthlyCredits(userId);
       if (monthlyResult.processed) {
         // Refresh user data after adding credits
@@ -180,6 +181,9 @@ async function shouldSyncWithPaddle(userId: string, user: IUser | null): Promise
 
 /**
  * Sync user data with Paddle
+ * 
+ * IMPORTANT: This sync should NOT overwrite subscription data that was recently
+ * updated by webhooks. The sync is only for recovering missed webhooks.
  */
 async function syncPaddleData(
   userId: string,
@@ -219,104 +223,155 @@ async function syncPaddleData(
 
     let totalCreditsAdded = 0;
     let subscriptionUpdated = false;
+    
+    // Collect all subscriptions to find the most recent one
+    const allSubscriptions: Array<{ sub: typeof subscriptions extends AsyncIterable<infer T> ? T : never; startedAt: Date }> = [];
 
     for await (const subscription of subscriptions) {
-      // Update subscription data if not present or different
-      // Paddle SDK doesn't export full type, cast to access additional properties
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const subData = subscription as any;
+      const startedAt = subData.startedAt ? new Date(subData.startedAt) : new Date(0);
+      allSubscriptions.push({ sub: subscription, startedAt });
+    }
+
+    // Sort by startedAt descending to get the most recent subscription first
+    allSubscriptions.sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
+
+    // Only process the MOST RECENT active subscription
+    const latestSubscription = allSubscriptions[0];
+    
+    if (!latestSubscription) {
+      // No active subscriptions found
+      return { updated: false, creditsAdded: 0 };
+    }
+
+    const subscription = latestSubscription.sub;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const subData = subscription as any;
+
+    // CRITICAL: Check if the subscription in DB was updated recently (within last 5 minutes)
+    // If so, trust the webhook data and DON'T overwrite it
+    const currentSubUpdatedAt = user?.subscription?.started_at || 0;
+    const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+    const currentSubIsRecent = currentSubUpdatedAt > fiveMinutesAgo;
+
+    // Only update subscription if:
+    // 1. User has no subscription at all, OR
+    // 2. Current subscription is NOT recent AND the Paddle subscription is newer
+    const paddleSubStartedAt = subData.startedAt ? new Date(subData.startedAt).getTime() : 0;
+    const shouldUpdateSubscription = 
+      !user?.subscription?.id || // No existing subscription
+      (
+        !currentSubIsRecent && // Current subscription is not recent
+        paddleSubStartedAt > currentSubUpdatedAt // Paddle subscription is newer
+      );
+
+    if (shouldUpdateSubscription) {
+      // Get price info from items
+      const firstItem = subscription.items?.[0];
+      const priceId = firstItem?.price?.id;
+      const productId = firstItem?.price?.productId;
+
+      const subscriptionUpdate = {
+        id: subscription.id,
+        customerId: customerId,
+        product_id: productId,
+        price_id: priceId,
+        status: subscription.status,
+        current_period_start: subData.currentBillingPeriod?.startsAt 
+          ? new Date(subData.currentBillingPeriod.startsAt).getTime() 
+          : undefined,
+        current_period_ends: subData.currentBillingPeriod?.endsAt 
+          ? new Date(subData.currentBillingPeriod.endsAt).getTime() 
+          : undefined,
+        billing_cycle: priceId ? getBillingCycle(priceId) : undefined,
+        plan_tier: productId ? PRODUCT_TO_TIER[productId] : undefined,
+        plan_name: priceId ? getPlanNameFromPriceId(priceId) : undefined,
+        started_at: paddleSubStartedAt || Date.now(),
+        cancel_at_period_end: subData.scheduledChange?.action === "cancel",
+        next_payment_date: subData.nextBilledAt 
+          ? new Date(subData.nextBilledAt).getTime() 
+          : undefined,
+      };
+
+      await User.findByIdAndUpdate(userId, { 
+        subscription: subscriptionUpdate,
+        customerId,
+      });
+      subscriptionUpdated = true;
       
-      if (!user?.subscription?.id || user.subscription.id !== subscription.id) {
-        // Get price info from items
-        const firstItem = subscription.items?.[0];
-        const priceId = firstItem?.price?.id;
-        const productId = firstItem?.price?.productId;
+      logInfo("Paddle sync updated subscription", {
+        userId,
+        subscriptionId: subscription.id,
+        planName: subscriptionUpdate.plan_name,
+        reason: !user?.subscription?.id ? "no_existing_subscription" : "paddle_subscription_newer",
+      });
+    } else {
+      logInfo("Paddle sync skipped subscription update", {
+        userId,
+        existingSubId: user?.subscription?.id,
+        paddleSubId: subscription.id,
+        reason: currentSubIsRecent ? "current_subscription_is_recent" : "current_subscription_is_newer",
+        currentSubStartedAt: new Date(currentSubUpdatedAt).toISOString(),
+        paddleSubStartedAt: new Date(paddleSubStartedAt).toISOString(),
+      });
+    }
 
-        const subscriptionUpdate = {
-          id: subscription.id,
-          customerId: customerId,
-          product_id: productId,
-          price_id: priceId,
-          status: subscription.status,
-          current_period_start: subData.currentBillingPeriod?.startsAt 
-            ? new Date(subData.currentBillingPeriod.startsAt).getTime() 
-            : undefined,
-          current_period_ends: subData.currentBillingPeriod?.endsAt 
-            ? new Date(subData.currentBillingPeriod.endsAt).getTime() 
-            : undefined,
-          billing_cycle: priceId ? getBillingCycle(priceId) : undefined,
-          plan_tier: productId ? PRODUCT_TO_TIER[productId] : undefined,
-          plan_name: priceId ? getPlanNameFromPriceId(priceId) : undefined,
-          started_at: subData.startedAt ? new Date(subData.startedAt).getTime() : undefined,
-          cancel_at_period_end: subData.scheduledChange?.action === "cancel",
-          next_payment_date: subData.nextBilledAt 
-            ? new Date(subData.nextBilledAt).getTime() 
-            : undefined,
-        };
+    // Check for missing transaction credits (only for the current subscription)
+    const transactionId = subData.firstTransactionId;
+    
+    if (transactionId) {
+      // Check if transaction already processed in CreditLedger
+      const existsInLedger = await CreditLedger.exists({
+        transaction_id: transactionId,
+      });
 
-        await User.findByIdAndUpdate(userId, { 
-          subscription: subscriptionUpdate,
-          customerId,
-        });
-        subscriptionUpdated = true;
-      }
-
-      // Check for missing transaction credits
-      const transactionId = subData.firstTransactionId;
-      
-      if (transactionId) {
-        // Check if transaction already processed in CreditLedger
-        const existsInLedger = await CreditLedger.exists({
-          transaction_id: transactionId,
-        });
-
-        if (!existsInLedger) {
-          // Get transaction details and add credits
-          try {
-            const transaction = await paddle.transactions.get(transactionId);
-            
-            let credits = 0;
-            for (const item of transaction.items || []) {
-              const itemPriceId = item.price?.id;
-              if (itemPriceId) {
-                credits += getCreditsForPrice(itemPriceId, item.quantity || 1);
-              }
+      if (!existsInLedger) {
+        // Get transaction details and add credits
+        try {
+          const transaction = await paddle.transactions.get(transactionId);
+          
+          let credits = 0;
+          for (const item of transaction.items || []) {
+            const itemPriceId = item.price?.id;
+            if (itemPriceId) {
+              credits += getCreditsForPrice(itemPriceId, item.quantity || 1);
             }
-
-            if (credits > 0) {
-              const result = await CreditService.addCredits({
-                userId,
-                amount: credits,
-                type: "sync_adjustment",
-                description: `Paddle sync: ${getPlanNameFromPriceId(transaction.items?.[0]?.price?.id || "")} subscription`,
-                source: "sync",
-                transactionId: transactionId,
-                subscriptionId: subscription.id,
-                customerId: customerId,
-                priceId: transaction.items?.[0]?.price?.id,
-                metadata: { 
-                  sync_reason: "api_me_fallback",
-                  original_status: transaction.status,
-                },
-              });
-
-              if (result.success) {
-                totalCreditsAdded += credits;
-                logCredits("add", credits, {
-                  userId,
-                  transactionId,
-                  source: "paddle_sync",
-                  operation: "api_me_fallback",
-                });
-              }
-            }
-          } catch (txError) {
-            logError("Error fetching transaction during Paddle sync", txError, {
-              userId,
-              transactionId,
-              operation: "paddle_sync",
-            });
           }
+
+          if (credits > 0) {
+            const result = await CreditService.addCredits({
+              userId,
+              amount: credits,
+              type: "sync_adjustment",
+              description: `Paddle sync: ${getPlanNameFromPriceId(transaction.items?.[0]?.price?.id || "")} subscription`,
+              source: "sync",
+              transactionId: transactionId,
+              subscriptionId: subscription.id,
+              customerId: customerId,
+              priceId: transaction.items?.[0]?.price?.id,
+              metadata: { 
+                sync_reason: "api_me_fallback",
+                original_status: transaction.status,
+              },
+            });
+
+            if (result.success) {
+              totalCreditsAdded += credits;
+              logCredits("add", credits, {
+                userId,
+                transactionId,
+                source: "paddle_sync",
+                operation: "api_me_fallback",
+              });
+            }
+          }
+        } catch (txError) {
+          logError("Error fetching transaction during Paddle sync", txError, {
+            userId,
+            transactionId,
+            operation: "paddle_sync",
+          });
         }
       }
     }

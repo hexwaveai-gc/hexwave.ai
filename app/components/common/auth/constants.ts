@@ -1,4 +1,7 @@
-// Shared auth videos
+// =============================================================================
+// AUTH VIDEOS
+// =============================================================================
+
 export const AUTH_VIDEOS = [
   {
     url: "https://cdn.higgsfield.ai/kling_motion/8c4795a8-e7ef-4272-8fb3-9d349192a013.mp4",
@@ -22,7 +25,67 @@ export const AUTH_VIDEOS = [
   },
 ] as const;
 
-export type AuthMode = "sign-up" | "sign-in";
+// =============================================================================
+// CLERK CONFIGURATION
+// =============================================================================
+
+/** Timeout for Clerk JS to load (15 seconds) */
+export const CLERK_LOAD_TIMEOUT = 15000;
+
+/** Maximum retry attempts for loading errors */
+export const MAX_RETRY_ATTEMPTS = 3;
+
+// =============================================================================
+// ERROR MESSAGES
+// =============================================================================
+
+/**
+ * User-friendly error messages mapped to Clerk error codes
+ */
+export const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  // Account-related errors
+  form_identifier_exists: "An account with this email already exists.",
+  form_identifier_not_found: "No account found with this email.",
+  
+  // Verification errors
+  form_code_incorrect: "Invalid verification code. Please check and try again.",
+  form_code_expired: "Verification code has expired. Please request a new one.",
+  
+  // Session errors
+  session_exists: "You're already signed in. Redirecting...",
+  
+  // Loading/network errors
+  failed_to_load_clerk_js_timeout: "Authentication service is taking too long to load. Please refresh the page.",
+  network_error: "Network error. Please check your connection and try again.",
+  rate_limited: "Too many attempts. Please wait a moment and try again.",
+  clerk_js_script_failed: "Failed to load authentication. Please refresh the page.",
+} as const;
+
+// =============================================================================
+// RETRYABLE ERROR CODES
+// =============================================================================
+
+/**
+ * Error codes that can be retried
+ */
+export const RETRYABLE_ERROR_CODES = [
+  "network_error",
+  "failed_to_load_clerk_js_timeout",
+  "clerk_js_script_failed",
+] as const;
+
+// =============================================================================
+// VALIDATION
+// =============================================================================
+
+/** Email validation regex */
+export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Verification code length */
+export const VERIFICATION_CODE_LENGTH = 6;
+
+// Re-export AuthMode type from types.ts for backwards compatibility
+export type { AuthMode } from "./types";
 
 
 

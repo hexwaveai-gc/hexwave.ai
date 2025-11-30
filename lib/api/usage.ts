@@ -82,6 +82,16 @@ export interface UsageDailySummary {
 }
 
 // ============================================================================
+// Types for API Response Wrapper
+// ============================================================================
+
+interface ApiSuccessResponse<T> {
+  success: true;
+  data: T;
+  message?: string;
+}
+
+// ============================================================================
 // API Functions
 // ============================================================================
 
@@ -103,13 +113,15 @@ export async function fetchUsage(filters: UsageFilters = {}): Promise<UsageData>
     sortOrder: filters.sortOrder,
   };
 
-  return api.get<UsageData>("/api/usage", params);
+  const response = await api.get<ApiSuccessResponse<UsageData>>("/api/usage", params);
+  return response.data;
 }
 
 /**
  * Fetch usage summary for dashboard charts
  */
 export async function fetchUsageSummary(days: number = 30): Promise<UsageDailySummary> {
-  return api.post<UsageDailySummary>("/api/usage", { days });
+  const response = await api.post<ApiSuccessResponse<UsageDailySummary>>("/api/usage", { days });
+  return response.data;
 }
 

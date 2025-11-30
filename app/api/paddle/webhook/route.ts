@@ -5,11 +5,10 @@ import {
   handleSubscriptionCreated,
   handleSubscriptionUpdated,
   handleSubscriptionCanceled,
-  handleSubscriptionActivated,
-  handleSubscriptionPaused,
-  handleSubscriptionResumed,
   handleTransactionCompleted,
   handleTransactionPaymentFailed,
+  handleAdjustmentCreated,
+  handleAdjustmentUpdated,
 } from "@/lib/paddle/webhook-handlers";
 import { logInfo, logError, logWarn, createTimer, logSubscription } from "@/lib/logger";
 
@@ -145,25 +144,22 @@ export async function POST(req: NextRequest) {
         logSubscription("cancelled", { eventId, subscriptionId: data.id });
         break;
 
-      case WEBHOOK_EVENTS.SUBSCRIPTION_ACTIVATED:
-        await handleSubscriptionActivated(data);
-        logSubscription("activated", { eventId, subscriptionId: data.id });
-        break;
-
-      case WEBHOOK_EVENTS.SUBSCRIPTION_PAUSED:
-        await handleSubscriptionPaused(data);
-        break;
-
-      case WEBHOOK_EVENTS.SUBSCRIPTION_RESUMED:
-        await handleSubscriptionResumed(data);
-        break;
-
       case WEBHOOK_EVENTS.TRANSACTION_COMPLETED:
         await handleTransactionCompleted(data);
         break;
 
       case WEBHOOK_EVENTS.TRANSACTION_PAYMENT_FAILED:
         await handleTransactionPaymentFailed(data);
+        break;
+
+      case WEBHOOK_EVENTS.ADJUSTMENT_CREATED:
+        await handleAdjustmentCreated(data);
+        logInfo("Adjustment created processed", { eventId, adjustmentId: data.id, action: data.action });
+        break;
+
+      case WEBHOOK_EVENTS.ADJUSTMENT_UPDATED:
+        await handleAdjustmentUpdated(data);
+        logInfo("Adjustment updated processed", { eventId, adjustmentId: data.id, action: data.action });
         break;
 
       default:

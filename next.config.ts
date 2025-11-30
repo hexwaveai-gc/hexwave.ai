@@ -40,8 +40,8 @@ const nextConfig: NextConfig = {
   },
   // Mark packages as external to prevent SSR bundling issues
   // - ably: Node.js bundle has dependencies that don't work in browser/SSR
-  // - thread-stream: Contains test files that Turbopack tries to bundle
-  serverExternalPackages: ['ably', 'thread-stream'],
+  // - pino, pino-pretty, thread-stream: Worker thread packages that conflict with Next.js serverless bundling
+  serverExternalPackages: ['ably', 'pino', 'pino-pretty', 'thread-stream'],
   // Webpack config for backward compatibility
   webpack: (config, { isServer, webpack }) => {
     // Add externals for WebSocket optional dependencies

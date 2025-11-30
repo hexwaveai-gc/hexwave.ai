@@ -1,14 +1,11 @@
-import { LucideIcon } from "lucide-react";
+// Types for sidebar components
 
-/**
- * Represents a single navigation item in the sidebar
- */
 export interface SidebarItem {
   id: string;
   label: string;
-  icon: LucideIcon;
+  icon: React.ComponentType<{ className?: string }>;
   href: string;
   matchPaths?: string[]; // Additional paths that should activate this item
   badge?: string;
+  requiresAuth?: boolean; // Whether this route requires authentication
 }
-

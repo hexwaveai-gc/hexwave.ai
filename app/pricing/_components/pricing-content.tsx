@@ -29,7 +29,8 @@ declare global {
       Initialize: (options: { token: string }) => void;
       Checkout: {
         open: (options: {
-          items: Array<{ priceId: string; quantity: number }>;
+          transactionId?: string;
+          items?: Array<{ priceId: string; quantity: number }>;
           customer?: { email: string };
           customData?: Record<string, string>;
           settings?: {
@@ -82,6 +83,15 @@ const FREE_TIER = {
 // Plan Hierarchy for Upgrade Logic
 // ============================================================================
 
+/**
+ * Plan hierarchy using plan IDs (pro, ultimate, creator)
+ * Higher number = higher tier plan
+ * 
+ * Upgrade rules:
+ * - Users can upgrade from lower to higher tier (e.g., pro → ultimate → creator)
+ * - Users can upgrade from monthly to annual on the same tier
+ * - Users cannot downgrade (must contact support)
+ */
 const PLAN_HIERARCHY = {
   free: 0,
   pro_monthly: 1,
@@ -94,18 +104,56 @@ const PLAN_HIERARCHY = {
 
 type PlanKey = keyof typeof PLAN_HIERARCHY;
 
-function getPlanKey(planId: string | null, billingCycle: string | null): PlanKey {
-  if (!planId) return "free";
-  return `${planId.toLowerCase()}_${billingCycle === "yearly" || billingCycle === "annual" ? "annual" : "monthly"}` as PlanKey;
+/**
+ * Maps database plan_tier values to plan IDs used in the hierarchy
+ * Tiers now match plan IDs directly: pro, ultimate, creator
+ * Legacy tiers (basic, enterprise, custom) are mapped for backward compatibility
+ */
+const TIER_TO_PLAN_ID: Record<string, string> = {
+  // Direct mappings (current)
+  pro: "pro",
+  ultimate: "ultimate",
+  creator: "creator",
+  free: "free",
+  // Legacy mappings (backward compatibility for old data)
+  basic: "pro",
+  enterprise: "ultimate",
+  custom: "creator",
+};
+
+function getPlanKey(planIdOrTier: string | null, billingCycle: string | null): PlanKey {
+  if (!planIdOrTier) return "free";
+  
+  const normalizedInput = planIdOrTier.toLowerCase();
+  
+  // First, check if it's a tier name that needs mapping
+  const planId = TIER_TO_PLAN_ID[normalizedInput] || normalizedInput;
+  
+  const cycle = billingCycle === "yearly" || billingCycle === "annual" ? "annual" : "monthly";
+  const key = `${planId}_${cycle}` as PlanKey;
+  
+  // Validate the key exists in hierarchy, fallback to free if not
+  return key in PLAN_HIERARCHY ? key : "free";
 }
 
+/**
+ * Determines if user can upgrade from current plan to target plan
+ * 
+ * Allowed upgrades:
+ * - Monthly → Annual (same tier): pro_monthly → pro_annual ✓
+ * - Lower → Higher tier: pro → ultimate → creator ✓
+ * - Monthly lower → Annual higher: pro_monthly → ultimate_annual ✓
+ * 
+ * Not allowed (requires support):
+ * - Downgrade to lower tier
+ * - Annual → Monthly (same tier)
+ */
 function canUpgrade(currentPlanKey: PlanKey, targetPlanKey: PlanKey): boolean {
-  return PLAN_HIERARCHY[targetPlanKey] > PLAN_HIERARCHY[currentPlanKey];
-}
-
-function isPlanSameOrDowngrade(currentPlanKey: PlanKey, targetPlanKey: PlanKey): boolean {
-  return PLAN_HIERARCHY[targetPlanKey] <= PLAN_HIERARCHY[currentPlanKey];
-}
+  const currentRank = PLAN_HIERARCHY[currentPlanKey] ?? -1;
+  const targetRank = PLAN_HIERARCHY[targetPlanKey] ?? -1;
+  
+  return targetRank > currentRank;
+} 
 
 // ============================================================================
 // Component
@@ -116,12 +164,25 @@ export function PricingContent() {
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [paddleLoaded, setPaddleLoaded] = useState(false);
   const [paddleError, setPaddleError] = useState<string | null>(null);
-  const { isSignedIn } = useAuth();
   const router = useRouter();
+  const { isSignedIn } = useAuth(); 
   const { openSignUp } = useAuthModal();
 
   // TanStack Query hook - auto-fetches when signed in
   const { subscription, hasActiveSubscription } = useUser();
+
+  // Get user's current billing cycle (if they have an active subscription)
+  const userBillingCycle = useMemo(() => {
+    if (!hasActiveSubscription || !subscription?.billing_cycle) return null;
+    return subscription.billing_cycle === "annual" ? "annual" : "monthly";
+  }, [hasActiveSubscription, subscription]);
+
+  // Only lock billing toggle if user is on annual plan (can't downgrade to monthly without support)
+  // Monthly users CAN upgrade to annual
+  const isBillingCycleLocked = userBillingCycle === "annual";
+  
+  // If user is on annual plan, lock to annual. Otherwise, allow toggle.
+  const effectiveBillingCycle = isBillingCycleLocked ? "annual" : billingCycle;
 
   // Get current plan key
   const currentPlanKey = useMemo(() => {
@@ -204,7 +265,7 @@ export function PricingContent() {
     loadPaddle();
   }, [isSignedIn]);
 
-  const handleSelectPlan = async (plan: PaddlePlan | null, cycle: "monthly" | "annual") => {
+  const handleSelectPlan = async (plan: PaddlePlan | null) => {
     // If user is not signed in, open sign-up modal
     if (!isSignedIn) {
       openSignUp();
@@ -213,14 +274,8 @@ export function PricingContent() {
 
     if (!plan) return; // Free tier - no action needed for signed-in users
 
-    if (!paddleLoaded || !window.Paddle) {
-      console.error("Paddle not loaded yet");
-      if (paddleError) {
-        alert(paddleError);
-      }
-      return;
-    }
-
+    // Use the effective billing cycle (locked to user's current cycle if they have a subscription)
+    const cycle = effectiveBillingCycle;
     const loadingKey = `${plan.id}-${cycle}`;
     setIsLoading(loadingKey);
 
@@ -236,34 +291,71 @@ export function PricingContent() {
       const response_data = await response.json();
 
       if (!response_data.success) {
-        console.error("Failed to get checkout data:", response_data.error);
+        // Display user-friendly error message
+        const errorMessage = response_data.error?.message || "Failed to process request";
+        console.error("Checkout/Upgrade error:", errorMessage);
+        alert(errorMessage);
         setIsLoading(null);
         return;
       }
 
-      // API response is wrapped: { success: true, data: { checkoutData: {...} } }
-      const { checkoutData } = response_data.data;
+      const { action } = response_data.data;
 
-      window.Paddle?.Checkout.open({
-        items: checkoutData.items,
-        customer: checkoutData.customer,
-        customData: checkoutData.customData,
-        settings: checkoutData.settings,
-      });
+      // ========================================================================
+      // UPGRADE PATH: Subscription was updated via Paddle API
+      // ========================================================================
+      if (action === "upgraded") {
+        const { message, redirectUrl } = response_data.data;
+        
+        // Show success message
+        alert(message || "Your subscription has been updated successfully!");
+        
+        // Redirect to success page
+        if (redirectUrl) {
+          router.push(redirectUrl);
+        }
+        return;
+      }
+
+      // ========================================================================
+      // NEW SUBSCRIPTION PATH: Open Paddle.js checkout overlay
+      // ========================================================================
+      if (action === "checkout") {
+        // Check if Paddle is loaded for new subscriptions
+        if (!paddleLoaded || !window.Paddle) {
+          console.error("Paddle not loaded yet");
+          if (paddleError) {
+            alert(paddleError);
+          }
+          setIsLoading(null);
+          return;
+        }
+
+        const { checkoutData } = response_data.data;
+
+        window.Paddle?.Checkout.open({
+          items: checkoutData.items,
+          customer: checkoutData.customer,
+          customData: checkoutData.customData,
+          settings: checkoutData.settings,
+        });
+      }
     } catch (error) {
-      console.error("Error initiating checkout:", error);
+      console.error("Error processing plan selection:", error);
+      alert("An error occurred. Please try again.");
     } finally {
       setIsLoading(null);
     }
   };
 
-  const getButtonState = (planId: string, cycle: "monthly" | "annual") => {
+  const getButtonState = (planId: string) => {
     // If user is not signed in, show "Get Started" for all plans
     if (!isSignedIn) {
       return { label: "Get Started", disabled: false, variant: "get-started" as const };
     }
 
-    const targetKey = `${planId}_${cycle}` as PlanKey;
+    // Use the effective billing cycle (locked to user's current cycle if they have a subscription)
+    const targetKey = `${planId}_${effectiveBillingCycle}` as PlanKey;
 
     if (currentPlanKey === targetKey) {
       return { label: "Current Plan", disabled: true, variant: "current" as const };
@@ -313,33 +405,40 @@ export function PricingContent() {
       </div>
 
       {/* Billing Toggle */}
-      <div className="flex justify-center mb-12">
-        <div className="inline-flex items-center p-1 rounded-full bg-white/5 border border-white/10">
+      <div className="flex flex-col items-center gap-3 mb-12">
+        <div className={cn(
+          "inline-flex items-center p-1 rounded-full bg-white/5 border border-white/10",
+          isBillingCycleLocked && "opacity-60"
+        )}>
           <button
-            onClick={() => setBillingCycle("monthly")}
+            onClick={() => !isBillingCycleLocked && setBillingCycle("monthly")}
+            disabled={isBillingCycleLocked}
             className={cn(
               "px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-200",
-              billingCycle === "monthly"
+              effectiveBillingCycle === "monthly"
                 ? "bg-[#74FF52] text-black"
-                : "text-white/60 hover:text-white"
+                : "text-white/60 hover:text-white",
+              isBillingCycleLocked && "cursor-not-allowed"
             )}
           >
             Monthly
           </button>
           <button
-            onClick={() => setBillingCycle("annual")}
+            onClick={() => !isBillingCycleLocked && setBillingCycle("annual")}
+            disabled={isBillingCycleLocked}
             className={cn(
               "px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2",
-              billingCycle === "annual"
+              effectiveBillingCycle === "annual"
                 ? "bg-[#74FF52] text-black"
-                : "text-white/60 hover:text-white"
+                : "text-white/60 hover:text-white",
+              isBillingCycleLocked && "cursor-not-allowed"
             )}
           >
             Annual
             <span
               className={cn(
                 "px-2 py-0.5 rounded-full text-xs font-semibold",
-                billingCycle === "annual"
+                effectiveBillingCycle === "annual"
                   ? "bg-black/20 text-black"
                   : "bg-[#74FF52]/20 text-[#74FF52]"
               )}
@@ -348,6 +447,12 @@ export function PricingContent() {
             </span>
           </button>
         </div>
+        {isBillingCycleLocked && (
+          <p className="text-xs text-white/50 flex items-center gap-1.5">
+            <AlertCircle className="w-3 h-3" />
+            You&apos;re on an annual plan. Contact support to switch to monthly billing.
+          </p>
+        )}
       </div>
 
       {/* Pricing Cards */}
@@ -364,12 +469,12 @@ export function PricingContent() {
           <PlanCard
             key={plan.id}
             plan={plan}
-            billingCycle={billingCycle}
-            buttonState={getButtonState(plan.id, billingCycle)}
-            isLoading={isLoading === `${plan.id}-${billingCycle}`}
+            billingCycle={effectiveBillingCycle}
+            buttonState={getButtonState(plan.id)}
+            isLoading={isLoading === `${plan.id}-${effectiveBillingCycle}`}
             paddleLoaded={paddleLoaded}
             isSignedIn={!!isSignedIn}
-            onSelect={() => handleSelectPlan(plan, billingCycle)}
+            onSelect={() => handleSelectPlan(plan)}
           />
         ))}
       </div>
@@ -622,7 +727,12 @@ function PlanCard({ plan, billingCycle, buttonState, isLoading, paddleLoaded, is
         ) : (
           <button
             onClick={onSelect}
-            disabled={isLoading || (isSignedIn && !paddleLoaded) || buttonState.disabled}
+            disabled={
+              isLoading || 
+              buttonState.disabled || 
+              // Only require Paddle for new subscriptions (get-started), not upgrades
+              (isSignedIn && buttonState.variant === "get-started" && !paddleLoaded)
+            }
             className={cn(
               "w-full py-3 px-6 rounded-xl font-semibold transition-all duration-200 flex items-center justify-center gap-2 group/btn disabled:opacity-50 disabled:cursor-not-allowed",
               buttonState.variant === "current" && "bg-white/5 text-white/50 border border-white/10",

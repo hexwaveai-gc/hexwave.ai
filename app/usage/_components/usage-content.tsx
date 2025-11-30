@@ -239,7 +239,7 @@ export function UsageContent() {
   }, []);
 
   const exportToCsv = () => {
-    if (!usageData?.entries.length) return;
+    if (!usageData?.entries?.length) return;
 
     const headers = ["Date", "Type", "Description", "Amount", "Balance After", "Status"];
     const rows = usageData.entries.map(entry => [
@@ -273,7 +273,7 @@ export function UsageContent() {
           <button onClick={() => refetch()} disabled={isFetching} className="p-2 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-50" title="Refresh">
             <RefreshCw className={cn("w-5 h-5", isFetching && "animate-spin")} />
           </button>
-          <button onClick={exportToCsv} disabled={!usageData?.entries.length} className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/15 rounded-lg transition-colors disabled:opacity-50">
+          <button onClick={exportToCsv} disabled={!usageData?.entries?.length} className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/15 rounded-lg transition-colors disabled:opacity-50">
             <Download className="w-4 h-4" />Export
           </button>
         </div>
@@ -282,13 +282,13 @@ export function UsageContent() {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <SummaryCard icon={<Coins className="w-4 h-4" />} label="Current Balance" value={credits.toLocaleString()} valueColor="text-[#74FF52]" />
-        <SummaryCard icon={<ArrowDownLeft className="w-4 h-4 text-green-400" />} label="Credited" value={`+${(usageData?.summary.total_credited || 0).toLocaleString()}`} valueColor="text-green-400" />
-        <SummaryCard icon={<ArrowUpRight className="w-4 h-4 text-red-400" />} label="Used" value={`-${(usageData?.summary.total_debited || 0).toLocaleString()}`} valueColor="text-red-400" />
+        <SummaryCard icon={<ArrowDownLeft className="w-4 h-4 text-green-400" />} label="Credited" value={`+${(usageData?.summary?.total_credited ?? 0).toLocaleString()}`} valueColor="text-green-400" />
+        <SummaryCard icon={<ArrowUpRight className="w-4 h-4 text-red-400" />} label="Used" value={`-${(usageData?.summary?.total_debited ?? 0).toLocaleString()}`} valueColor="text-red-400" />
         <SummaryCard 
-          icon={(usageData?.summary.net_change || 0) >= 0 ? <TrendingUp className="w-4 h-4 text-green-400" /> : <TrendingDown className="w-4 h-4 text-red-400" />} 
+          icon={(usageData?.summary?.net_change ?? 0) >= 0 ? <TrendingUp className="w-4 h-4 text-green-400" /> : <TrendingDown className="w-4 h-4 text-red-400" />} 
           label="Net Change" 
-          value={`${(usageData?.summary.net_change || 0) >= 0 ? "+" : ""}${(usageData?.summary.net_change || 0).toLocaleString()}`} 
-          valueColor={(usageData?.summary.net_change || 0) >= 0 ? "text-green-400" : "text-red-400"} 
+          value={`${(usageData?.summary?.net_change ?? 0) >= 0 ? "+" : ""}${(usageData?.summary?.net_change ?? 0).toLocaleString()}`} 
+          valueColor={(usageData?.summary?.net_change ?? 0) >= 0 ? "text-green-400" : "text-red-400"} 
         />
       </div>
 
@@ -373,7 +373,7 @@ export function UsageContent() {
       <div className="bg-[#151515] border border-white/10 rounded-xl overflow-hidden">
         {isLoading ? (
           <div className="p-12 text-center"><Loader2 className="w-8 h-8 animate-spin text-[#74FF52] mx-auto" /></div>
-        ) : usageData?.entries.length === 0 ? (
+        ) : !usageData?.entries?.length ? (
           <div className="p-12 text-center">
             <Coins className="w-12 h-12 mx-auto mb-4 text-white/20" />
             <p className="text-white/50 mb-2">No transactions found</p>

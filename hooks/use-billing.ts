@@ -66,15 +66,15 @@ export function useBillingAction() {
 }
 
 /**
- * Hook for opening customer portal
+ * Hook for getting payment method update transaction
+ * 
+ * Returns a transactionId that should be used with Paddle.js overlay.
+ * The component using this hook should:
+ * 1. Call mutate() to get the transactionId
+ * 2. Use window.Paddle.Checkout.open({ transactionId }) to open the overlay
  */
 export function useOpenPortal() {
   return useMutation({
     mutationFn: getPortalUrl,
-    onSuccess: (data) => {
-      if (data.url) {
-        window.open(data.url, "_blank");
-      }
-    },
   });
 }

@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import Sidebar from "@/app/components/common/Sidebar";
+import Sidebar from "@/app/components/common/sidebar";
 import { AssetCard } from "./asset-card";
 import { AssetsGrid } from "./assets-grid";
 import { AssetsTabs } from "./assets-tabs";

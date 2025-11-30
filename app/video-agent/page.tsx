@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Sidebar from "@/app/components/common/Sidebar";
+import Sidebar from "@/app/components/common/sidebar";
 import { VideoAgentContent } from "./_components/video-agent-content";
 
 export const metadata: Metadata = {

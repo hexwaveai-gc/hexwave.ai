@@ -29,12 +29,25 @@ export interface BillingSubscription {
   credits_per_period: number;
   current_period_start: string;
   current_period_ends: string;
-  next_payment_date?: string;
-  next_payment_amount?: string;
+  next_credit_date?: string;
   cancel_at_period_end: boolean;
   canceled_at?: string;
   started_at?: string;
   customer_id?: string;
+  // Enhanced billing info
+  next_billing_amount?: string;
+  next_billing_date?: string;
+  currency?: string;
+  unit_price?: string;
+  trial_ends_at?: string;
+  is_trialing?: boolean;
+  payment_method?: {
+    type: string;
+    last_four?: string;
+    expiry_month?: number;
+    expiry_year?: number;
+    card_brand?: string;
+  };
 }
 
 export interface BillingData {
@@ -44,10 +57,8 @@ export interface BillingData {
 }
 
 export interface BillingPortalResponse {
-  success: boolean;
-  url?: string;
-  type?: string;
-  message?: string;
+  transactionId?: string;
+  type?: "paddle_overlay";
   error?: string;
   subscription_id?: string;
 }

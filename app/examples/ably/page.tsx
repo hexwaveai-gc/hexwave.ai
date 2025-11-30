@@ -9,7 +9,7 @@ import {
 } from "@/hooks/queries/use-process";
 import { useUser } from "@/hooks/use-user";
 import { useUserStore, selectCredits } from "@/store/useUserStore";
-import Sidebar from "@/app/components/common/Sidebar";
+import Sidebar from "@/app/components/common/sidebar";
 import { FlowDiagram } from "./components/FlowDiagram";
 import { ProcessMonitor } from "./components/ProcessMonitor";
 import { WebhookSimulator } from "./components/WebhookSimulator";

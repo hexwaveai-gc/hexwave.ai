@@ -207,6 +207,44 @@ const baseLogger: Logger = pino(
 );
 
 // =============================================================================
+// SAFE LOGGING WRAPPER
+// =============================================================================
+
+/**
+ * Safe logging wrapper that catches "worker has exited" errors
+ * 
+ * In Next.js serverless environments, pino-pretty uses worker threads that can
+ * terminate before logging completes. This wrapper catches those errors gracefully.
+ */
+function safeLog(
+  logFn: () => void,
+  fallbackFn?: () => void
+): void {
+  try {
+    logFn();
+  } catch (error) {
+    // Check if this is a worker exit error (common in Next.js serverless)
+    if (
+      error instanceof Error &&
+      error.message.includes("worker has exited")
+    ) {
+      // Silently ignore - this happens during serverless function shutdown
+      // Optionally log to console as fallback in development
+      if (isDevelopment && fallbackFn) {
+        try {
+          fallbackFn();
+        } catch {
+          // Ignore fallback errors too
+        }
+      }
+      return;
+    }
+    // Re-throw unexpected errors
+    throw error;
+  }
+}
+
+// =============================================================================
 // CONTEXT-AWARE LOGGING FUNCTIONS
 // =============================================================================
 
@@ -253,11 +291,13 @@ function getLogContext(additionalContext?: LogContext): LogContext {
  */
 export function logInfo(message: string, context?: LogContext): void {
   const fullContext = getLogContext(context);
-  if (Object.keys(fullContext).length > 0) {
-    baseLogger.info(fullContext, message);
-  } else {
-    baseLogger.info(message);
-  }
+  safeLog(() => {
+    if (Object.keys(fullContext).length > 0) {
+      baseLogger.info(fullContext, message);
+    } else {
+      baseLogger.info(message);
+    }
+  });
 }
 
 /**
@@ -266,11 +306,13 @@ export function logInfo(message: string, context?: LogContext): void {
  */
 export function logWarn(message: string, context?: LogContext): void {
   const fullContext = getLogContext(context);
-  if (Object.keys(fullContext).length > 0) {
-    baseLogger.warn(fullContext, message);
-  } else {
-    baseLogger.warn(message);
-  }
+  safeLog(() => {
+    if (Object.keys(fullContext).length > 0) {
+      baseLogger.warn(fullContext, message);
+    } else {
+      baseLogger.warn(message);
+    }
+  });
 }
 
 /**
@@ -284,20 +326,22 @@ export function logError(
 ): void {
   const fullContext = getLogContext(context) as ErrorContext;
 
-  if (error instanceof Error) {
-    fullContext.errorType = error.name;
-    fullContext.stack = error.stack;
-    if ("code" in error) {
-      fullContext.code = String(error.code);
+  safeLog(() => {
+    if (error instanceof Error) {
+      fullContext.errorType = error.name;
+      fullContext.stack = error.stack;
+      if ("code" in error) {
+        fullContext.code = String(error.code);
+      }
+      baseLogger.error({ ...fullContext, err: error }, message);
+    } else if (error) {
+      baseLogger.error({ ...fullContext, error }, message);
+    } else if (Object.keys(fullContext).length > 0) {
+      baseLogger.error(fullContext, message);
+    } else {
+      baseLogger.error(message);
     }
-    baseLogger.error({ ...fullContext, err: error }, message);
-  } else if (error) {
-    baseLogger.error({ ...fullContext, error }, message);
-  } else if (Object.keys(fullContext).length > 0) {
-    baseLogger.error(fullContext, message);
-  } else {
-    baseLogger.error(message);
-  }
+  });
 }
 
 /**
@@ -306,11 +350,13 @@ export function logError(
  */
 export function logDebug(message: string, context?: LogContext): void {
   const fullContext = getLogContext(context);
-  if (Object.keys(fullContext).length > 0) {
-    baseLogger.debug(fullContext, message);
-  } else {
-    baseLogger.debug(message);
-  }
+  safeLog(() => {
+    if (Object.keys(fullContext).length > 0) {
+      baseLogger.debug(fullContext, message);
+    } else {
+      baseLogger.debug(message);
+    }
+  });
 }
 
 /**
@@ -319,11 +365,13 @@ export function logDebug(message: string, context?: LogContext): void {
  */
 export function logTrace(message: string, context?: LogContext): void {
   const fullContext = getLogContext(context);
-  if (Object.keys(fullContext).length > 0) {
-    baseLogger.trace(fullContext, message);
-  } else {
-    baseLogger.trace(message);
-  }
+  safeLog(() => {
+    if (Object.keys(fullContext).length > 0) {
+      baseLogger.trace(fullContext, message);
+    } else {
+      baseLogger.trace(message);
+    }
+  });
 }
 
 /**
@@ -337,15 +385,17 @@ export function logFatal(
 ): void {
   const fullContext = getLogContext(context) as ErrorContext;
 
-  if (error instanceof Error) {
-    fullContext.errorType = error.name;
-    fullContext.stack = error.stack;
-    baseLogger.fatal({ ...fullContext, err: error }, message);
-  } else if (Object.keys(fullContext).length > 0) {
-    baseLogger.fatal(fullContext, message);
-  } else {
-    baseLogger.fatal(message);
-  }
+  safeLog(() => {
+    if (error instanceof Error) {
+      fullContext.errorType = error.name;
+      fullContext.stack = error.stack;
+      baseLogger.fatal({ ...fullContext, err: error }, message);
+    } else if (Object.keys(fullContext).length > 0) {
+      baseLogger.fatal(fullContext, message);
+    } else {
+      baseLogger.fatal(message);
+    }
+  });
 }
 
 // =============================================================================
@@ -360,7 +410,7 @@ export function logRequestStart(additionalContext?: LogContext): void {
   const requestContext = getRequestContext();
   
   if (!requestContext) {
-    baseLogger.info(additionalContext || {}, "Request started (no context)");
+    safeLog(() => baseLogger.info(additionalContext || {}, "Request started (no context)"));
     return;
   }
 
@@ -385,7 +435,7 @@ export function logRequestStart(additionalContext?: LogContext): void {
     }
   });
 
-  baseLogger.info(fullContext, `→ ${requestContext.method} ${requestContext.path}`);
+  safeLog(() => baseLogger.info(fullContext, `→ ${requestContext.method} ${requestContext.path}`));
 }
 
 /**
@@ -408,7 +458,7 @@ export function logRequestEnd(statusCode: number, additionalContext?: LogContext
   const path = requestContext?.path || "unknown";
   const method = requestContext?.method || "?";
   
-  baseLogger[level](fullContext, `← ${method} ${path} ${statusCode} ${duration ? `${duration}ms` : ""}`);
+  safeLog(() => baseLogger[level](fullContext, `← ${method} ${path} ${statusCode} ${duration ? `${duration}ms` : ""}`));
 }
 
 /**
@@ -425,7 +475,7 @@ export function logAuth(
     ...context,
   });
 
-  baseLogger[level](fullContext, `Auth ${event}`);
+  safeLog(() => baseLogger[level](fullContext, `Auth ${event}`));
 }
 
 /**
@@ -444,7 +494,7 @@ export function logCredits(
     ...context,
   });
 
-  baseLogger[level](fullContext, `Credits ${operation}: ${amount}`);
+  safeLog(() => baseLogger[level](fullContext, `Credits ${operation}: ${amount}`));
 }
 
 /**
@@ -461,7 +511,7 @@ export function logGeneration(
     ...context,
   });
 
-  baseLogger[level](fullContext, `Generation ${status}: ${context?.tool || "unknown"}`);
+  safeLog(() => baseLogger[level](fullContext, `Generation ${status}: ${context?.tool || "unknown"}`));
 }
 
 /**
@@ -482,11 +532,13 @@ export function logRateLimit(
     ...context,
   });
 
-  if (allowed) {
-    baseLogger.debug(fullContext, "Rate limit check passed");
-  } else {
-    baseLogger.warn(fullContext, "Rate limit exceeded");
-  }
+  safeLog(() => {
+    if (allowed) {
+      baseLogger.debug(fullContext, "Rate limit check passed");
+    } else {
+      baseLogger.warn(fullContext, "Rate limit exceeded");
+    }
+  });
 }
 
 /**
@@ -504,10 +556,10 @@ export function logFreeTierUsage(context: LogContext & {
     ...context,
   });
 
-  baseLogger.info(
+  safeLog(() => baseLogger.info(
     fullContext,
     `Free tier usage: ${context.dailyUsed}/${context.dailyLimit} daily, ${context.monthlyUsed}/${context.monthlyLimit} monthly`
-  );
+  ));
 }
 
 /**
@@ -523,7 +575,7 @@ export function logSubscription(
     ...context,
   });
 
-  baseLogger.info(fullContext, `Subscription ${event}`);
+  safeLog(() => baseLogger.info(fullContext, `Subscription ${event}`));
 }
 
 // =============================================================================
@@ -556,7 +608,7 @@ export function createTimer(operation: string, context?: LogContext) {
         ...additionalContext,
       });
 
-      baseLogger.debug(fullContext, `${operation} completed in ${duration}ms`);
+      safeLog(() => baseLogger.debug(fullContext, `${operation} completed in ${duration}ms`));
       return duration;
     },
     elapsed: () => Math.round(performance.now() - startTime),

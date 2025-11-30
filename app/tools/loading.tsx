@@ -1,4 +1,4 @@
-import Sidebar from "@/app/components/common/Sidebar";
+import Sidebar from "@/app/components/common/sidebar";
 
 function ToolCardSkeleton() {
   return (

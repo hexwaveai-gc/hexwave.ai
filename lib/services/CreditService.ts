@@ -857,7 +857,8 @@ class CreditServiceClass {
       const { subscription } = user;
 
       // Only process for active annual subscriptions
-      if (subscription.status !== "active" || subscription.billing_cycle !== "yearly") {
+      // Note: billing_cycle is now "annual" (was previously "yearly")
+      if (subscription.status !== "active" || subscription.billing_cycle !== "annual") {
         return { processed: false, creditsAdded: 0 };
       }
 

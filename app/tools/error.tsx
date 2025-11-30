@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import Sidebar from "@/app/components/common/Sidebar";
+import Sidebar from "@/app/components/common/sidebar";
 
 interface ErrorProps {
   error: Error & { digest?: string };

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { XCircle, ArrowLeft, MessageCircle } from "lucide-react";
-import Sidebar from "@/app/components/common/Sidebar";
+import Sidebar from "@/app/components/common/sidebar";
 
 export default function PricingCancelPage() {
   return (

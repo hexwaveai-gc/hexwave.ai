@@ -129,16 +129,18 @@ const userSchema = new Mongoose.Schema(
         },
         
         // Billing Cycle
+        // Note: "annual" is the standard value (previously "yearly" was used)
         billing_cycle: {
           type: String,
-          enum: ["monthly", "yearly", "quarterly", "weekly", "lifetime"],
+          enum: ["monthly", "annual", "yearly", "quarterly", "weekly", "lifetime"],
           required: false,
         },
            
         // Plan tier for quick access
+        // Tiers match plan IDs: pro, ultimate, creator
         plan_tier: {
           type: String,
-          enum: ["free", "basic", "pro", "enterprise", "custom"],
+          enum: ["free", "pro", "ultimate", "creator"],
           required: false,
         },
 
@@ -178,6 +180,32 @@ const userSchema = new Mongoose.Schema(
           required: false,
         },
         last_credit_date: {
+          type: Number,
+          required: false,
+        },
+
+        // Subscription change tracking (preserved from previous subscription for transaction.completed)
+        // These are set by subscription.created and cleared by transaction.completed
+        // Used to detect: tier upgrades (Pro → Ultimate) and billing cycle changes (monthly → annual)
+        previous_product_id: {
+          type: String,
+          required: false,
+        },
+        previous_price_id: {
+          type: String,
+          required: false,
+        },
+        previous_plan_tier: {
+          type: String,
+          enum: ["free", "pro", "ultimate", "creator"],
+          required: false,
+        },
+        previous_billing_cycle: {
+          type: String,
+          enum: ["monthly", "annual", "yearly", "quarterly", "weekly", "lifetime"],
+          required: false,
+        },
+        subscription_changed_at: {
           type: Number,
           required: false,
         },
@@ -278,8 +306,8 @@ export interface ISubscription {
     | "upgrade"
     | "downgrade"
     | "other";
-  billing_cycle?: "monthly" | "yearly" | "lifetime";
-  plan_tier?: "free" | "basic" | "pro" | "enterprise" | "custom";
+  billing_cycle?: "monthly" | "annual" | "yearly" | "lifetime";
+  plan_tier?: "free" | "pro" | "ultimate" | "creator";
   plan_name?: string;
   next_payment_date?: number;
   last_payment_date?: number;
@@ -288,6 +316,13 @@ export interface ISubscription {
   ended_at?: number;
   next_credit_date?: number; // For annual plans - when next monthly credits are due
   last_credit_date?: number; // For annual plans - when credits were last added
+  // Subscription change tracking (set by subscription.created, cleared by transaction.completed)
+  // Used to detect: tier upgrades (Pro → Ultimate) and billing cycle changes (monthly → annual)
+  previous_product_id?: string;
+  previous_price_id?: string;
+  previous_plan_tier?: "free" | "pro" | "ultimate" | "creator";
+  previous_billing_cycle?: "monthly" | "annual" | "yearly" | "lifetime";
+  subscription_changed_at?: number;
   metadata?: Map<string, string>;
 }
 

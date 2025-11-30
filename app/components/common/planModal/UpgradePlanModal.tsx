@@ -35,7 +35,8 @@ declare global {
       Initialize: (options: { token: string }) => void;
       Checkout: {
         open: (options: {
-          items: Array<{ priceId: string; quantity: number }>;
+          transactionId?: string;
+          items?: Array<{ priceId: string; quantity: number }>;
           customer?: { email: string };
           customData?: Record<string, string>;
           settings?: {

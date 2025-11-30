@@ -316,16 +316,15 @@ export default function AuthModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[90vh] max-h-[700px] bg-black border-white/10 text-white p-0 flex overflow-hidden [&>button]:text-white [&>button]:hover:text-white/80 [&>button]:top-4 [&>button]:right-4 [&>button]:z-20">
-        <DialogHeader className="sr-only">
-          <DialogTitle>{mode === "sign-up" ? "Sign Up" : "Sign In"}</DialogTitle>
-        </DialogHeader>
-
+      <DialogContent className="max-w-4xl h-[90vh] max-h-[700px] bg-black border-white/10 text-white p-0 flex !gap-0 overflow-hidden [&>button]:text-white [&>button]:hover:text-white/80 [&>button]:top-4 [&>button]:right-4 [&>button]:z-20">
         {/* Left Side - Video Player */}
         <AuthVideoPlayer isActive={open} />
 
         {/* Right Side - Auth UI */}
         <div className="flex-1 lg:w-1/2 bg-black relative flex items-center justify-center p-8">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{mode === "sign-up" ? "Sign Up" : "Sign In"}</DialogTitle>
+          </DialogHeader>
           <div className="w-full max-w-md space-y-6">
             {/* Header */}
             <AuthHeader mode={mode} />

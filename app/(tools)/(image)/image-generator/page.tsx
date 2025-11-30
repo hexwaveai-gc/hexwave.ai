@@ -1,7 +1,7 @@
 "use client";
 
 import { ImageIcon, RefreshCw, Palette, Maximize2, Download, X } from "lucide-react";
-import Sidebar from "@/app/components/common/Sidebar";
+import Sidebar from "@/app/components/common/sidebar";
 import GeneratorLayout from "@/app/components/shared/GeneratorLayout";
 import GeneratorTabs from "@/app/components/shared/GeneratorTabs";
 import ResultsPanel from "@/app/components/shared/ResultsPanel";

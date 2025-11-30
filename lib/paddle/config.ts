@@ -52,13 +52,18 @@ export function validatePaddleConfig(): void {
   }
 }
 
+/** Purchase type for success URL messaging */
+export type PurchaseType = "plan" | "upgrade" | "billing_change" | "credits";
+
 /**
  * Get checkout redirect URLs
+ * @param purchaseType - Type of purchase for contextual success messaging
  */
-export function getCheckoutUrls() {
+export function getCheckoutUrls(purchaseType?: PurchaseType) {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const typeParam = purchaseType ? `?type=${purchaseType}` : "";
   return {
-    success: `${baseUrl}/pricing/success`,
+    success: `${baseUrl}/pricing/success${typeParam}`,
     cancel: `${baseUrl}/pricing/cancel`,
   };
 }
