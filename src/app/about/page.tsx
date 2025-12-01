@@ -10,14 +10,14 @@ export default function AboutPage() {
       <NavbarDemo>
         <div className="container mx-auto px-4 py-16">
           <div className="max-w-3xl mx-auto">
-            <h1 className="text-3xl font-semibold mb-6">About Hexwave.ai</h1>
+            <h1 className="text-3xl font-semibold mb-6">About hexwave AI</h1>
             
             <div className="prose dark:prose-invert">
               <p className="text-lg mb-6">
-                Hexwave.ai is a social media management platform that helps you manage all your social accounts in one place.
+                hexwave AI is a social media management platform that helps you manage all your social accounts in one place.
               </p>
               
-              <h2 className="text-xl font-medium mt-8 mb-4">What you can do with Hexwave.ai:</h2>
+              <h2 className="text-xl font-medium mt-8 mb-4">What you can do with hexwave AI:</h2>
               
               <ul className="space-y-3 list-disc pl-5 mb-8">
                 <li>Connect multiple social media accounts (Twitter/X, Instagram, TikTok, YouTube, and more)</li>

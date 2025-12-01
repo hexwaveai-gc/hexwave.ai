@@ -80,7 +80,7 @@ export function AppSidebar() {
           </div>
           <div>
             <h2 className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
-              Hexwave.ai
+              hexwave AI
             </h2>
             <p className="text-xs text-muted-foreground">Social Management</p>
           </div>

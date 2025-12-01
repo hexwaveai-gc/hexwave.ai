@@ -5,7 +5,7 @@ const LicenseAgreement = () => {
     <main className="mx-auto max-w-3xl px-4 py-20">
       <div className="prose prose-gray dark:prose-invert mx-auto flex flex-col gap-8">
         <div>
-          <h1 className="text-3xl font-semibold">Hexwave.ai SaaS Template License Agreement</h1>
+          <h1 className="text-3xl font-semibold">hexwave AI SaaS Template License Agreement</h1>
         </div>
         
         <div>
@@ -15,7 +15,7 @@ const LicenseAgreement = () => {
         </div>
         
         <div>
-          This License Agreement ('Agreement') is entered into between Hexwave.ai SaaS Template ('Hexwave.ai'), and you, the user ('Licensee'), regarding the use of the Hexwave.ai SaaS development template (the 'Product') available at Hexwave.ai.dev. By downloading, accessing, or using the Product, Licensee agrees to be bound by the terms and conditions of this Agreement.
+          This License Agreement ('Agreement') is entered into between hexwave AI SaaS Template ('hexwave AI'), and you, the user ('Licensee'), regarding the use of the hexwave AI SaaS development template (the 'Product') available at hexwave AI.dev. By downloading, accessing, or using the Product, Licensee agrees to be bound by the terms and conditions of this Agreement.
         </div>
         
         <span className="text-lg font-semibold">1. Grant of License</span>
@@ -23,7 +23,7 @@ const LicenseAgreement = () => {
         <div className="flex flex-col gap-8">
           <span className="font-semibold">1.1 Standard License</span>
           <span>
-            Subject to the terms and conditions of this Agreement, Hexwave.ai grants Licensee a non-exclusive, non-transferable, and non-sublicensable Standard License to use the Hexwave.ai SaaS template for the following purposes:
+            Subject to the terms and conditions of this Agreement, hexwave AI grants Licensee a non-exclusive, non-transferable, and non-sublicensable Standard License to use the hexwave AI SaaS template for the following purposes:
           </span>
           <ul>
             <li>Create one commercial SaaS application.</li>
@@ -35,7 +35,7 @@ const LicenseAgreement = () => {
         <div className="flex flex-col gap-8">
           <span className="font-semibold">1.2 Enterprise License</span>
           <span>
-            Subject to the terms and conditions of this Agreement, Hexwave.ai grants Licensee a non-exclusive, non-transferable, and non-sublicensable Enterprise License to use the Hexwave.ai SaaS template for the following purposes:
+            Subject to the terms and conditions of this Agreement, hexwave AI grants Licensee a non-exclusive, non-transferable, and non-sublicensable Enterprise License to use the hexwave AI SaaS template for the following purposes:
           </span>
           <ul>
             <li>Create unlimited commercial SaaS applications.</li>
@@ -50,11 +50,11 @@ const LicenseAgreement = () => {
         <div className="flex flex-col gap-8">
           <span>Licensee shall not:</span>
           <ul>
-            <li>Resell or redistribute the Hexwave.ai SaaS template as a standalone product.</li>
+            <li>Resell or redistribute the hexwave AI SaaS template as a standalone product.</li>
             <li>Create derivative templates for distribution or sale.</li>
-            <li>Remove, alter, or obscure any copyright, trademark, or other proprietary notices from the Hexwave.ai SaaS template.</li>
-            <li>Use the Hexwave.ai SaaS template in any way that violates applicable laws, regulations, or third-party rights.</li>
-            <li>Sub-license, rent, lease, or transfer the Hexwave.ai SaaS template or any rights granted under this Agreement.</li>
+            <li>Remove, alter, or obscure any copyright, trademark, or other proprietary notices from the hexwave AI SaaS template.</li>
+            <li>Use the hexwave AI SaaS template in any way that violates applicable laws, regulations, or third-party rights.</li>
+            <li>Sub-license, rent, lease, or transfer the hexwave AI SaaS template or any rights granted under this Agreement.</li>
           </ul>
         </div>
         
@@ -62,21 +62,21 @@ const LicenseAgreement = () => {
           <div className="grid gap-4">
             <span className="text-lg font-semibold">3. Ownership and Intellectual Property</span>
             <span>
-              Hexwave.ai retains all ownership and intellectual property rights in and to the Hexwave.ai SaaS template. This Agreement does not grant Licensee any ownership rights in the Hexwave.ai SaaS template.
+              hexwave AI retains all ownership and intellectual property rights in and to the hexwave AI SaaS template. This Agreement does not grant Licensee any ownership rights in the hexwave AI SaaS template.
             </span>
           </div>
           
           <div className="grid gap-4">
             <span className="text-lg font-semibold">4. Warranty and Disclaimer</span>
             <span>
-              THE Hexwave.ai SAAS TEMPLATE IS PROVIDED 'AS IS' WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR NONINFRINGEMENT.
+              THE hexwave AI SAAS TEMPLATE IS PROVIDED 'AS IS' WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR NONINFRINGEMENT.
             </span>
           </div>
           
           <div className="grid gap-4">
             <span className="text-lg font-semibold">5. Limitation of Liability</span>
             <span>
-              TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, Hexwave.ai SHALL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING OUT OF OR RELATING TO THE USE OR INABILITY TO USE THE Hexwave.ai SAAS TEMPLATE, EVEN IF Hexwave.ai HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+              TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, hexwave AI SHALL NOT BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES ARISING OUT OF OR RELATING TO THE USE OR INABILITY TO USE THE hexwave AI SAAS TEMPLATE, EVEN IF hexwave AI HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
             </span>
           </div>
           
@@ -90,15 +90,15 @@ const LicenseAgreement = () => {
           <div className="grid gap-4">
             <span className="text-lg font-semibold">7. Entire Agreement</span>
             <span>
-              This Agreement constitutes the entire agreement between Licensee and Hexwave.ai concerning the subject matter herein and supersedes all prior or contemporaneous agreements, representations, warranties, and understandings.
+              This Agreement constitutes the entire agreement between Licensee and hexwave AI concerning the subject matter herein and supersedes all prior or contemporaneous agreements, representations, warranties, and understandings.
             </span>
           </div>
         </div>
         
         <div className="flex flex-col">
           <span>Last updated: 2024-07-01</span>
-          <span>Hexwave.ai SaaS Template</span>
-          <span>Contact Information: support@Hexwave.ai.dev</span>
+          <span>hexwave AI SaaS Template</span>
+          <span>Contact Information: support@hexwave AI.dev</span>
         </div>
       </div>
     </main>

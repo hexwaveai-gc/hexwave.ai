@@ -72,18 +72,13 @@ const Footer = () => {
     { href: '/license', text: 'Licence' }, // Note: 'License' is the more common spelling in US English 
   ];
 
-  // Data for social links (replace # with actual URLs)
-  const socialLinks = [
-    { href: 'https://x.com/AgusainBuilds', label: 'X/Twitter', icon: <XIcon /> },
-    { href: '#', label: 'LinkedIn', icon: <LinkedInIcon /> },
-  ];
 
   return (
     <footer className="py-16 md:py-32">
       <div className="mx-auto max-w-5xl px-6">
         {/* Homepage Link */}
         <a aria-label="go home" className="mx-auto block size-fit font-semibold" href="/">
-          Hexwave.ai
+          hexwave AI
         </a>
 
         {/* Navigation Links */}
@@ -95,14 +90,6 @@ const Footer = () => {
           ))}
         </div>
 
-        {/* Social Media Links */}
-        <div className="my-8 flex flex-wrap justify-center gap-6 text-sm">
-           {socialLinks.map((link) => (
-            <SocialLink key={link.label} href={link.href} label={link.label}>
-                {link.icon}
-            </SocialLink>
-           ))}
-        </div>
       </div>
     </footer>
   );

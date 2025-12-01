@@ -35,7 +35,7 @@ export default function InstagramSetupGuide() {
               Instagram Setup Guide
             </h1>
             <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              Convert your Instagram account to Business or Creator to unlock powerful social media management features with Hexwave.ai
+              Convert your Instagram account to Business or Creator to unlock powerful social media management features with hexwave AI
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <Badge variant="secondary" className="bg-purple-100 text-purple-800 px-4 py-2">
@@ -90,7 +90,7 @@ export default function InstagramSetupGuide() {
             </CardHeader>
             <CardContent className="text-center">
               <p className="text-gray-600">
-                Access professional scheduling tools, content management, and third-party integrations like Hexwave.ai.
+                Access professional scheduling tools, content management, and third-party integrations like hexwave AI.
               </p>
             </CardContent>
           </Card>
@@ -118,7 +118,7 @@ export default function InstagramSetupGuide() {
             Choose Your Account Type
           </h2>
           <p className="text-lg text-gray-600">
-            Both account types work with Hexwave.ai - choose what fits your goals
+            Both account types work with hexwave AI - choose what fits your goals
           </p>
         </div>
 
@@ -296,7 +296,7 @@ export default function InstagramSetupGuide() {
                   <li>Instagram will ask you to choose between "Business" and "Creator"</li>
                   <li><strong>Choose "Business"</strong> if you're representing a company, brand, or local business</li>
                   <li><strong>Choose "Creator"</strong> if you're an influencer, content creator, or public figure</li>
-                  <li>Both account types work perfectly with Hexwave.ai!</li>
+                  <li>Both account types work perfectly with hexwave AI!</li>
                 </ol>
               </div>
             </div>
@@ -329,7 +329,7 @@ export default function InstagramSetupGuide() {
                 <ol className="list-decimal list-inside space-y-2 text-gray-600">
                   <li>Instagram will prompt you to connect to a Facebook Page</li>
                   <li>If you don't have a Facebook Page, create one (it's free)</li>
-                  <li>This connection is required for API access and Hexwave.ai integration</li>
+                  <li>This connection is required for API access and hexwave AI integration</li>
                   <li>Make sure you're an admin of the Facebook Page</li>
                 </ol>
               </div>
@@ -363,7 +363,7 @@ export default function InstagramSetupGuide() {
                 <ol className="list-decimal list-inside space-y-2 text-gray-600">
                   <li>Add your business category and contact information</li>
                   <li>Review and confirm your settings</li>
-                  <li>Your account is now ready for Hexwave.ai!</li>
+                  <li>Your account is now ready for hexwave AI!</li>
                 </ol>
               </div>
             </div>
@@ -371,7 +371,7 @@ export default function InstagramSetupGuide() {
         </div>
       </div>
 
-      {/* Connect to Hexwave.ai */}
+      {/* Connect to hexwave AI */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <Card className="border-0 shadow-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white">
           <CardHeader className="text-center">
@@ -380,7 +380,7 @@ export default function InstagramSetupGuide() {
             </div>
             <CardTitle className="text-3xl">Ready to Connect?</CardTitle>
             <CardDescription className="text-purple-100 text-lg">
-              Now that your account is set up, connect it to Hexwave.ai and start managing your Instagram like a pro!
+              Now that your account is set up, connect it to hexwave AI and start managing your Instagram like a pro!
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
@@ -410,7 +410,7 @@ export default function InstagramSetupGuide() {
                   onClick={() => window.location.href = '/integrations'}
                 >
                   <ArrowRight className="h-5 w-5 mr-2" />
-                  Connect to Hexwave.ai
+                  Connect to hexwave AI
                 </Button>
                 <Button 
                   size="lg"
@@ -453,7 +453,7 @@ export default function InstagramSetupGuide() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600">
-                Yes, you'll need a Facebook account to connect your Instagram Business/Creator account. This is required for API access and to use tools like Hexwave.ai.
+                Yes, you'll need a Facebook account to connect your Instagram Business/Creator account. This is required for API access and to use tools like hexwave AI.
               </p>
             </CardContent>
           </Card>
@@ -464,7 +464,7 @@ export default function InstagramSetupGuide() {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600">
-                Yes, you can switch back to a personal account at any time through your Instagram settings. However, you'll lose access to business features and won't be able to use Hexwave.ai.
+                Yes, you can switch back to a personal account at any time through your Instagram settings. However, you'll lose access to business features and won't be able to use hexwave AI.
               </p>
             </CardContent>
           </Card>
@@ -489,7 +489,7 @@ export default function InstagramSetupGuide() {
             Ready to Transform Your Instagram?
           </h2>
           <p className="text-xl text-purple-100 mb-8">
-            Join thousands of creators and businesses using Hexwave.ai to grow their Instagram presence
+            Join thousands of creators and businesses using hexwave AI to grow their Instagram presence
           </p>
           <Button 
             size="lg"

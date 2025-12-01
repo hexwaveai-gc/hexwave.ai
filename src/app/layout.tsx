@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Hexwave.ai - Social Media Management",
+  title: "hexwave AI - Social Media Management",
   description: "Post ahead is a social media management tool that allows you to schedule posts to your social media accounts.",
 };
 
@@ -24,19 +24,19 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <meta property="og:image" content="/Hexwave.aiv3.png" />
+      <meta property="og:image" content="/hexwave AIv3.png" />
       <meta property="og:image:type" content="image/png" />
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
       <meta
         property="og:site_name"
-        content="Hexwave.ai"
+        content="hexwave AI"
       />
       <meta
         property="og:url"
-        content="https://Hexwave.ai.dev/"
+        content="https://hexwave AI.dev/"
       />
-      <meta name="twitter:image" content="/Hexwave.aiv3.png" />
+      <meta name="twitter:image" content="/hexwave AIv3.png" />
       <meta name="twitter:image:type" content="image/png" />
       <meta name="twitter:image:width" content="1200" />
       <meta name="twitter:image:height" content="630" />

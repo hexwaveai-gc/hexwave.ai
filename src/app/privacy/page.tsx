@@ -1,8 +1,8 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy - Hexwave.ai',
-  description: 'Privacy Policy for Hexwave.ai - Social Media Management Platform',
+  title: 'Privacy Policy - hexwave AI',
+  description: 'Privacy Policy for hexwave AI - Social Media Management Platform',
 };
 
 export default function PrivacyPolicy() {
@@ -20,7 +20,7 @@ export default function PrivacyPolicy() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">1. Introduction</h2>
               <p className="text-gray-700 mb-4">
-                Welcome to Hexwave.ai ("we," "our," or "us"). This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our social media management platform, including our website and mobile application (collectively, the "Service").
+                Welcome to hexwave AI ("we," "our," or "us"). This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our social media management platform, including our website and mobile application (collectively, the "Service").
               </p>
               <p className="text-gray-700">
                 By using our Service, you consent to the data practices described in this Privacy Policy. If you do not agree with the practices described in this Privacy Policy, please do not use our Service.
@@ -134,7 +134,7 @@ export default function PrivacyPolicy() {
                 <li><strong>Withdraw Consent:</strong> Revoke consent for data processing</li>
               </ul>
               <p className="text-gray-700">
-                To exercise these rights, please contact us at privacy@Hexwave.ai.com
+                To exercise these rights, please contact us at privacy@hexwave AI.com
               </p>
             </section>
 
@@ -190,8 +190,8 @@ export default function PrivacyPolicy() {
                 If you have any questions about this Privacy Policy or our privacy practices, please contact us:
               </p>
               <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-gray-700 mb-2"><strong>Email:</strong> privacy@Hexwave.ai.com</p>
-                <p className="text-gray-700 mb-2"><strong>Website:</strong> https://Hexwave.ai.com</p>
+                <p className="text-gray-700 mb-2"><strong>Email:</strong> privacy@hexwave AI.com</p>
+                <p className="text-gray-700 mb-2"><strong>Website:</strong> https://hexwave AI.com</p>
                 <p className="text-gray-700"><strong>Address:</strong> [Your Business Address]</p>
               </div>
             </section>
@@ -202,10 +202,10 @@ export default function PrivacyPolicy() {
                 To delete your data from our platform:
               </p>
               <ol className="list-decimal pl-6 text-gray-700 mb-4">
-                <li>Log into your Hexwave.ai account</li>
+                <li>Log into your hexwave AI account</li>
                 <li>Go to Settings → Account</li>
                 <li>Click "Delete Account" and follow the instructions</li>
-                <li>Alternatively, email us at privacy@Hexwave.ai.com with your deletion request</li>
+                <li>Alternatively, email us at privacy@hexwave AI.com with your deletion request</li>
               </ol>
               <p className="text-gray-700">
                 We will delete your data within 30 days of your request, except where retention is required by law.

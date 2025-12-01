@@ -1,8 +1,8 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Terms of Service - Hexwave.ai',
-  description: 'Terms of Service for Hexwave.ai - Social Media Management Platform',
+  title: 'Terms of Service - hexwave AI',
+  description: 'Terms of Service for hexwave AI - Social Media Management Platform',
 };
 
 export default function TermsOfService() {
@@ -20,7 +20,7 @@ export default function TermsOfService() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">1. Agreement to Terms</h2>
               <p className="text-gray-700 mb-4">
-                These Terms of Service ("Terms") govern your use of Hexwave.ai's social media management platform, website, and related services (collectively, the "Service") operated by Hexwave.ai ("us," "we," or "our").
+                These Terms of Service ("Terms") govern your use of hexwave AI's social media management platform, website, and related services (collectively, the "Service") operated by hexwave AI ("us," "we," or "our").
               </p>
               <p className="text-gray-700">
                 By accessing or using our Service, you agree to be bound by these Terms. If you disagree with any part of these Terms, you may not access the Service.
@@ -30,7 +30,7 @@ export default function TermsOfService() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">2. Description of Service</h2>
               <p className="text-gray-700 mb-4">
-                Hexwave.ai is a social media management platform that allows users to:
+                hexwave AI is a social media management platform that allows users to:
               </p>
               <ul className="list-disc pl-6 text-gray-700 mb-4">
                 <li>Connect and manage multiple social media accounts</li>
@@ -170,7 +170,7 @@ export default function TermsOfService() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">10. Limitation of Liability</h2>
               <p className="text-gray-700 mb-4">
-                TO THE MAXIMUM EXTENT PERMITTED BY LAW, Hexwave.ai SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS OF PROFITS, DATA, OR USE, ARISING OUT OF YOUR USE OF THE SERVICE.
+                TO THE MAXIMUM EXTENT PERMITTED BY LAW, hexwave AI SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO LOSS OF PROFITS, DATA, OR USE, ARISING OUT OF YOUR USE OF THE SERVICE.
               </p>
               <p className="text-gray-700">
                 OUR TOTAL LIABILITY FOR ANY CLAIMS ARISING FROM THESE TERMS OR YOUR USE OF THE SERVICE SHALL NOT EXCEED THE AMOUNT YOU PAID US IN THE TWELVE MONTHS PRECEDING THE CLAIM.
@@ -180,7 +180,7 @@ export default function TermsOfService() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">11. Indemnification</h2>
               <p className="text-gray-700">
-                You agree to indemnify and hold harmless Hexwave.ai from any claims, damages, losses, or expenses arising from your use of the Service, violation of these Terms, or infringement of any third-party rights.
+                You agree to indemnify and hold harmless hexwave AI from any claims, damages, losses, or expenses arising from your use of the Service, violation of these Terms, or infringement of any third-party rights.
               </p>
             </section>
 
@@ -218,8 +218,8 @@ export default function TermsOfService() {
                 If you have any questions about these Terms, please contact us:
               </p>
               <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-gray-700 mb-2"><strong>Email:</strong> legal@Hexwave.ai.com</p>
-                <p className="text-gray-700 mb-2"><strong>Website:</strong> https://Hexwave.ai.com</p>
+                <p className="text-gray-700 mb-2"><strong>Email:</strong> legal@hexwave AI.com</p>
+                <p className="text-gray-700 mb-2"><strong>Website:</strong> https://hexwave AI.com</p>
                 <p className="text-gray-700"><strong>Address:</strong> [Your Business Address]</p>
               </div>
             </section>

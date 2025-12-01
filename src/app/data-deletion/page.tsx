@@ -1,8 +1,8 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Data Deletion - Hexwave.ai',
-  description: 'Instructions for deleting your data from Hexwave.ai',
+  title: 'Data Deletion - hexwave AI',
+  description: 'Instructions for deleting your data from hexwave AI',
 };
 
 export default function DataDeletion() {
@@ -14,9 +14,9 @@ export default function DataDeletion() {
           
           <div className="prose prose-lg max-w-none">
             <section className="mb-8">
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">Delete Your Hexwave.ai Account and Data</h2>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">Delete Your hexwave AI Account and Data</h2>
               <p className="text-gray-700 mb-4">
-                You can delete your Hexwave.ai account and all associated data at any time. This will permanently remove:
+                You can delete your hexwave AI account and all associated data at any time. This will permanently remove:
               </p>
               <ul className="list-disc pl-6 text-gray-700 mb-6">
                 <li>Your account profile and settings</li>
@@ -33,7 +33,7 @@ export default function DataDeletion() {
               <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
                 <h3 className="text-lg font-medium text-blue-900 mb-2">Method 1: Through Your Account Settings</h3>
                 <ol className="list-decimal pl-6 text-blue-800 space-y-2">
-                  <li>Log into your Hexwave.ai account</li>
+                  <li>Log into your hexwave AI account</li>
                   <li>Go to Settings → Account</li>
                   <li>Scroll down to "Danger Zone"</li>
                   <li>Click "Delete Account"</li>
@@ -47,7 +47,7 @@ export default function DataDeletion() {
                 <p className="text-gray-700 mb-2">
                   If you cannot access your account, email us at:
                 </p>
-                <p className="text-lg font-semibold text-gray-900">privacy@Hexwave.ai.com</p>
+                <p className="text-lg font-semibold text-gray-900">privacy@hexwave AI.com</p>
                 <p className="text-gray-700 mt-2">
                   Include your registered email address and request account deletion.
                 </p>
@@ -57,7 +57,7 @@ export default function DataDeletion() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">Facebook/Instagram Data Deletion</h2>
               <p className="text-gray-700 mb-4">
-                When you delete your Hexwave.ai account, we will also:
+                When you delete your hexwave AI account, we will also:
               </p>
               <ul className="list-disc pl-6 text-gray-700 mb-4">
                 <li>Revoke all access tokens for your connected social media accounts</li>
@@ -69,7 +69,7 @@ export default function DataDeletion() {
               <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
                 <h3 className="text-lg font-medium text-yellow-900 mb-2">Important Note</h3>
                 <p className="text-yellow-800">
-                  Deleting your Hexwave.ai account does not delete the content you've already posted to your social media accounts. 
+                  Deleting your hexwave AI account does not delete the content you've already posted to your social media accounts. 
                   To delete that content, you'll need to remove it directly from each platform.
                 </p>
               </div>
@@ -158,8 +158,8 @@ export default function DataDeletion() {
                 If you have questions about data deletion or need assistance:
               </p>
               <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-gray-700 mb-2"><strong>Email:</strong> privacy@Hexwave.ai.com</p>
-                <p className="text-gray-700 mb-2"><strong>Support:</strong> support@Hexwave.ai.com</p>
+                <p className="text-gray-700 mb-2"><strong>Email:</strong> privacy@hexwave AI.com</p>
+                <p className="text-gray-700 mb-2"><strong>Support:</strong> support@hexwave AI.com</p>
                 <p className="text-gray-700"><strong>Response Time:</strong> Within 48 hours</p>
               </div>
             </section>
