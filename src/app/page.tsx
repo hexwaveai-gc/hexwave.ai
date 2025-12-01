@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
 import { NavbarDemo } from "@/components/navbar";
-import Pricing from "@/components/pricing";
 import Image from "next/image";
 import Link from "next/link";
 import ProblemSection from "./components/problem";
@@ -155,10 +154,6 @@ export default function Home() {
         <ProblemSection />
 
         <SolutionSection />
-        {/* Pricing Section */}
-        <section className="py-16 px-4 md:px-8 lg:px-16">
-          <Pricing />
-        </section>
 
         {/* CTA Section */}
         <section className="py-20 px-4 md:px-8 lg:px-16 bg-gradient-to-r from-purple-50 via-pink-50 to-blue-50 dark:from-purple-950/20 dark:via-pink-950/20 dark:to-blue-950/20">
