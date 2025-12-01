@@ -9,3 +9,5 @@ export interface SidebarItem {
   badge?: string;
   requiresAuth?: boolean; // Whether this route requires authentication
 }
+
+

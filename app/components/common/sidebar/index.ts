@@ -11,3 +11,5 @@ export { SidebarAuthSection } from "./sidebar-auth-section";
 // Constants and types
 export { SIDEBAR_NAV_ITEMS, LOW_CREDITS_THRESHOLD } from "./constants";
 export type { SidebarItem } from "./types";
+
+
