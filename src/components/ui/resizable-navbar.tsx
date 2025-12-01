@@ -235,15 +235,7 @@ export const NavbarLogo = () => {
     <Link
       href="/"
       className="relative z-20 mr-4 flex items-center space-x-2 px-2 py-1 text-sm font-normal text-black"
-    >
-      <Image
-        src="/logo/hexwave AIv3.png"
-        alt="logo"
-        width={40}
-        height={40}
-        className="rounded-lg"
-      />
-      
+    > 
       <div className="font-sans">
         <span className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-black">hexwave AI</span>
       </div>
