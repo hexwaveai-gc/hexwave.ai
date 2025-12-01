@@ -5,7 +5,6 @@ import { ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import config from "@/config";
-import Pricing from "@/components/pricing";
 
 export default function NotSubscriber() {
   return (
